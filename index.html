@@ -237,6 +237,7 @@ async function supabaseApi(cfg) {
       if (on) must(await sb.from("views").upsert({ user_id: userId, title_id: titleId }));
       else must(await sb.from("views").delete().eq("user_id", userId).eq("title_id", titleId));
     },
+    async setPassword(password) { must(await sb.auth.updateUser({ password })); },
     async rename(name) { must(await sb.from("profiles").update({ name }).eq("id", S.me.id)); },
     async link(code) { return must(await sb.rpc("link_partner", { code })); },
     async unlink() { must(await sb.rpc("unlink_partner")); },
@@ -283,6 +284,7 @@ function demoApi() {
     async setMark(t, s) { s ? db.marks.set(t, s) : db.marks.delete(t); },
     async setView(u, t, on) { const k = u === "me" ? "me" : "p"; on ? db.views.get(k).add(t) : db.views.get(k).delete(t); },
     async rename() {},
+    async setPassword() {},
     async link(code) { if (code.toUpperCase() !== "SAM123") throw new Error("No one has that code. Check it and try again."); partner = { id: "p", name: "Sam", partner_id: "me" }; return "Sam"; },
     async unlink() { partner = null; },
     async syncStep(p) { await new Promise((r) => setTimeout(r, 30)); return { page: +p.page || 1, totalPages: 2, saved: 3 }; },
@@ -466,6 +468,7 @@ function renderAccount() {
     <div class="row"><span class="code">${esc(S.me.invite_code)}</span><button class="btn" id="copycode">Copy code</button></div>
     <div class="row"><input type="text" id="pcode" maxlength="6" placeholder="Partner’s code" style="text-transform:uppercase;width:150px"><button class="btn primary" id="linkbtn">Link</button></div>
     <div class="err" id="linkerr"></div>`}
+  <label>Password (so you can sign in without an email link)<div class="row"><input type="password" id="newpw" minlength="6" placeholder="New password (6+ characters)" autocomplete="new-password"><button class="btn" id="savepw">Set password</button></div></label>
   <div class="row"><button class="btn" id="signout">Sign out</button></div>`;
 }
 
@@ -541,6 +544,12 @@ document.addEventListener("click", async (e) => {
     case "savename": {
       const v = $("myname").value.trim().slice(0, 30); if (!v) return;
       try { await api.rename(v); S.me.name = v; renderSub(); toast("Name saved"); } catch (er) { toast("Couldn’t save: " + er.message); } return;
+    }
+    case "savepw": {
+      const v = $("newpw").value; if (v.length < 6) { toast("Use at least 6 characters."); return; }
+      b.disabled = true;
+      try { await api.setPassword(v); $("newpw").value = ""; toast("Password set. Next time, sign in with your email and this password."); }
+      catch (er) { toast("Couldn’t set it: " + er.message); } finally { b.disabled = false; } return;
     }
     case "linkbtn": {
       const code = $("pcode").value.trim(); if (!code) return;
