@@ -16,12 +16,16 @@ main{max-width:1060px;margin:0 auto;padding:calc(20px + env(safe-area-inset-top,
 header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 h1{margin:0;font-size:24px}
 .sub{color:var(--mu);font-size:13px;margin-top:2px}
+.pill{margin-top:6px;border:1px solid var(--bd);background:var(--card);border-radius:999px;padding:4px 11px;font-size:13px;font-weight:600}
+.pill.linked{border-color:var(--ok);color:var(--ok)}
+.shared{background:color-mix(in srgb,var(--ok) 10%,var(--card));border:1px solid color-mix(in srgb,var(--ok) 40%,var(--bd));border-radius:10px;padding:10px 12px;font-size:13px}
+.shared ul{margin:6px 0 0;padding-left:18px}
 button{font:inherit;cursor:pointer;color:inherit}
 .hbtns{display:flex;gap:8px;flex-wrap:wrap}
 .btn{border:1px solid var(--bd);background:var(--card);border-radius:10px;padding:9px 14px;font-weight:600}
 .primary{background:var(--ac);color:#fff;border-color:var(--ac)}
 .btn:disabled{opacity:.6;cursor:wait}
-input[type=search],input[type=email],input[type=text]{font:inherit;color:var(--tx);background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:10px 12px;min-width:0}
+input[type=search],input[type=email],input[type=text],input[type=password]{font:inherit;color:var(--tx);background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:10px 12px;min-width:0}
 .search{margin-top:14px;width:100%;font-size:16px!important;border-radius:12px!important;padding:11px 14px!important}
 .presets{display:flex;gap:6px;overflow-x:auto;padding:12px 0 2px;scrollbar-width:none}
 .presets::-webkit-scrollbar{display:none}
@@ -108,11 +112,11 @@ footer{color:var(--mu);font-size:12px;margin-top:24px}
   <!-- The app -->
   <div id="app" hidden>
     <header>
-      <div><h1>Watch Finder</h1><div class="sub" id="sub"></div></div>
+      <div><h1>Watch Finder</h1><div class="sub" id="sub"></div><button class="pill" id="partnerChip" hidden></button></div>
       <div class="hbtns">
-        <button class="btn" id="surprise">🎲 Surprise me</button>
-        <button class="btn" id="acctBtn">👤 Account</button>
-        <button class="btn primary" id="sync">↻ Sync</button>
+        <button class="btn" id="surprise" title="Can’t decide? Pick a random movie or series from what’s showing now">🎲 Surprise me</button>
+        <button class="btn" id="acctBtn" title="Your name, password, partner link and sign-out">👤 Account</button>
+        <button class="btn primary" id="sync" title="Refresh the catalog: adds new titles, updates ratings and checks which services carry them. Takes a few minutes; your marks are kept.">↻ Sync</button>
       </div>
     </header>
 
@@ -452,7 +456,14 @@ const rank = (t) => rankMap.get(t.id) || "—";
 
 function renderSub(note) {
   const when = S.lastUpdated ? new Date(S.lastUpdated).toLocaleDateString() : "never";
-  $("sub").textContent = note || `${all().length} titles · updated ${when} · signed in as ${S.me?.name || "you"}${S.partner ? " with " + pName() : ""}`;
+  $("sub").textContent = note || `${all().length} titles · last synced ${when} · signed in as ${S.me?.name || "you"}`;
+  const chip = $("partnerChip");
+  if (S.me && !note) {
+    chip.hidden = false;
+    chip.className = "pill" + (S.partner ? " linked" : "");
+    chip.textContent = S.partner ? `👫 Watching with ${pName()}` : "👤 Just you · Link your partner";
+    chip.title = S.partner ? "See what you share with your partner" : "Link with your partner to track what you’ve both watched";
+  }
 }
 function render() {
   syncControls();
@@ -501,10 +512,17 @@ function renderAccount() {
   <h2>Your account</h2>
   <label>Your name (what your partner sees)<div class="row"><input type="text" id="myname" maxlength="30" value="${esc(S.me.name)}"><button class="btn" id="savename">Save</button></div></label>
   ${S.partner ? `
-    <div><strong>Linked with ${esc(pName())}.</strong> <span class="muted">You each have your own “watched” box; when both are ticked, the title moves to Watched. You can tick either box from either login.</span></div>
+    <div class="shared"><strong>👫 You’re linked with ${esc(pName())}.</strong> Here’s exactly what that means:
+      <ul>
+        <li><b>You both see:</b> each other’s “watched” ticks and “Want to watch” picks (shown as “${esc(pName())} wants this”).</li>
+        <li><b>Either of you can tick</b> the other’s “watched” box, handy when you watch on one screen.</li>
+        <li>A title moves to <b>Watched</b> only when <b>both</b> boxes are ticked. If just one of you has seen it, it shows under “Seen by one of you”.</li>
+        <li><b>Stays private:</b> your “Not interested” list, your filters and your password.</li>
+        <li>Unlinking keeps everyone’s ticks; you just stop seeing each other’s.</li>
+      </ul></div>
     <div class="row"><button class="btn" id="unlink">Unlink partner</button></div>`
   : `
-    <div><strong>Link with your partner</strong><div class="muted">Send them your code, or type theirs below. Friends who aren’t a couple don’t need to link — they just sign up.</div></div>
+    <div><strong>Link with your partner</strong><div class="muted">Send them your code, or type theirs below. Once linked, you’ll each see the other’s “watched” ticks and “Want to watch” picks, and a title counts as Watched when you’ve both seen it. Your “Not interested” list stays private. Friends who aren’t a couple don’t need to link; they just sign up.</div></div>
     <div class="row"><span class="code">${esc(S.me.invite_code)}</span><button class="btn" id="copycode">Copy code</button></div>
     <div class="row"><input type="text" id="pcode" maxlength="6" placeholder="Partner’s code" style="text-transform:uppercase;width:150px"><button class="btn primary" id="linkbtn">Link</button></div>
     <div class="err" id="linkerr"></div>`}
@@ -583,6 +601,7 @@ document.addEventListener("click", async (e) => {
     case "again": surprise(); return;
     case "closepick": pickId = null; choosing = false; renderPick(); return;
     case "acctBtn": $("account").hidden = !$("account").hidden; if (!$("account").hidden) renderAccount(); return;
+    case "partnerChip": $("account").hidden = false; renderAccount(); $("account").scrollIntoView({ behavior: "smooth", block: "start" }); return;
     case "copycode": try { await navigator.clipboard.writeText(S.me.invite_code); toast("Code copied"); } catch { toast("Your code is " + S.me.invite_code); } return;
     case "savename": {
       const v = $("myname").value.trim().slice(0, 30); if (!v) return;

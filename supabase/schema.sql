@@ -99,7 +99,7 @@ create policy "rename yourself" on public.profiles for update to authenticated
 
 drop policy if exists "own and partner marks: read" on public.marks;
 create policy "own and partner marks: read" on public.marks for select to authenticated
-  using (user_id = auth.uid() or public.is_my_partner(user_id));
+  using (user_id = auth.uid() or (public.is_my_partner(user_id) and status = 'want'));  -- "Not interested" stays private
 drop policy if exists "own marks: write" on public.marks;
 create policy "own marks: write" on public.marks for all to authenticated
   using (user_id = auth.uid()) with check (user_id = auth.uid());
