@@ -1498,7 +1498,11 @@ function renderAlert() {
   const parts = [];
   if (out.length) parts.push(`<b>New season out:</b> ${esc(names(out, (t) => `${t.title} (season ${newSeason(t)})`))}`);
   if (soon.length) parts.push(`<b>Coming:</b> ${esc(names(soon, (t) => `${t.title} (season ${comingSeason(t).season}${comingSeason(t).date ? ", " + fmtDate(comingSeason(t).date) : ""})`))}`);
-  const slim = [out.length ? `${out.length} new season${out.length > 1 ? "s" : ""}` : "", soon.length ? `${soon.length} soon` : ""].filter(Boolean).join(" · ");
+  // phones: name the show when there's just one, otherwise count them
+  const slim = [
+    out.length === 1 ? `<b>${esc(out[0].title)}</b> season ${newSeason(out[0])} is out` : out.length ? `<b>${out.length} new seasons</b> are out` : "",
+    soon.length === 1 ? `<span class="muted">${esc(soon[0].title)} season ${comingSeason(soon[0]).season} ${comingSeason(soon[0]).date ? "on " + esc(new Date(comingSeason(soon[0]).date + "T12:00").toLocaleDateString(undefined, { month: "short", day: "numeric" })) : "is coming"}</span>` : soon.length ? `<span class="muted">${soon.length} ${out.length ? "more" : "new"} seasons coming soon</span>` : "",
+  ].filter(Boolean).join("<br>");
   el.innerHTML = `<div><span class="alert-full">${parts.join("<br>")}</span><span class="alert-slim">${slim}</span></div><div class="alert-acts"><button data-view="seasons">See them</button><button id="alertclose" class="alert-x" title="Dismiss" aria-label="Dismiss">✕</button></div>`;
   el.hidden = false;
 }
