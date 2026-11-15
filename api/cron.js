@@ -13,6 +13,8 @@ function jobs() {
   return [
     { kind: "movie", order: "new", page: 1 }, { kind: "tv", order: "new", page: 1 },
     { kind: "movie", order: "new", page: 2 }, { kind: "tv", order: "new", page: 2 },
+    { kind: "tv", order: "top", page: 1, genre: "10764" }, { kind: "tv", order: "new", page: 1, genre: "10764" }, // reality & competition
+    { kind: "tv", order: "top", page: 1, genre: "99" }, { kind: "tv", order: "top", page: 1, genre: "16", lang: "ja" },
     { mode: "stale" }, { mode: "stale" },
     { kind: "movie", order: "top", page: rot(10) }, { kind: "tv", order: "top", page: rot(8) },
     { kind: "tv", order: "top", page: rot(4), genre: "10764" }, { kind: "tv", order: "top", page: rot(4), genre: "16", lang: "ja" },

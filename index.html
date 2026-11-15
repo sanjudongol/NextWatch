@@ -617,6 +617,9 @@ function render() {
   const q = $("q").value.trim();
   const noun = F.view === "all" || F.view === "together" ? (list.length === 1 ? "match" : "matches") : (list.length === 1 ? "title" : "titles");
   $("status").textContent = `${list.length} ${noun}${q ? ` for “${q}”` : ""}`;
+  const inSection = all().filter((t) => categoryOf(t) === F.cat).length;
+  if (F.view === "all" && F.cat !== "main" && inSection < 15)
+    $("status").textContent += ` · only ${inSection} in this section so far. Tap ↻ Sync to pull in more`;
   let empty = "Nothing here yet.";
   if (F.view === "together") empty = "Nothing here that neither of you has seen. Try another section or loosen the filters.";
   if (F.view === "seasons") empty = "No new or upcoming seasons for series you’ve watched.";
