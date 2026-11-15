@@ -102,6 +102,9 @@ select,.fgrid input{font:inherit;color:var(--tx);background:var(--bg);border:1px
 .seasonbtn{border:1px solid var(--new);background:color-mix(in srgb,var(--new) 10%,var(--card));color:var(--tx);border-radius:8px;padding:7px 8px;font-size:13px;font-weight:650}
 #alert{border:2px solid var(--new);background:color-mix(in srgb,var(--new) 9%,var(--card));border-radius:12px;padding:10px 12px;margin-bottom:10px;font-size:14px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 #alert button{background:var(--new);color:#fff;border:0;border-radius:8px;padding:6px 12px;font-weight:650}
+#alert .alert-acts{display:flex;gap:6px;align-items:center;margin-left:auto}
+#alert button.alert-x{background:transparent;color:var(--mu);padding:4px 8px;font-size:16px;line-height:1}
+#alert button.alert-x:hover{color:var(--tx)}
 .head{display:flex;gap:12px}
 .cover{flex:none;width:72px;height:108px;border-radius:8px;display:flex;align-items:flex-end;padding:6px;color:#fff;font:700 11px/1.15 Georgia,serif;text-shadow:0 1px 3px rgba(0,0,0,.4);overflow:hidden;position:relative}
 .cover img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
@@ -1062,13 +1065,15 @@ function renderTips() {
 function renderAlert() {
   const out = all().filter((t) => newSeason(t)), soon = all().filter((t) => comingSeason(t));
   const el = $("alert");
-  if (!out.length && !soon.length || F.view === "seasons") { el.hidden = true; return; }
+  const sig = [...out.map((t) => t.id + ":" + newSeason(t)), ...soon.map((t) => t.id + ":" + comingSeason(t).season)].sort().join(",");
+  el.dataset.sig = sig;
+  if (!out.length && !soon.length || F.view === "seasons" || local.get("wf-alert-off", "") === sig) { el.hidden = true; return; }
   const names = (list, f) => list.slice(0, 3).map(f).join(", ") + (list.length > 3 ? ` and ${list.length - 3} more` : "");
   const parts = [];
   if (out.length) parts.push(`<b>🆕 New season out:</b> ${esc(names(out, (t) => `${t.title} (season ${newSeason(t)})`))}`);
   if (soon.length) parts.push(`<b>📅 Coming:</b> ${esc(names(soon, (t) => `${t.title} (season ${comingSeason(t).season}${comingSeason(t).date ? ", " + fmtDate(comingSeason(t).date) : ""})`))}`);
   const slim = [out.length ? `🆕 ${out.length} new season${out.length > 1 ? "s" : ""} out` : "", soon.length ? `📅 ${soon.length} coming` : ""].filter(Boolean).join(" · ");
-  el.innerHTML = `<div><span class="alert-full">${parts.join("<br>")}</span><span class="alert-slim">${slim}</span></div><button data-view="seasons">See them</button>`;
+  el.innerHTML = `<div><span class="alert-full">${parts.join("<br>")}</span><span class="alert-slim">${slim}</span></div><div class="alert-acts"><button data-view="seasons">See them</button><button id="alertclose" class="alert-x" title="Dismiss" aria-label="Dismiss">✕</button></div>`;
   el.hidden = false;
 }
 let choosing = false, pickType = "";
@@ -1273,6 +1278,7 @@ async function onClick(e) {
     case "moodBtn": { const el = $("moodbox"); el.hidden = !el.hidden; renderMood(); if (!el.hidden) { el.scrollIntoView({ behavior: "smooth", block: "start" }); setTimeout(() => $("moodtext") && $("moodtext").focus(), 300); } return; }
     case "moodclose": $("moodbox").hidden = true; moodRes = null; return;
     case "openfilters": $("fp").open = true; return;
+    case "alertclose": local.set("wf-alert-off", $("alert").dataset.sig || ""); renderAlert(); return;
     case "tipsok": local.set("wf-tips-done", true); renderTips(); return;
     case "sharepick": {
       const t = all().find((x) => x.id === pickId); if (!t) return;
