@@ -160,7 +160,18 @@ footer{color:var(--mu);font-size:12px;margin-top:24px}
 .scorechips .chip.on{background:var(--ac)}
 .rowc,.card{touch-action:pan-y;transition:transform .15s}
 .rowc.swiping,.card.swiping{transition:none}
-#pick,#tabs,#account,#grid{scroll-margin-top:140px}
+#pick,#tabs,#account,#grid,#moodbox{scroll-margin-top:140px}
+#moodbox{padding:14px;margin:0 0 14px;border:2px solid var(--want)}
+#moodbox textarea{width:100%;font:inherit;font-size:16px;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:10px 12px;min-height:64px;resize:vertical}
+.moodhead{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.moodhead b{font-size:16px}
+.understood{display:flex;gap:5px;flex-wrap:wrap;margin:8px 0}
+.understood span{font-size:12px;border-radius:999px;padding:3px 9px;background:color-mix(in srgb,var(--want) 14%,var(--card));color:var(--tx)}
+.understood span.neg{background:color-mix(in srgb,var(--ac) 14%,var(--card))}
+.moodgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:10px;margin-top:10px}
+#moodform .row>*{min-width:0;max-width:100%}
+@media (max-width:620px){#moodform .row{flex-direction:column;align-items:stretch}#moodform .presets{width:100%;flex:none}.moodgrid{grid-template-columns:1fr}.moodhead{flex-wrap:nowrap}}
+.why{font-size:12px;color:var(--want);font-weight:600}
 .vid{display:grid;grid-template-columns:168px minmax(0,1fr) auto;gap:12px;align-items:center;background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:8px 10px}
 .vid.dim{opacity:.6}
 .vthumb{position:relative;width:168px;aspect-ratio:16/9;border-radius:8px;overflow:hidden;background:linear-gradient(135deg,#c4302b,#6b1512)}
@@ -249,6 +260,7 @@ footer{color:var(--mu);font-size:12px;margin-top:24px}
     <header>
       <div><h1>Watch Finder</h1><div class="sub" id="sub"></div><button class="pill" id="partnerChip" hidden></button></div>
       <div class="hbtns">
+        <button class="btn" id="moodBtn" title="Describe what you’re in the mood for and get a hand-picked list" aria-label="What are you in the mood for?">🪄<span class="lbl"> Mood</span></button>
         <button class="btn" id="surprise" title="Can’t decide? Pick a random movie or series from what’s showing now" aria-label="Surprise me">🎲<span class="lbl"> Surprise me</span></button>
         <button class="btn" id="acctBtn" title="Your name, password, partner link and sign-out" aria-label="Account">👤<span class="lbl"> Account</span></button>
         <button class="btn primary" id="sync" title="Refresh the catalog now: adds new titles, updates ratings and checks which services carry them. Takes a few minutes; your marks are kept. The catalog also refreshes by itself every night." aria-label="Sync">↻<span class="lbl"> Sync</span></button>
@@ -289,6 +301,7 @@ footer{color:var(--mu);font-size:12px;margin-top:24px}
     <div id="alert" hidden></div>
     <div id="tipsbox"></div>
     <div class="tabs" id="tabs"></div>
+    <section id="moodbox" class="box" hidden></section>
     <section id="pick" hidden></section>
     <div class="statusbar"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><div id="status"></div><span id="findwrap" hidden style="display:inline-flex;gap:4px"><button class="chip" id="findmore"></button><button class="chip" id="clearfind" aria-label="Clear" title="Clear and show everything again">✕</button></span></div><button class="chip" id="layout" title="Switch between detailed cards and a compact list"></button></div>
     <div id="grid"></div>
@@ -870,8 +883,126 @@ function render() {
   const compact = F.layout === "list";
   $("grid").className = compact ? "list" : "";
   $("grid").innerHTML = list.length ? list.map((t) => t.kind === "yt" ? vid(t) : compact ? (openRow === t.id ? card(t, true) : row(t)) : card(t)).join("") : `<div class="empty">${empty}</div>`;
-  renderPick(); renderSub(); renderAlert(); renderTips();
+  renderPick(); renderSub(); renderAlert(); renderTips(); if (moodRes) { moodRes.picks = moodPicks(moodRes.want); renderMood(); }
 }
+// ---------------- mood: describe it, get a curated list ----------------
+const MOOD_WORDS = [
+  // [regex, what it means]
+  [/\b(funny|laugh|hilarious|comed(y|ies)|silly|lighthearted|light-hearted|witty)\b/, { g: ["Comedy"], label: "Funny" }],
+  [/\b(scary|horror|spooky|creepy|terrifying|frightening)\b/, { g: ["Horror"], label: "Scary" }],
+  [/\b(romantic|romance|love story|date night|rom-?com)\b/, { g: ["Romance"], label: "Romantic" }],
+  [/\b(action|explosions?|fights?|adrenaline)\b/, { g: ["Action"], label: "Action" }],
+  [/\b(thriller|suspense|suspenseful|tense|edge of (my|our) seats?|gripping)\b/, { g: ["Thriller"], label: "Tense" }],
+  [/\b(mystery|mysteries|whodunn?it|detective|puzzle)\b/, { g: ["Mystery"], label: "Mystery" }],
+  [/\b(sci-?fi|science fiction|space|future|futuristic|aliens?|robots?|time travel)\b/, { g: ["Sci-Fi"], label: "Sci-fi" }],
+  [/\b(fantasy|magic|magical|dragons?|wizards?|fairy ?tale)\b/, { g: ["Fantasy"], label: "Fantasy" }],
+  [/\b(crime|heist|mafia|gangsters?|mob|cops?)\b/, { g: ["Crime"], label: "Crime" }],
+  [/\b(war|wwii|ww2|battle|soldiers?|military)\b/, { g: ["War"], label: "War" }],
+  [/\b(histor(y|ical)|period piece|true story|based on a true)\b/, { g: ["History"], label: "Historical" }],
+  [/\b(drama|emotional|cry|tear-?jerker|moving|heartfelt|sad)\b/, { g: ["Drama"], label: "Emotional" }],
+  [/\b(adventure|journey|quest|epic)\b/, { g: ["Adventure"], label: "Adventure" }],
+  [/\b(musical|music)\b/, { g: ["Music"], label: "Music" }],
+  [/\b(western|cowboys?)\b/, { g: ["Western"], label: "Western" }],
+  [/\b(feel[- ]?good|uplifting|wholesome|cozy|cosy|happy|heartwarming|comfort)\b/, { mood: "feel", label: "Feel-good" }],
+  [/\b(mind[- ]?bend(ing|er)|twisty|twists?|clever|smart|thought[- ]provoking|trippy)\b/, { mood: "mind", label: "Mind-bending" }],
+  [/\b(dark|gritty|bleak|disturbing)\b/, { mood: "dark", label: "Dark" }],
+];
+const MOOD_CATS = [
+  [/\b(anime)\b/, "anime", "Anime"], [/\b(reality|competition|game show|cooking show|dating show)\b/, "reality", "Reality"],
+  [/\b(true crime|serial killers?|murder (case|mystery documentar))\b/, "truecrime", "True crime"], [/\b(documentar(y|ies)|docuseries|docu)\b/, "docs", "Documentary"],
+  [/\b(kids?|children|family movie|family film|for the family|cartoons?|pixar|disney)\b/, "kids", "Kids & family"], [/\b(youtube|videos?)\b/, "youtube", "YouTube"],
+];
+function parseMood(text) {
+  const x = " " + text.toLowerCase().replace(/[’']/g, "'") + " ";
+  const want = { genres: new Set(), moods: new Set(), not: new Set(), notLabels: [], labels: [], type: "", cat: "", maxLen: 0, minYear: 0, maxYear: 0, minScore: 0, gem: false, together: false, svc: [], people: [], words: [] };
+  // "no horror", "nothing sad", "not too scary", "without romance"
+  const negRe = /\b(no|not|nothing|without|avoid|skip|hate|don't want|dont want|not too|not anything)\s+(too\s+|very\s+|a\s+|any\s+)?([a-z-]+(\s[a-z-]+)?)/g;
+  const negSpans = [];
+  for (const m of x.matchAll(negRe)) {
+    const phrase = " " + m[3] + " ";
+    for (const [re, v] of MOOD_WORDS) if (re.test(phrase)) { (v.g || []).forEach((g) => want.not.add(g)); if (v.mood) want.not.add("mood:" + v.mood); want.notLabels.push(v.label); negSpans.push(m[0]); }
+  }
+  let y = x; negSpans.forEach((sp) => (y = y.replace(sp, " ")));
+  for (const [re, v] of MOOD_WORDS) if (re.test(y)) { (v.g || []).forEach((g) => want.genres.add(g)); if (v.mood) want.moods.add(v.mood); want.labels.push(v.label); }
+  for (const [re, cat, label] of MOOD_CATS) if (re.test(y) && !want.cat) { want.cat = cat; want.labels.unshift(label); }
+  if (/\b(movie|film|flick)s?\b/.test(y) && !/\b(series|show)\b/.test(y)) { want.type = "Movie"; want.labels.unshift("Movie"); }
+  else if (/\b(series|shows?|tv|binge|episodes?|season)\b/.test(y)) { want.type = "Series"; want.labels.unshift("Series"); }
+  if (/\b(short|quick|not too long|under (an? )?hour|under 90|easy watch|light watch)\b/.test(y)) { want.maxLen = 100; want.labels.push("Short"); }
+  else if (/\bunder (2|two) hours?\b/.test(y)) { want.maxLen = 120; want.labels.push("Under 2h"); }
+  const dec = /\b(19)?([5-9]0)'?s\b/.exec(y) || /\b(20)(00|10)'?s\b/.exec(y);
+  if (dec) { const start = dec[1] === "20" ? 2000 + +dec[2] : 1900 + +dec[2]; want.minYear = start; want.maxYear = start + 9; want.labels.push(`${start}s`); }
+  else if (/\b(classic|old|older|vintage|golden age)\b/.test(y)) { want.maxYear = 1995; want.labels.push("Classic"); }
+  else if (/\b(new|recent|latest|this year|just came out|fresh)\b/.test(y)) { want.minYear = new Date().getFullYear() - 2; want.labels.push("Recent"); }
+  if (/\b(best|acclaimed|critically|masterpiece|award|oscar|highly rated|top rated|great)\b/.test(y)) { want.minScore = 7.6; want.labels.push("Acclaimed"); }
+  if (/\b(underrated|hidden gem|lesser[- ]known|under the radar|obscure)\b/.test(y)) { want.gem = true; want.labels.push("Hidden gem"); }
+  if (/\b(together|with (my|our) (partner|boyfriend|girlfriend|husband|wife|bf|gf)|both of us|couple)\b/.test(y) && S.partner) { want.together = true; want.labels.push("For both of you"); }
+  if (want.cat !== "youtube") for (const sv of [...new Set(all().flatMap((t) => t.services || []))]) if (y.includes(" " + sv.toLowerCase().replace(/\+$/, "")) ) { want.svc.push(sv); want.labels.push(sv); }
+  // names of directors / actors in the catalog
+  const names = new Set(all().flatMap((t) => [...(t.dirs || []), ...(t.cast || [])]));
+  for (const n of names) if (n.length > 5 && y.includes(n.toLowerCase())) { want.people.push(n); want.labels.push(n); }
+  // leftover meaningful words, matched against summaries ("heist", "high school", "space")
+  const STOP = new Set("i im i'm we a an the and or but for to of in on with something some anything want wanna like feel feeling mood tonight watch watching show movie film series kind sort really very pretty bit little that this is it be maybe good nice quite just more less into about would could can our my me us let lets let's".split(" "));
+  want.words = y.split(/[^a-z-]+/).filter((w) => w.length > 3 && !STOP.has(w));
+  return want;
+}
+function moodPicks(want) {
+  const now = new Date().getFullYear();
+  const scored = [];
+  for (const t of all()) {
+    if (iSaw(t.id) || S.marks.get(t.id) === "skipped") continue;
+    if (want.together && (theySaw(t.id) || S.pSkip.has(t.id))) continue;
+    const cat = categoryOf(t), g = gl(t), moods = moodsOf(t);
+    if (want.cat ? cat !== want.cat : !["movies", "series", "anime", "kids"].includes(cat)) continue; // docs, reality etc. only when asked for
+    if (want.type && t.type !== want.type && t.kind !== "yt") continue;
+    if ([...want.not].some((n) => n.startsWith("mood:") ? moods.includes(n.slice(5)) : g.includes(n))) continue;
+    if (want.maxLen && t.type === "Movie" && !(t.len && t.len <= want.maxLen)) continue;
+    if (want.maxLen && t.type === "Series" && !(t.status !== "Ongoing" && (t.len || 9) <= 2)) continue;
+    if (want.minYear && !(t.year >= want.minYear)) continue;
+    if (want.maxYear && !(t.year && t.year <= want.maxYear)) continue;
+    if (want.svc.length && !(t.services || []).some((s) => want.svc.includes(s))) continue;
+    if (want.people.length && !want.people.some((n) => [...(t.dirs || []), ...(t.cast || [])].includes(n))) continue;
+    const q = t.kind === "yt" ? Math.log10((t.views || 1)) : imdbOrTmdb(t);
+    if (want.minScore && t.kind !== "yt" && q < want.minScore) continue;
+    const why = [];
+    let sc = 0;
+    for (const gg of want.genres) if (g.includes(gg)) { sc += 3; why.push(gg); }
+    for (const m of want.moods) if (moods.includes(m)) { sc += 2.5; why.push({ feel: "feel-good", mind: "mind-bending", dark: "dark" }[m]); }
+    const hay = ((t.summary || "") + " " + t.title).toLowerCase();
+    for (const w of want.words) if (hay.includes(w)) { sc += 1.5; why.push(`“${w}”`); }
+    const asked = want.genres.size + want.moods.size;
+    if (asked && !why.length) continue; // asked for a feel this title doesn't have
+    sc += q * (want.gem ? 0.8 : 1.2) + (t.rt != null ? t.rt / 50 : 0);
+    if (want.gem) sc -= Math.log10((t.popularity || 1) + 1) * 1.5; else sc += Math.log10((t.popularity || 1) + 1) * 0.4;
+    if (wantCount(t.id)) { sc += 2; why.push(wantCount(t.id) === 2 ? "you both want it" : "on a want list"); }
+    scored.push({ t, sc, why: [...new Set(why)] });
+  }
+  return scored.sort((a, b) => b.sc - a.sc).slice(0, 12);
+}
+let moodText = "", moodRes = null;
+const MOOD_EXAMPLES = ["Something funny and short", "A tense thriller, nothing too gory", "Feel-good series to binge together", "Mind-bending sci-fi movie", "Acclaimed 90s crime film", "Cozy anime", "A hidden gem documentary"];
+function renderMood() {
+  const el = $("moodbox");
+  if (el.hidden) return;
+  const head = `<div class="moodhead"><b>🪄 What are you in the mood for?</b><button class="chip" id="moodclose" aria-label="Close">✕</button></div>
+    <form id="moodform"><textarea id="moodtext" placeholder="Describe it in your own words, e.g. “something light and funny, under 2 hours, no horror”">${esc(moodText)}</textarea>
+    <div class="row" style="margin-top:8px;justify-content:space-between"><div class="presets" style="padding:0;flex:1;min-width:0">${MOOD_EXAMPLES.map((e) => `<button type="button" class="chip" data-moodex="${esc(e)}">${esc(e)}</button>`).join("")}</div>
+    <button class="btn primary">Find picks</button></div></form>`;
+  if (!moodRes) { el.innerHTML = head; return; }
+  const { want, picks } = moodRes;
+  const understood = [...want.labels.map((l) => `<span>${esc(l)}</span>`), ...want.notLabels.map((l) => `<span class="neg">No ${esc(l.toLowerCase())}</span>`)].join("");
+  el.innerHTML = head + `<div class="understood">${understood || `<span>Best-rated overall</span>`}</div>
+    ${picks.length ? `<div class="muted">${picks.length} picks you haven’t seen, best match first. Change the words above to steer it.</div>
+    <div class="moodgrid">${picks.map(({ t, why }) => `<div>${why.length ? `<div class="why">Why: ${esc(why.slice(0, 4).join(", "))}</div>` : ""}${t.kind === "yt" ? vid(t) : F.layout === "list" ? row(t) : card(t)}</div>`).join("")}</div>`
+    : `<div class="empty" style="padding:20px 0">Nothing fits all of that. Try fewer conditions, or tap ↻ Sync to bring in more titles.</div>`}`;
+}
+function runMood(text) {
+  moodText = text.trim();
+  if (!moodText) { moodRes = null; renderMood(); return; }
+  const want = parseMood(moodText);
+  moodRes = { want, picks: moodPicks(want) };
+  renderMood();
+}
+
 // ---------------- top directors ----------------
 const ACCLAIMED = ["Akira Kurosawa", "Alfonso Cuarón", "Alfred Hitchcock", "Ang Lee", "Barry Jenkins", "Bong Joon Ho", "Céline Sciamma", "Christopher Nolan",
   "Damien Chazelle", "David Fincher", "Denis Villeneuve", "Ethan Coen", "Greta Gerwig", "Guillermo del Toro", "Hayao Miyazaki", "Hirokazu Kore-eda",
@@ -1069,6 +1200,7 @@ async function onClick(e) {
     F.view = last && g[3].includes(last) ? last : g[3][0];
     saveF(); render(); scrollTo({ top: 0 }); return;
   }
+  if (b.dataset.moodex) { runMood(b.dataset.moodex); return; }
   if (b.dataset.ytmode) { F.ytMode = b.dataset.ytmode; F.view = F.view === "together" ? "together" : "all"; saveF(); render(); return; }
   if (b.dataset.score) {
     const [im, rt] = b.dataset.score.split("|");
@@ -1138,6 +1270,8 @@ async function onClick(e) {
       if ($("findmore").dataset.role === "director") F.director = ""; else $("q").value = "";
       saveF(); render(); return;
     }
+    case "moodBtn": { const el = $("moodbox"); el.hidden = !el.hidden; renderMood(); if (!el.hidden) { el.scrollIntoView({ behavior: "smooth", block: "start" }); setTimeout(() => $("moodtext") && $("moodtext").focus(), 300); } return; }
+    case "moodclose": $("moodbox").hidden = true; moodRes = null; return;
     case "openfilters": $("fp").open = true; return;
     case "tipsok": local.set("wf-tips-done", true); renderTips(); return;
     case "sharepick": {
@@ -1203,6 +1337,8 @@ document.addEventListener("touchend", () => {
 });
 let rzT; addEventListener("resize", () => { clearTimeout(rzT); rzT = setTimeout(() => S.me && render(), 150); });
 $("sheetclose").onclick = closeSheet;
+document.addEventListener("submit", (e) => { if (e.target.id === "moodform") { e.preventDefault(); runMood($("moodtext").value); } });
+document.addEventListener("keydown", (e) => { if (e.target.id === "moodtext" && e.key === "Enter" && !e.shiftKey) { e.preventDefault(); runMood(e.target.value); } });
 $("sheetdone").onclick = () => { closeSheet(); $("tabs").scrollIntoView({ behavior: "smooth", block: "start" }); };
 document.addEventListener("pointerdown", (e) => { if (phone() && $("fp").open && !e.target.closest(".fgrid") && !e.target.closest("summary")) closeSheet(); });
 let siteVersion = null;
