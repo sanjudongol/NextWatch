@@ -1128,6 +1128,8 @@ function moodPicks(want) {
     if (want.people.length && !want.people.some((n) => [...(t.dirs || []), ...(t.cast || [])].includes(n))) continue;
     const q = t.kind === "yt" ? Math.log10((t.views || 1)) : imdbOrTmdb(t);
     if (want.minScore && t.kind !== "yt" && q < want.minScore) continue;
+    const [, , smIm, smRt] = SURPRISE_MIN.find((x) => x[0] === surpriseMin) || SURPRISE_MIN[1]; // the score bar on this page
+    if (smIm && t.kind !== "yt" && !(q >= smIm || (t.rt ?? -1) >= smRt)) continue;
     const why = [];
     let sc = 0;
     for (const gg of want.genres) if (g.includes(gg)) { sc += 3; why.push(gg); }
@@ -1148,7 +1150,7 @@ const MOOD_EXAMPLES = ["Something funny and short", "A tense thriller, nothing t
 function renderMood() {
   const el = $("moodbox");
   if (el.hidden) return;
-  const head = `<div class="pagehead"><button class="btn" id="moodclose" aria-label="Back">←</button><h2>🪄 What are you in the mood for?</h2></div>
+  const head = `<div class="pagehead"><button class="btn" id="moodclose" aria-label="Back">←</button><h2>🪄 What are you in the mood for?</h2></div><div class="muted">Looks through everything you haven’t seen, whatever filters you have on.</div>${minChips()}
     <form id="moodform"><textarea id="moodtext" placeholder="Describe it in your own words, e.g. “something light and funny, under 2 hours, no horror”">${esc(moodText)}</textarea>
     <div class="row" style="margin-top:8px;justify-content:space-between"><div class="presets" style="padding:0;flex:1;min-width:0">${MOOD_EXAMPLES.map((e) => `<button type="button" class="chip" data-moodex="${esc(e)}">${esc(e)}</button>`).join("")}</div>
     <button class="btn primary">Find picks</button></div></form>`;
@@ -1431,7 +1433,7 @@ async function onClick(e) {
   if (b.dataset.page) { const yt = b.dataset.page === "youtube"; showPage("home"); if (yt && F.cat !== "youtube") { F.ytMode = "history"; F.ytSub = (F.ytSubs || {}).history || ""; }
     if (yt !== (F.cat === "youtube")) setCat(yt ? "youtube" : (F.lastCat || "movies")); else render(); scrollTo({ top: 0 }); return; }
   if (b.dataset.cat) { setCat(b.dataset.cat); return; }
-  if (b.dataset.smin) { surpriseMin = b.dataset.smin; local.set("wf-surprise-min", surpriseMin); if (pickId) { pickId = null; surprise(); } else renderPick(); return; }
+  if (b.dataset.smin) { surpriseMin = b.dataset.smin; local.set("wf-surprise-min", surpriseMin); if (page === "mood") { if (moodRes) moodRes.picks = moodPicks(moodRes.want); renderMood(); return; } if (pickId) { pickId = null; surprise(); } else renderPick(); return; }
   if (b.dataset.pick != null) { pickType = b.dataset.pick; surprise(); return; }
   if (b.dataset.view) { F.view = b.dataset.view; saveF(); render(); return; }
   if (b.dataset.dirpick) { Object.assign(F, { director: b.dataset.dirpick, view: "all" }); saveF(); render(); scrollTo({ top: 0, behavior: "smooth" }); toast(`Showing titles by ${b.dataset.dirpick}`); return; }
