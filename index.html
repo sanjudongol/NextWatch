@@ -80,6 +80,18 @@ select,.fgrid input{font:inherit;color:var(--tx);background:var(--bg);border:1px
 .rb.on.mk-skipped{border-color:var(--ac);color:var(--ac)}
 @media (max-width:620px){.rowc{grid-template-columns:48px minmax(0,1fr)}.rbtns{grid-column:1/-1;justify-content:flex-start;max-width:none}}
 .less{align-self:flex-start;background:none;border:0;color:var(--mu);font-size:13px;padding:0}
+.dirs{display:grid;gap:8px}
+.dirs h3{margin:10px 0 2px;font-size:15px}
+.dirs .muted{margin-bottom:4px}
+.drow{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:10px 12px}
+.drow .rk{flex:none;width:28px;text-align:center;font-weight:700;color:var(--mu)}
+.drow .dn{flex:1;min-width:0}
+.drow .dn b{display:block;font-size:15px}
+.drow .dn span{display:block;font-size:12px;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.drow button{flex:none;border:1px solid var(--bd);background:var(--bg);border-radius:8px;padding:7px 10px;font-size:13px;font-weight:600}
+.acclaimed{display:flex;flex-wrap:wrap;gap:6px}
+.acclaimed button{border:1px solid var(--bd);background:var(--card);border-radius:999px;padding:6px 12px;font-size:13px}
+.acclaimed button.have{border-color:var(--ok)}
 .hint{grid-column:1/-1;font-size:12px;color:var(--mu);margin-top:-4px}
 #grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:12px}
 .card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
@@ -397,6 +409,9 @@ function demoApi() {
   titles[7].tmdb = 8.0;
   titles.push(Object.assign(T("tv-5", "Frieren", "Series", 2023, ["Animation", "Drama"], 8.9, 100, ["Netflix"], ["Keiichiro Saito"], ["Atsumi Tanezaki"], 1, "Ongoing", "An elf mage reflects on life after her hero party’s quest.", 50), { lang: "ja" }));
   titles.push(T("tv-6", "The Great British Bake Off", "Series", 2010, ["Reality"], 8.6, 100, ["Netflix"], [], ["Noel Fielding"], 15, "Ongoing", "Amateur bakers compete in a tent.", 45));
+  titles.push(T("movie-6", "Interstellar", "Movie", 2014, ["Sci-Fi", "Drama"], 8.7, 73, ["Paramount+"], ["Christopher Nolan"], ["Matthew McConaughey"], 169, null, "Explorers travel through a wormhole.", 60));
+  titles.push(T("movie-7", "The Grand Budapest Hotel", "Movie", 2014, ["Comedy"], 8.1, 92, ["Hulu"], ["Wes Anderson"], ["Ralph Fiennes"], 99, null, "A legendary concierge and his lobby boy.", 30));
+  titles.push(T("movie-8", "Fantastic Mr. Fox", "Movie", 2009, ["Animation", "Comedy"], 7.9, 93, ["Disney+"], ["Wes Anderson"], ["George Clooney"], 87, null, "A fox plans one last heist.", 25));
   titles.push(T("movie-5", "My Octopus Teacher", "Movie", 2020, ["Documentary"], 8.1, 95, ["Netflix"], ["Pippa Ehrlich"], [], 85, null, "A filmmaker befriends an octopus.", 20));
   let signedIn = !!local.get("demo-in", false);
   // demo: you've seen Abbott Elementary up to season 4 (season 5 is out) and Severance season 2 (season 3 announced)
@@ -507,10 +522,10 @@ function syncControls() {
     : k === "onlythem" ? all().filter((t) => onlyThem(t.id)).length
     : k === "watched" ? all().filter((t) => watched(t.id)).length
     : all().filter((t) => S.marks.get(t.id) === "skipped").length;
-  const tabs = [["all", "All matches"], ...(seasonNews().length ? [["seasons", "🆕 New seasons"]] : []), ...(S.partner ? [["together", "👫 Watch together"], ["bothwant", "💞 Want together"]] : []), ["watching", "▶ Watching now"], ["want", "Want to watch"], ...(S.partner ? [["onlyme", "Only you’ve seen"], ["onlythem", `Only ${esc(pName())} has seen`]] : []), ["watched", "Watched"], ["skipped", "Not interested"]];
+  const tabs = [["all", "All matches"], ...(seasonNews().length ? [["seasons", "🆕 New seasons"]] : []), ...(S.partner ? [["together", "👫 Watch together"], ["bothwant", "💞 Want together"]] : []), ["watching", "▶ Watching now"], ["want", "Want to watch"], ["directors", "🎬 Top directors"], ...(S.partner ? [["onlyme", "Only you’ve seen"], ["onlythem", `Only ${esc(pName())} has seen`]] : []), ["watched", "Watched"], ["skipped", "Not interested"]];
   if (F.view === "one") F.view = "onlyme";
   if (!tabs.some(([k]) => k === F.view)) F.view = "all";
-  $("tabs").innerHTML = tabs.map(([k, l]) => `<button class="chip ${F.view === k ? "on" : ""}" data-view="${k}" ${k === "together" ? `title="Only what neither of you has seen, with what you both want first. Uses the filters and section above."` : ""}>${l}${k === "all" || k === "together" ? "" : ` (${count(k)})`}</button>`).join("");
+  $("tabs").innerHTML = tabs.map(([k, l]) => `<button class="chip ${F.view === k ? "on" : ""}" data-view="${k}" ${k === "directors" ? `title="Directors and creators whose titles on your services score best, plus acclaimed directors to explore"` : ""} ${k === "together" ? `title="Only what neither of you has seen, with what you both want first. Uses the filters and section above."` : ""}>${l}${k === "all" || k === "together" || k === "directors" ? "" : ` (${count(k)})`}</button>`).join("");
   $("layout").textContent = F.layout === "list" ? "▦ Cards" : "☰ Compact list";
   const sectionName = { movies: "Movies", series: "Series", anime: "Anime", reality: "Reality & competition", docs: "Documentaries" }[F.cat];
   $("scorehint").textContent = `Score settings are remembered separately for each section (now: ${sectionName}).`;
@@ -676,7 +691,7 @@ function renderSub(note) {
   if (S.me && !note) {
     chip.hidden = false;
     chip.className = "pill" + (S.partner ? " linked" : "");
-    chip.textContent = S.partner ? `👫 Watching with ${pName()}` : "👤 Just you · Link your partner";
+    chip.textContent = S.partner ? `👫 Watching with ${pName()}` : innerWidth < 620 ? "👤 Link your partner" : "👤 Just you · Link your partner";
     chip.title = S.partner ? "See what you share with your partner" : "Link with your partner to track what you’ve both watched";
   }
 }
@@ -685,6 +700,8 @@ function render() {
   const searching = $("q").value.trim() && (F.view === "all" || F.view === "together");
   setTimeout(() => { $("sheetdone").textContent = `Show ${$("grid").querySelectorAll(".card,.rowc").length} results`; });
   $("fsum").innerHTML = searching ? `<b>Filters</b>paused while you search · clear the search box to use them again` : `<b>Filters</b>${esc(filterSummary())}`;
+  if (F.view === "directors") { renderDirectors(); renderPick(); renderSub(); renderAlert(); $("findmore").hidden = true; $("layout").hidden = true; return; }
+  $("layout").hidden = false;
   const list = filtered();
   const k = F.sort, dir = F.desc ? -1 : 1;
   // pinned first: in "Watch together", what you both want; elsewhere, series you're in the middle of
@@ -712,6 +729,53 @@ function render() {
   $("grid").className = compact ? "list" : "";
   $("grid").innerHTML = list.length ? list.map((t) => compact ? (openRow === t.id ? card(t, true) : row(t)) : card(t)).join("") : `<div class="empty">${empty}</div>`;
   renderPick(); renderSub(); renderAlert();
+}
+// ---------------- top directors ----------------
+const ACCLAIMED = ["Akira Kurosawa", "Alfonso Cuarón", "Alfred Hitchcock", "Ang Lee", "Barry Jenkins", "Bong Joon Ho", "Céline Sciamma", "Christopher Nolan",
+  "Damien Chazelle", "David Fincher", "Denis Villeneuve", "Ethan Coen", "Greta Gerwig", "Guillermo del Toro", "Hayao Miyazaki", "Hirokazu Kore-eda",
+  "Jordan Peele", "Joel Coen", "Martin Scorsese", "Park Chan-wook", "Paul Thomas Anderson", "Quentin Tarantino", "Richard Linklater", "Ridley Scott",
+  "Sofia Coppola", "Spike Lee", "Stanley Kubrick", "Steven Spielberg", "Wes Anderson", "Wong Kar-wai", "Yorgos Lanthimos"];
+function directorStats() {
+  const m = new Map();
+  for (const t of all()) for (const d of t.dirs || []) {
+    if (!m.has(d)) m.set(d, []);
+    m.get(d).push(t);
+  }
+  return m;
+}
+function renderDirectors() {
+  const m = directorStats();
+  const avg = (xs) => xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null;
+  const rows = [...m.entries()].map(([name, ts]) => {
+    const im = avg(ts.map((t) => t.imdb ?? t.tmdb).filter((x) => x != null));
+    const rt = avg(ts.map((t) => t.rt).filter((x) => x != null));
+    const best = [...ts].sort((a, b) => imdbOrTmdb(b) - imdbOrTmdb(a))[0];
+    // favour directors with several good titles over one-hit wonders
+    const score = im == null ? 0 : (im * ts.length + 7 * 2) / (ts.length + 2);
+    return { name, ts, im, rt, best, score, unseen: ts.filter((t) => !iSaw(t.id)).length };
+  }).filter((r) => r.ts.length >= 2 && r.im != null).sort((a, b) => b.score - a.score).slice(0, 30);
+  const have = new Set(m.keys());
+  $("status").textContent = "Directors and creators ranked by how their titles on your services score (2+ titles each)";
+  $("grid").className = "";
+  $("grid").innerHTML = `<div class="dirs" style="grid-column:1/-1">
+    ${rows.length ? rows.map((r, i) => `<div class="drow"><div class="rk">${i + 1}</div><div class="dn"><b>${esc(r.name)}</b>
+      <span>${r.ts.length} titles · avg IMDb ${r.im.toFixed(1)}${r.rt != null ? ` · RT ${Math.round(r.rt)}%` : ""}${r.unseen < r.ts.length ? ` · ${r.unseen} you haven’t seen` : ""}</span>
+      <span>Best: ${esc(r.best.title)}${r.best.year ? " (" + r.best.year + ")" : ""}</span></div>
+      <button data-seedir="${esc(r.name)}">See titles</button></div>`).join("") : `<div class="empty">Not enough titles yet. Tap ↻ Sync to fill the catalog.</div>`}
+    <h3>Acclaimed directors to explore</h3>
+    <div class="muted">Green ones already have titles here. Tap any name to see their work; for the others, Watch Finder looks up their films and adds the ones included with your services.</div>
+    <div class="acclaimed">${ACCLAIMED.map((n) => `<button class="${have.has(n) ? "have" : ""}" data-${have.has(n) ? "seedir" : "finddir"}="${esc(n)}">${have.has(n) ? "✓ " : "🔎 "}${esc(n)}</button>`).join("")}</div>
+  </div>`;
+}
+function showDirector(name) {
+  const ts = all().filter((t) => (t.dirs || []).includes(name));
+  const counts = {}; ts.forEach((t) => (counts[categoryOf(t)] = (counts[categoryOf(t)] || 0) + 1));
+  const cat = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+  rememberCatScores();
+  if (cat) { F.cat = cat[0]; useCatScores(); }
+  Object.assign(F, { director: name, view: "all" }); $("q").value = "";
+  saveF(); render(); scrollTo({ top: 0, behavior: "smooth" });
+  toast(`Showing titles by ${name}${ts.length ? "" : ""}. Lower the score filters if some are missing.`);
 }
 function renderAlert() {
   const out = all().filter((t) => newSeason(t)), soon = all().filter((t) => comingSeason(t));
@@ -845,6 +909,16 @@ async function onClick(e) {
   if (b.dataset.season) {
     const id = b.dataset.id, n = +b.dataset.season;
     change(id, { me: true, seen: n }, `Marked season ${n} of ${name(id)} as watched`); return;
+  }
+  if (b.dataset.seedir) { showDirector(b.dataset.seedir); return; }
+  if (b.dataset.finddir) {
+    const n = b.dataset.finddir; b.disabled = true; b.textContent = "Looking up " + n + "…";
+    try {
+      const r = await api.lookup(n, "director"); await reload();
+      if (!r.streaming) { toast(`None of ${r.person || n}’s titles are included free with your services right now.`); render(); }
+      else showDirector(r.person || n);
+    } catch (er) { toast("Lookup failed: " + er.message); render(); }
+    return;
   }
   if (b.dataset.open) { openRow = openRow === b.dataset.open ? null : b.dataset.open; render(); return; }
   if (b.dataset.svcall) { F.svcOn = []; saveF(); render(); return; }
