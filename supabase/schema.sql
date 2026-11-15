@@ -114,13 +114,13 @@ create policy "own and partner views: write" on public.views for all to authenti
   with check (user_id = auth.uid() or public.is_my_partner(user_id));
 
 -- Table permissions
-revoke all on public.titles, public.profiles, public.marks, public.views from anon;
+revoke all on public.titles, public.profiles, public.marks, public.views from anon, authenticated;
 grant select on public.titles to authenticated;
 grant select on public.profiles to authenticated;
 revoke update on public.profiles from authenticated;
 grant update (name) on public.profiles to authenticated;   -- partner links change only through the functions above
 grant select, insert, update, delete on public.marks, public.views to authenticated;
-grant all on public.titles to service_role;
+grant all on public.titles, public.profiles, public.marks, public.views to service_role;
 revoke execute on function public.handle_new_user() from public, anon, authenticated;   -- only the sign-up trigger runs it
 revoke execute on function public.link_partner(text), public.unlink_partner(), public.is_my_partner(uuid) from public, anon;
 grant execute on function public.link_partner(text), public.unlink_partner(), public.is_my_partner(uuid) to authenticated;

@@ -612,6 +612,7 @@ function showSignIn(state) {
       <div class="row" style="justify-content:center"><button class="btn primary" data-act="in">Sign in</button><button class="btn" data-act="up">Create account</button></div>
       <button class="btn" data-act="link" type="button" style="font-weight:500">Email me a sign-in link instead</button>
     </form><div class="err" id="signerr"></div>`);
+  const note = local.get("wf-signin-note", ""); if (note) { $("signerr").textContent = note; local.set("wf-signin-note", ""); }
   const form = $("signin");
   const go = async (act, btn) => {
     const email = $("email").value.trim(), pw = $("pw").value;
@@ -622,7 +623,7 @@ function showSignIn(state) {
     try {
       if (act === "link") { await api.sendLink(email); if (DEMO) return start(); return showSignIn("sent"); }
       const res = act === "in" ? await api.signInPassword(email, pw) : await api.signUp(email, pw);
-      if (res && res.session) return start();
+      if (res && res.session) return DEMO ? start() : location.reload(); // fresh page = one clean connection
       showSignIn("sent"); // sign-up needs email confirmation
     } catch (er) { $("signerr").textContent = friendly(er.message); btn.disabled = false; }
   };
@@ -631,19 +632,29 @@ function showSignIn(state) {
 }
 async function start() {
   try {
-    if (DEMO) api = demoApi();
-    else {
-      const cfg = await fetch("/api/config").then((r) => r.json()).catch(() => ({ ready: false }));
-      if (!cfg.ready) return gate(`<h1>Almost there</h1><p class="muted">The site is running, but its Supabase settings aren’t in Vercel yet (SUPABASE_URL and SUPABASE_ANON_KEY). Add them, redeploy, and reload this page.</p>`);
-      api = await supabaseApi(cfg);
+    if (!api) { // create the connection only once per page
+      if (DEMO) api = demoApi();
+      else {
+        const cfg = await fetch("/api/config").then((r) => r.json()).catch(() => ({ ready: false }));
+        if (!cfg.ready) return gate(`<h1>Almost there</h1><p class="muted">The site is running, but its Supabase settings aren’t in Vercel yet (SUPABASE_URL and SUPABASE_ANON_KEY). Add them, redeploy, and reload this page.</p>`);
+        api = await supabaseApi(cfg);
+        let wasIn = !!(await api.session());
+        api.onAuth((s) => { if (!!s !== wasIn) { wasIn = !!s; location.reload(); } }); // signed in or out in another tab / via email link
+      }
     }
     const session = await api.session();
-    if (!session) { api.onAuth((s) => { if (s) location.reload(); }); return showSignIn(false); }
+    if (!session) return showSignIn();
     $("gate").hidden = true; $("app").hidden = false;
     $("fp").open = local.get("wf-panel-open", innerWidth >= 760);
     renderSub("Loading…");
     await reload();
   } catch (e) {
+    // a stale or rejected sign-in shows up as a permission error: start the sign-in over instead of getting stuck
+    if (/permission denied|jwt|not authorized|session/i.test(e.message || "") && api && !DEMO) {
+      local.set("wf-signin-note", "Your sign-in didn’t stick. Please sign in again.");
+      try { await api.signOut(); } catch {}
+      return showSignIn();
+    }
     gate(`<h1>Something went wrong</h1><p class="muted">${esc(e.message)}</p><button class="btn" onclick="location.reload()">Try again</button>`);
   }
 }
