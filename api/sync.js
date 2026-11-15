@@ -1,0 +1,70 @@
+// POST /api/sync?kind=movie|tv&order=top|new&page=N   — pull one page of titles into the catalog
+// POST /api/sync?mode=stale                            — refresh the oldest titles (ratings, services)
+import { env, json, requireUser, tmdb, providerMap, buildTitle, freshIds, staleIds, saveTitles, deleteTitles, mapLimit } from "../lib/server.js";
+
+const NEEDED = ["SUPABASE_URL", "SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY", "TMDB_TOKEN", "OMDB_KEY"];
+
+export default async function handler(req, res) {
+  try {
+    const missing = NEEDED.filter((k) => !env(k));
+    if (missing.length) return json(res, 500, { error: "The site is missing these settings in Vercel: " + missing.join(", ") });
+    if (!(await requireUser(req))) return json(res, 401, { error: "Please sign in again." });
+
+    const q = req.query || Object.fromEntries(new URL(req.url, "http://x").searchParams);
+    if (q.mode === "stale") return json(res, 200, await refreshStale());
+
+    const kind = q.kind === "tv" ? "tv" : "movie";
+    const order = q.order === "new" ? "new" : "top";
+    const page = Math.max(1, Math.min(20, parseInt(q.page, 10) || 1));
+    const byId = await providerMap(kind);
+    if (!byId.size) return json(res, 500, { error: "Couldn’t match any streaming services on TMDB." });
+
+    const today = new Date().toISOString().slice(0, 10);
+    const p = new URLSearchParams({
+      watch_region: "US",
+      with_watch_providers: [...byId.keys()].join("|"),
+      with_watch_monetization_types: "flatrate|free|ads",
+      include_adult: "false",
+      language: "en-US",
+      page: String(page),
+    });
+    const dateKey = kind === "movie" ? "primary_release_date" : "first_air_date";
+    if (order === "top") {
+      p.set("sort_by", "vote_count.desc");
+      p.set("vote_average.gte", "6.8");
+    } else {
+      p.set("sort_by", dateKey + ".desc");
+      p.set(dateKey + ".lte", today);
+      p.set("vote_count.gte", kind === "movie" ? "60" : "30");
+      p.set("vote_average.gte", "6.5");
+    }
+    const d = await tmdb(`/discover/${kind}?${p}`);
+    const results = d.results || [];
+    const fresh = await freshIds(results.map((r) => `${kind}-${r.id}`));
+    const todo = results.filter((r) => !fresh.has(`${kind}-${r.id}`));
+    const built = await mapLimit(todo, 5, (r) => buildTitle(kind, r.id, byId));
+    const summary = await store(built);
+    return json(res, 200, { page, totalPages: Math.min(d.total_pages || 1, 20), checked: results.length, skippedFresh: fresh.size, ...summary });
+  } catch (e) {
+    return json(res, 500, { error: String(e.message || e) });
+  }
+}
+
+async function store(built) {
+  const keep = built.filter((t) => t && !t.remove && !t.error);
+  const gone = built.filter((t) => t && t.remove).map((t) => t.id);
+  const errors = built.filter((t) => t && t.error).map((t) => t.error);
+  await saveTitles(keep);
+  await deleteTitles(gone);
+  return { saved: keep.length, removed: gone.length, errors: errors.length, firstError: errors[0] || null, ratingsPending: keep.filter((t) => t.needsRatings).length };
+}
+
+async function refreshStale() {
+  const ids = await staleIds(15);
+  const maps = { movie: await providerMap("movie"), tv: await providerMap("tv") };
+  const built = await mapLimit(ids, 5, (id) => {
+    const [kind, num] = id.split("-");
+    return buildTitle(kind, num, maps[kind]);
+  });
+  return { stale: ids.length, ...(await store(built)) };
+}

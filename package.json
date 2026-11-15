@@ -1,0 +1,8 @@
+{
+  "name": "watch-finder",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Find well-rated movies and series included with your streaming subscriptions.",
+  "engines": { "node": ">=18" }
+}
