@@ -17,6 +17,8 @@ body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.55 system-ui,-app
 main{max-width:880px;margin:0 auto;padding:calc(24px + env(safe-area-inset-top,0px)) 16px 64px}
 nav{display:flex;justify-content:space-between;align-items:center;gap:12px}
 .brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit;font-weight:800;font-size:22px;letter-spacing:-.02em}
+.bn{display:flex;flex-direction:column;line-height:1.15}.slogan{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#b9864f;margin-top:3px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .slogan{color:#e3b585}}
 .brand img{border-radius:9px;box-shadow:0 2px 8px rgb(163 63 240 / .25)}
 .grad{background:linear-gradient(90deg,var(--g1),var(--g2));-webkit-background-clip:text;background-clip:text;color:transparent}
 .cta{display:inline-block;background:var(--ac);color:#fff;text-decoration:none;font-weight:700;padding:11px 20px;border-radius:12px;white-space:nowrap}
@@ -47,7 +49,7 @@ footer{margin-top:40px;color:var(--mu);font-size:13px;text-align:center}
 <body>
 <main>
   <nav>
-    <a class="brand" href="/"><img src="/icons/logo.png" alt="" width="36" height="36"><span>Next<span class="grad">Watch</span></span></a>
+    <a class="brand" href="/"><img src="/icons/logo.png" alt="" width="36" height="36"><span class="bn"><span>Next<span class="grad">Watch</span></span><span class="slogan">Instantly watch what’s good</span></span></a>
     <a class="cta" href="/">Open the app</a>
   </nav>
 
