@@ -281,7 +281,7 @@ footer{color:var(--mu);font-size:12px;margin-top:24px}
     <div id="tipsbox"></div>
     <div class="tabs" id="tabs"></div>
     <section id="pick" hidden></section>
-    <div class="statusbar"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><div id="status"></div><button class="chip" id="findmore" hidden></button></div><button class="chip" id="layout" title="Switch between detailed cards and a compact list"></button></div>
+    <div class="statusbar"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><div id="status"></div><span id="findwrap" hidden style="display:inline-flex;gap:4px"><button class="chip" id="findmore"></button><button class="chip" id="clearfind" aria-label="Clear" title="Clear and show everything again">✕</button></span></div><button class="chip" id="layout" title="Switch between detailed cards and a compact list"></button></div>
     <div id="grid"></div>
 
     <footer>
@@ -779,7 +779,7 @@ function render() {
   const searching = $("q").value.trim() && (F.view === "all" || F.view === "together");
   setTimeout(() => { $("sheetdone").textContent = `Show ${$("grid").querySelectorAll(".card,.rowc").length} results`; });
   $("fsum").innerHTML = searching ? `<b>Filters</b>paused while you search · clear the search box to use them again` : `<b>Filters</b>${esc(filterSummary())}`;
-  if (F.view === "directors") { renderDirectors(); renderPick(); renderSub(); renderAlert(); $("findmore").hidden = true; $("layout").hidden = true; return; }
+  if (F.view === "directors") { renderDirectors(); renderPick(); renderSub(); renderAlert(); $("findwrap").hidden = true; $("layout").hidden = true; return; }
   $("layout").hidden = false;
   const list = filtered();
   const k = F.sort, dir = F.desc ? -1 : 1;
@@ -795,6 +795,7 @@ function render() {
   if (F.view === "all" && dq.length >= 2) { fm.hidden = false; fm.dataset.role = "director"; fm.dataset.q = dq; fm.textContent = `🔎 Find more by “${dq}”`; fm.title = "Looks up this director’s or creator’s work and adds whatever is included with your services"; }
   else if (F.view === "all" && q.length >= 3) { fm.hidden = false; fm.dataset.role = "any"; fm.dataset.q = q; fm.textContent = `🔎 Look up “${q}” on your services`; fm.title = "Finds titles, or a person’s films and shows, that aren’t in the list yet"; }
   else fm.hidden = true;
+  $("findwrap").hidden = fm.hidden; fm.hidden = false;
   const inSection = all().filter((t) => categoryOf(t) === F.cat).length;
   if (F.view === "all" && !["movies", "series"].includes(F.cat) && inSection < 15)
     $("status").textContent += ` · only ${inSection} in this section so far. Tap ↻ Sync to pull in more`;
@@ -1070,6 +1071,10 @@ async function onClick(e) {
     case "unlink": if (!confirmUnlink()) return; await api.unlink(); await reload(); renderAccount(); toast("Unlinked"); return;
     case "signout": await api.signOut(); location.reload(); return;
     case "sync": runSync(); return;
+    case "clearfind": {
+      if ($("findmore").dataset.role === "director") F.director = ""; else $("q").value = "";
+      saveF(); render(); return;
+    }
     case "openfilters": $("fp").open = true; return;
     case "tipsok": local.set("wf-tips-done", true); renderTips(); return;
     case "sharepick": {
