@@ -365,7 +365,7 @@ const YT_MODES = [["trending", "🔥 Trending now"], ["alltime", "🏆 All-time 
 const YT_SUBS = { // same keys as YT_TOPICS in api/youtube.js
   history: [["world", "🌍 World"], ["us", "🇺🇸 US history"], ["ancient", "🏛️ Ancient"], ["medieval", "🏰 Medieval"], ["wars", "⚔️ World wars"], ["empires", "👑 Empires"], ["mysteries", "🔍 Mysteries & archaeology"]],
   food: [["streetfood", "🌮 Street food"], ["cooking", "🍳 Cooking"], ["foodtours", "🍜 Food tours"], ["destinations", "🧳 Destinations"], ["wonders", "🏞️ Amazing places"]],
-  soccer: [["highlights", "📺 Latest highlights", 10], ["pl", "🦁 Premier League", 10], ["ucl", "⭐ Champions League", 16], ["transfers", "🔁 Transfer news", 6], ["fpl", "📋 FPL", 9], ["tactics", "🧠 Tactics & analysis"], ["goals", "🥅 Best goals"], ["legends", "🐐 Legends"], ["worldcup", "🏆 World Cup"], ["skills", "✨ Skills"], ["stories", "🎬 Stories & documentaries"]],
+  soccer: [["barca", "🔵🔴 Barcelona", 12], ["lfc", "🔴 Liverpool", 12], ["highlights", "📺 Latest highlights", 10], ["pl", "🦁 Premier League", 10], ["ucl", "⭐ Champions League", 16], ["transfers", "🔁 Transfer news", 6], ["fpl", "📋 FPL", 9], ["tactics", "🧠 Tactics & analysis"], ["goals", "🥅 Best goals"], ["legends", "🐐 Legends"], ["worldcup", "🏆 World Cup"], ["skills", "✨ Skills"], ["stories", "🎬 Stories & documentaries"]],
 };
 const ytMaxAge = (t) => ((YT_SUBS[t.topic] || []).find((x) => x[0] === t.sub) || [])[2]; // e.g. highlights: last 10 days only
 const fmtViews = (n) => n >= 1e9 ? (n / 1e9).toFixed(1).replace(/\.0$/, "") + "B" : n >= 1e6 ? Math.round(n / 1e6) + "M" : n >= 1e3 ? Math.round(n / 1e3) + "K" : String(n || 0);

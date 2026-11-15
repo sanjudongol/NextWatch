@@ -32,6 +32,8 @@ export const YT_TOPICS = {
   } },
   // a third item { days, every } = only videos from the last N days, refreshed every M days (default: all-time, weekly)
   soccer: { label: "Soccer", subs: {
+    barca: ["Barcelona", "FC Barcelona", { days: 10, every: 1 }],
+    lfc: ["Liverpool", "Liverpool FC", { days: 10, every: 1 }],
     highlights: ["Latest highlights", "football highlights", { days: 7, every: 1 }],
     pl: ["Premier League", "premier league highlights", { days: 7, every: 1 }],
     ucl: ["Champions League", "champions league highlights", { days: 14, every: 1 }],
