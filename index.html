@@ -183,7 +183,7 @@ footer{color:var(--mu);font-size:12px;margin-top:24px}
     <div id="alert" hidden></div>
     <div class="tabs" id="tabs"></div>
     <section id="pick" hidden></section>
-    <div class="statusbar"><div id="status"></div><button class="chip" id="layout" title="Switch between detailed cards and a compact list"></button></div>
+    <div class="statusbar"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><div id="status"></div><button class="chip" id="findmore" hidden></button></div><button class="chip" id="layout" title="Switch between detailed cards and a compact list"></button></div>
     <div id="grid"></div>
 
     <footer>
@@ -314,6 +314,13 @@ async function supabaseApi(cfg) {
     async rename(name) { must(await sb.from("profiles").update({ name }).eq("id", S.me.id)); },
     async link(code) { return must(await sb.rpc("link_partner", { code })); },
     async unlink() { must(await sb.rpc("unlink_partner")); },
+    async lookup(q, role) {
+      const token = (await a.session())?.access_token;
+      const r = await fetch("/api/lookup?" + new URLSearchParams({ q, role }), { method: "POST", headers: { Authorization: "Bearer " + token } });
+      const body = await r.json().catch(() => ({ error: "The server didn’t answer properly (" + r.status + ")." }));
+      if (!r.ok) throw new Error(body.error || "Lookup failed");
+      return body;
+    },
     async syncStep(params) {
       const token = (await a.session())?.access_token;
       const r = await fetch("/api/sync?" + new URLSearchParams(params), { method: "POST", headers: { Authorization: "Bearer " + token } });
@@ -369,6 +376,7 @@ function demoApi() {
     async setPassword() {},
     async link(code) { if (code.toUpperCase() !== "SAM123") throw new Error("No one has that code. Check it and try again."); partner = { id: "p", name: "Sam", partner_id: "me" }; return "Sam"; },
     async unlink() { partner = null; },
+    async lookup(q) { await new Promise((r) => setTimeout(r, 300)); return { person: /wes/i.test(q) ? "Wes Anderson" : null, found: 0, streaming: 0, ids: [] }; },
     async syncStep(p) { await new Promise((r) => setTimeout(r, 30)); return { page: +p.page || 1, totalPages: 2, saved: 3 }; },
   };
 }
@@ -485,6 +493,8 @@ function categoryOf(t) {
 function filtered(cats = [F.cat]) {
   const q = $("q").value.trim();
   if (F.view === "want") return all().filter((t) => (S.marks.get(t.id) === "want" || S.pMarks.get(t.id) === "want") && !iSaw(t.id) && matchesSearch(t, q));
+  // searching looks through everything: every section, score, service and mark (filters come back when the box is cleared)
+  if (q && (F.view === "all" || F.view === "together")) return all().filter((t) => matchesSearch(t, q));
   if (F.view === "seasons") return seasonNews().filter((t) => matchesSearch(t, q));
   if (F.view === "watching") return all().filter((t) => isWatching(t.id) && matchesSearch(t, q));
   if (F.view === "one") return all().filter((t) => oneSeen(t.id) && matchesSearch(t, q));
@@ -614,7 +624,8 @@ function renderSub(note) {
 }
 function render() {
   syncControls();
-  $("fsum").innerHTML = `<b>Filters</b>${esc(filterSummary())}`;
+  const searching = $("q").value.trim() && (F.view === "all" || F.view === "together");
+  $("fsum").innerHTML = searching ? `<b>Filters</b>paused while you search · clear the search box to use them again` : `<b>Filters</b>${esc(filterSummary())}`;
   const list = filtered();
   const k = F.sort, dir = F.desc ? -1 : 1;
   // pinned first: in "Watch together", what you both want; elsewhere, series you're in the middle of
@@ -623,7 +634,12 @@ function render() {
   list.sort((x, y) => pri(y) - pri(x) || dir * (sortVal(x, k) - sortVal(y, k)) || imdbOrTmdb(y) - imdbOrTmdb(x));
   const q = $("q").value.trim();
   const noun = F.view === "all" || F.view === "together" ? (list.length === 1 ? "match" : "matches") : (list.length === 1 ? "title" : "titles");
-  $("status").textContent = `${list.length} ${noun}${q ? ` for “${q}”` : ""}`;
+  $("status").textContent = `${list.length} ${noun}${q ? ` for “${q}”` : ""}${q && (F.view === "all" || F.view === "together") ? " in everything (filters paused while you search)" : ""}`;
+  // offer to look beyond the catalog for a director / actor / title
+  const fm = $("findmore"), dq = (F.director || "").trim();
+  if (F.view === "all" && dq.length >= 2) { fm.hidden = false; fm.dataset.role = "director"; fm.dataset.q = dq; fm.textContent = `🔎 Find more by “${dq}”`; fm.title = "Looks up this director’s or creator’s work and adds whatever is included with your services"; }
+  else if (F.view === "all" && q.length >= 3) { fm.hidden = false; fm.dataset.role = "any"; fm.dataset.q = q; fm.textContent = `🔎 Look up “${q}” on your services`; fm.title = "Finds titles, or a person’s films and shows, that aren’t in the list yet"; }
+  else fm.hidden = true;
   const inSection = all().filter((t) => categoryOf(t) === F.cat).length;
   if (F.view === "all" && !["movies", "series"].includes(F.cat) && inSection < 15)
     $("status").textContent += ` · only ${inSection} in this section so far. Tap ↻ Sync to pull in more`;
@@ -820,6 +836,21 @@ async function onClick(e) {
     case "unlink": if (!confirmUnlink()) return; await api.unlink(); await reload(); renderAccount(); toast("Unlinked"); return;
     case "signout": await api.signOut(); location.reload(); return;
     case "sync": runSync(); return;
+    case "findmore": {
+      const role = b.dataset.role, text = b.dataset.q;
+      b.disabled = true; b.textContent = "Looking it up… (up to 30 seconds)";
+      try {
+        const r = await api.lookup(text, role);
+        await reload();
+        if (role === "director" && r.person) { F.director = r.person; saveF(); render(); }
+        const who = r.person || `“${text}”`;
+        if (!r.found) toast(`Couldn’t find anything for ${who}.`);
+        else if (!r.streaming) toast(`Found ${r.found} titles for ${who}, but none are included free with your services right now.`);
+        else toast(`${r.streaming} of ${r.found} titles for ${who} are on your services and are now in the list. Some may be in another section or below your score settings.`);
+      } catch (er) { toast("Lookup failed: " + er.message); render(); }
+      finally { b.disabled = false; }
+      return;
+    }
   }
 }
 function confirmUnlink() { const b = $("unlink"); if (b.dataset.sure) return true; b.dataset.sure = "1"; b.textContent = "Tap again to unlink"; return false; }
