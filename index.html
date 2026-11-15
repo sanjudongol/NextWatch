@@ -59,7 +59,15 @@ select,.fgrid input{font:inherit;color:var(--tx);background:var(--bg);border:1px
 .svc button.free{outline:1px solid var(--ok)}
 .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
 .cats{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;margin-top:12px;background:var(--pill);border-radius:12px;padding:4px}
-.cats button{border:0;background:transparent;border-radius:9px;padding:8px 6px;font-size:14px;font-weight:600;color:var(--mu)}
+.cats button{border:0;background:transparent;border-radius:9px;padding:9px 6px;font-size:14px;font-weight:600;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cats button[data-cat="youtube"].on{color:#c4302b}
+/* YouTube: its sections as tiles, all visible at once */
+.presets.ytmodes{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;overflow:visible}
+.ytmode{border:1px solid var(--bd);background:var(--card);color:var(--tx);border-radius:10px;padding:8px 6px;font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ytmode.on{background:#c4302b;border-color:#c4302b;color:#fff}
+@media (max-width:620px){.presets.ytmodes{grid-template-columns:repeat(3,1fr)}.ytmode{font-size:12.5px;padding:8px 4px}}
+/* wide screens: videos two per row */
+@media (min-width:1000px){body #grid:has(.vid){grid-template-columns:1fr 1fr}#grid .vid{grid-template-columns:200px minmax(0,1fr)}#grid .vid .vthumb{width:200px}#grid .vid .rbtns{grid-column:1/-1;justify-content:flex-start;max-width:none}}
 .cats button.on{background:var(--card);color:var(--tx);box-shadow:0 1px 3px rgba(0,0,0,.12)}
 @media (max-width:620px){.cats{grid-template-columns:repeat(6,1fr)}.cats button{grid-column:span 2}.cats button:nth-child(-n+2){grid-column:span 3}}
 .choose{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;padding:6px 0 4px}
@@ -160,6 +168,7 @@ footer{color:var(--mu);font-size:12px;margin-top:24px}
 .tips{grid-column:1/-1;background:var(--card);border:1px dashed var(--ac);border-radius:12px;padding:12px 14px;font-size:14px;margin-bottom:10px}
 .tips ol{margin:6px 0 8px;padding-left:20px}
 .tips li{margin:3px 0}
+.tipshead{display:flex;justify-content:space-between;align-items:center;gap:8px}.tipshead .btn{padding:5px 12px;font-size:13px}
 .scorechips{grid-column:1/-1;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .scorechips .chip{background:var(--bg)}
 .scorechips .chip.on{background:var(--ac)}
@@ -211,6 +220,9 @@ footer{color:var(--mu);font-size:12px;margin-top:24px}
   .search{margin-top:6px!important}
   .cats{display:flex;overflow-x:auto;scrollbar-width:none;gap:4px;margin-top:8px}
   .cats::-webkit-scrollbar{display:none}
+  .tips{font-size:13px;padding:10px 12px}.tips ol{margin:6px 0 0;padding-left:18px}.tips li{margin:2px 0}
+  #alert{flex-wrap:nowrap}#alert .alert-acts{flex:none}
+  .cats,.presets:not(.ytmodes),#ytsubs,.tabs{-webkit-mask-image:linear-gradient(90deg,#000 88%,transparent);mask-image:linear-gradient(90deg,#000 88%,transparent)}
   .cats button{flex:none;grid-column:auto!important;padding:7px 12px}
   .cats .long{display:none}.cats .short{display:inline}
   .presets{padding-top:8px}
@@ -361,7 +373,7 @@ const DEFAULTS = { imdb: "6.5", rt: "70", mode: "any", type: "", genre: "", dire
 // each section remembers its own score bar; reality TV tends to score lower on IMDb
 const CAT_SCORES = { movies: { imdb: "6.5", rt: "70", mode: "any" }, series: { imdb: "6.5", rt: "70", mode: "any" }, anime: { imdb: "6.5", rt: "70", mode: "any" }, reality: { imdb: "6.5", rt: "70", mode: "any" }, docs: { imdb: "6.5", rt: "70", mode: "any" }, kids: { imdb: "6.5", rt: "70", mode: "any" }, truecrime: { imdb: "6.5", rt: "70", mode: "any" }, youtube: { imdb: "0", rt: "0", mode: "any" } };
 const SCORE_KEYS = ["imdb", "rt", "mode"];
-const YT_MODES = [["trending", "🔥 Trending now"], ["alltime", "🏆 All-time most viewed"], ["history", "📜 History"], ["food", "🍜 Food & travel"], ["soccer", "⚽ Soccer"], ["f1", "🏎️ F1"]];
+const YT_MODES = [["trending", "🔥 Trending now"], ["alltime", "🏆 Most viewed"], ["history", "📜 History"], ["food", "🍜 Food & travel"], ["soccer", "⚽ Soccer"], ["f1", "🏎️ F1"]];
 const YT_SUBS = { // same keys as YT_TOPICS in api/youtube.js
   history: [["world", "🌍 World"], ["us", "🇺🇸 US history"], ["ancient", "🏛️ Ancient"], ["medieval", "🏰 Medieval"], ["wars", "⚔️ World wars"], ["empires", "👑 Empires"], ["mysteries", "🔍 Mysteries & archaeology"]],
   food: [["streetfood", "🌮 Street food"], ["cooking", "🍳 Cooking"], ["foodtours", "🍜 Food tours"], ["destinations", "🧳 Destinations"], ["wonders", "🏞️ Amazing places"]],
@@ -619,7 +631,7 @@ function renderServiceChips() {
 const GROUPS = [
   ["discover", "🔍", "Discover", ["all", "together"]],
   ["ours", "★", "Our list", ["bothwant", "want", "watching", "seasons"]],
-  ["history", "✓", "History", ["watched", "onlyme", "onlythem", "skipped"]],
+  ["history", "✓", "Watched", ["watched", "onlyme", "onlythem", "skipped"]],
   ["directors", "🎬", "Directors", ["directors"]],
 ];
 const groupOf = (v) => (GROUPS.find((g) => g[3].includes(v)) || GROUPS[0])[0];
@@ -638,7 +650,8 @@ function syncControls() {
   renderServiceChips();
   $("dir").textContent = F.desc ? "Highest first ↓" : "Lowest first ↑";
   const SHORT = { movies: "🎬 Movies", series: "📺 Series", anime: "🍥 Anime", reality: "🏆 Reality", docs: "🎥 Docs", truecrime: "🔪 True crime", kids: "🧸 Kids", youtube: "▶️ YouTube" };
-  $("cats").innerHTML = CATS.map(([k, l]) => `<button class="${F.cat === k ? "on" : ""}" data-cat="${k}"><span class="long">${l}</span><span class="short">${SHORT[k]}</span></button>`).join("");
+  $("cats").innerHTML = CATS.map(([k, l]) => `<button class="${F.cat === k ? "on" : ""}" data-cat="${k}" title="${esc(l.replace(/^\S+\s/, ""))}">${SHORT[k]}</button>`).join("");
+  const onCat = $("cats").querySelector(".on"); if (onCat && phone()) { const c = $("cats"), l = onCat.offsetLeft, r = l + onCat.offsetWidth; if (l < c.scrollLeft || r > c.scrollLeft + c.clientWidth) c.scrollLeft = l - 24; }
   const topCat = F.cat === "movies" || F.cat === "series";
 
   $("typebox").hidden = topCat; // the section already picks movies or series
@@ -649,10 +662,12 @@ function syncControls() {
   const nOn = activeFilterCount();
   $("presets").hidden = false;
   const subs = isYt && YT_SUBS[F.ytMode];
-  $("ytsubs").hidden = !subs;
-  $("ytsubs").innerHTML = subs ? [["", "All"], ...subs].map(([k, l]) => `<button class="chip ${(F.ytSub || "") === k ? "on" : ""}" data-ytsub="${k}">${l}</button>`).join("") : "";
-  $("presets").innerHTML = `<button class="chip fchip ${nOn ? "active" : ""}" id="openfilters">⚙︎ Filters${nOn ? ` · ${nOn}` : ""}</button>` + (isYt ? YT_MODES.map(([k, l]) => `<button class="chip ${(F.ytMode || "trending") === k ? "on" : ""}" data-ytmode="${k}">${l}</button>`).join("")
- : !topCat ? "" : PRESETS.map((p, i) => p.only && p.only !== F.cat ? "" : `<button class="chip ${F.preset === i ? "on" : ""}" data-preset="${i}">${p.name}</button>`).join(""));
+  const fchip = `<button class="chip fchip ${nOn ? "active" : ""}" id="openfilters">⚙︎ Filters${nOn ? ` · ${nOn}` : ""}</button>`;
+  $("ytsubs").hidden = !isYt;
+  $("ytsubs").innerHTML = !isYt ? "" : fchip + (subs ? [["", "All"], ...subs].map(([k, l]) => `<button class="chip ${(F.ytSub || "") === k ? "on" : ""}" data-ytsub="${k}">${l}</button>`).join("") : "");
+  $("presets").classList.toggle("ytmodes", isYt);
+  $("presets").innerHTML = isYt ? YT_MODES.map(([k, l]) => `<button class="ytmode ${(F.ytMode || "trending") === k ? "on" : ""}" data-ytmode="${k}">${l}</button>`).join("")
+ : fchip + (!topCat ? "" : PRESETS.map((p, i) => p.only && p.only !== F.cat ? "" : `<button class="chip ${F.preset === i ? "on" : ""}" data-preset="${i}">${p.name}</button>`).join(""));
   const sp = SCORE_PRESETS.find(([, im, rt]) => F.imdb === im && F.rt === rt);
   $("scorechips").innerHTML = `<span class="muted">Scores:</span>` + SCORE_PRESETS.map(([l, im, rt]) => `<button type="button" class="chip ${sp && sp[1] === im ? "on" : ""}" data-score="${im}|${rt}">${l}</button>`).join("");
   const count = (k) => k === "want" ? all().filter((t) => (S.marks.get(t.id) === "want" || S.pMarks.get(t.id) === "want") && !iSaw(t.id)).length
@@ -667,7 +682,8 @@ function syncControls() {
   if (F.view === "one") F.view = "onlyme";
   if (!tabs.some(([k]) => k === F.view)) F.view = "all";
   // phones: the bottom bar picks the group, and only that group's tabs show here
-  const shown = phone() ? tabs.filter(([k]) => groupOf(k) === groupOf(F.view)) : tabs;
+  const notYt = ["seasons", "watching", "directors"]; // not about videos
+  const shown = (phone() ? tabs.filter(([k]) => groupOf(k) === groupOf(F.view)) : tabs).filter(([k]) => F.cat !== "youtube" || !notYt.includes(k) || F.view === k);
   renderNav(tabs, count);
   $("tabs").innerHTML = (shown.length < 2 && phone() ? [] : shown).map(([k, l]) => `<button class="chip ${F.view === k ? "on" : ""}" data-view="${k}" ${k === "directors" ? `title="Directors and creators whose titles on your services score best, plus acclaimed directors to explore"` : ""} ${k === "together" ? `title="Only what neither of you has seen, with what you both want first. Uses the filters and section above."` : ""}>${l}${k === "all" || k === "together" || k === "directors" ? "" : ` (${count(k)})`}</button>`).join("");
   $("layout").textContent = F.layout === "list" ? "▦ Cards" : "☰ Compact list";
@@ -818,7 +834,7 @@ function vid(t) {
   <div class="rbtns">
     ${btn('data-seen="me"', iSaw(id), "", `${iSaw(id) ? "✓" : "○"} ${S.partner ? "Me" : "Seen"}`, S.partner ? "I watched" : "Watched")}
     ${S.partner ? btn('data-seen="partner"', theySaw(id), "", `${theySaw(id) ? "✓" : "○"} ${esc(pName())}`, `${pName()} watched`) : ""}
-    ${btn('data-mark="want"', mk === "want", "mk-want", "★ Want", "Want to watch")}
+    ${btn('data-mark="want"', mk === "want", "mk-want", "★ Later", "Save for later")}
     ${btn('data-mark="skipped"', mk === "skipped", "mk-skipped", "✕", "Not interested")}
     <a class="rb ytgo" ${ext} title="Open on YouTube">▶ Watch</a>
   </div>
@@ -861,7 +877,8 @@ function buildRanks() { byId = new Map(all().map((t) => [t.id, t])); rankMap = n
 const rank = (t) => rankMap.get(t.id) || "—";
 
 function renderSub(note) {
-  const when = S.lastUpdated ? new Date(S.lastUpdated).toLocaleDateString() : "never";
+  const days = S.lastUpdated ? Math.round((new Date().setHours(0, 0, 0, 0) - new Date(S.lastUpdated).setHours(0, 0, 0, 0)) / 864e5) : null;
+  const when = days == null ? "never" : days === 0 ? "today" : days === 1 ? "yesterday" : new Date(S.lastUpdated).toLocaleDateString(undefined, { month: "short", day: "numeric" });
   if (note) $("sub").textContent = note;
   else $("sub").innerHTML = `${all().length} titles · synced ${esc(when)}<span class="nophone"> (refreshes nightly) · signed in as ${esc(S.me?.name || "you")}</span>`;
   const chip = $("partnerChip");
@@ -1080,23 +1097,23 @@ function showDirector(name) {
 function renderTips() {
   const box = $("tipsbox");
   if (local.get("wf-tips-done", false) || !S.me) { box.innerHTML = ""; return; }
-  box.innerHTML = `<div class="tips"><b>👋 Quick tips</b><ol>
-    <li><b>Pick a section</b> at the top (Movies, Series, Anime, Reality, Docs, True crime, Kids), or search for anything.</li>
+  box.innerHTML = `<div class="tips"><div class="tipshead"><b>👋 Quick tips</b><button class="btn" id="tipsok">Got it</button></div><ol>
+    <li><b>Pick a section</b> at the top, or search for anything. <b>▶️ YouTube</b> has History, Food & travel, Soccer and F1 inside.</li>
     <li><b>Mark titles:</b> tap ○ Seen, ★ Want or ✕ Not interested.${"ontouchstart" in window ? " On your phone you can also <b>swipe right</b> for Seen and <b>swipe left</b> for Not interested." : ""}</li>
     <li><b>↻ Sync</b> refreshes the catalog. It also updates by itself every night.</li>
-  </ol><button class="btn" id="tipsok">Got it</button></div>`;
+  </ol></div>`;
 }
 function renderAlert() {
   const out = all().filter((t) => newSeason(t)), soon = all().filter((t) => comingSeason(t));
   const el = $("alert");
   const sig = [...out.map((t) => t.id + ":" + newSeason(t)), ...soon.map((t) => t.id + ":" + comingSeason(t).season)].sort().join(",");
   el.dataset.sig = sig;
-  if (!out.length && !soon.length || F.view === "seasons" || local.get("wf-alert-off", "") === sig) { el.hidden = true; return; }
+  if (!out.length && !soon.length || F.view === "seasons" || F.cat === "youtube" || local.get("wf-alert-off", "") === sig) { el.hidden = true; return; }
   const names = (list, f) => list.slice(0, 3).map(f).join(", ") + (list.length > 3 ? ` and ${list.length - 3} more` : "");
   const parts = [];
   if (out.length) parts.push(`<b>🆕 New season out:</b> ${esc(names(out, (t) => `${t.title} (season ${newSeason(t)})`))}`);
   if (soon.length) parts.push(`<b>📅 Coming:</b> ${esc(names(soon, (t) => `${t.title} (season ${comingSeason(t).season}${comingSeason(t).date ? ", " + fmtDate(comingSeason(t).date) : ""})`))}`);
-  const slim = [out.length ? `🆕 ${out.length} new season${out.length > 1 ? "s" : ""} out` : "", soon.length ? `📅 ${soon.length} coming` : ""].filter(Boolean).join(" · ");
+  const slim = [out.length ? `🆕 ${out.length} new season${out.length > 1 ? "s" : ""}` : "", soon.length ? `📅 ${soon.length} soon` : ""].filter(Boolean).join(" · ");
   el.innerHTML = `<div><span class="alert-full">${parts.join("<br>")}</span><span class="alert-slim">${slim}</span></div><div class="alert-acts"><button data-view="seasons">See them</button><button id="alertclose" class="alert-x" title="Dismiss" aria-label="Dismiss">✕</button></div>`;
   el.hidden = false;
 }
@@ -1230,8 +1247,8 @@ async function onClick(e) {
     saveF(); render(); scrollTo({ top: 0 }); return;
   }
   if (b.dataset.moodex) { runMood(b.dataset.moodex); return; }
-  if (b.dataset.ytsub != null) { F.ytSub = b.dataset.ytsub; saveF(); render(); return; }
-  if (b.dataset.ytmode) { F.ytMode = b.dataset.ytmode; F.ytSub = ""; F.view = F.view === "together" ? "together" : "all"; saveF(); render(); return; }
+  if (b.dataset.ytsub != null) { F.ytSub = b.dataset.ytsub; F.ytSubs = { ...(F.ytSubs || {}), [F.ytMode]: F.ytSub }; saveF(); render(); return; }
+  if (b.dataset.ytmode) { F.ytMode = b.dataset.ytmode; F.ytSub = (F.ytSubs || {})[F.ytMode] || ""; F.view = F.view === "together" ? "together" : "all"; saveF(); render(); return; }
   if (b.dataset.score) {
     const [im, rt] = b.dataset.score.split("|");
     Object.assign(F, { imdb: im, rt, preset: F.preset }); rememberCatScores(); saveF(); render(); return;
