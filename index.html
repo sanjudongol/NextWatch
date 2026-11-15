@@ -701,6 +701,7 @@ if (!local.get("wf-scores-v2", false)) { F.byCat = {}; Object.assign(F, { imdb: 
 if (!local.get("wf-ui-v3", false)) { local.set("wf-panel-open", false); local.set("wf-ui-v3", true); }
 if (!local.get("wf-phone-v1", false)) { if (innerWidth < 620) F.layout = "list"; local.set("wf-phone-v1", true); local.set("wf-filters", F); }
 delete F.svcOff;
+if (!local.get("wf-person-v1", false)) { F.director = ""; local.set("wf-person-v1", true); local.set("wf-filters", F); } // old "See titles" left a director filter on
 if (F.cat === "main" || !F.cat) { // "Movies & series" became two sections
   if (F.byCat && F.byCat.main) { F.byCat.movies = F.byCat.series = F.byCat.main; delete F.byCat.main; }
   F.cat = F.type === "Series" ? "series" : "movies"; F.type = "";
@@ -974,17 +975,20 @@ function syncControls() {
     : k === "bothwant" ? all().filter((t) => bothWant(t.id)).length
     : k === "onlyme" ? all().filter((t) => onlyMe(t.id)).length
     : k === "onlythem" ? all().filter((t) => onlyThem(t.id)).length
+    : k === "person" ? all().filter((t) => byPerson(t, F.person)).length
     : k === "faves" ? all().filter((t) => S.pRate.get(t.id)).length
     : k === "watched" ? all().filter((t) => watched(t.id)).length
     : all().filter((t) => S.marks.get(t.id) === "skipped").length;
   const tabs = [["all", "All matches"], ...(seasonNews().length ? [["seasons", "New seasons"]] : []), ...(S.partner ? [["together", "Watch together"]] : []), ["mine", "My list"], ["want", "Our list"], ["watching", "Watching now"], ["directors", "Top directors"], ...(S.partner ? [["onlyme", "Only you’ve seen"], ["onlythem", `Only ${esc(pName())} has seen`]] : []), ["watched", "Watched"], ...(S.partner ? [["faves", `${esc(pName())}’s favorites`]] : []), ["skipped", "Not interested"]];
+  if (F.view !== "person") F.person = "";
+  if (F.person) tabs.splice(1, 0, ["person", esc(F.person)]);
   if (F.view === "one") F.view = "onlyme";
   if (!tabs.some(([k]) => k === F.view)) F.view = "all";
   // phones: the bottom bar picks the group, and only that group's tabs show here
   const notYt = ["seasons", "watching", "directors"]; // not about videos
   const shown = (grouped() ? tabs.filter(([k]) => groupOf(k) === groupOf(F.view)) : tabs).filter(([k]) => F.cat !== "youtube" || !notYt.includes(k) || F.view === k);
   renderNav(tabs, count);
-  const SEG = { all: "All", together: "Together", mine: "My list", want: "Our list", watching: "Watching", seasons: "New", watched: "Watched", onlyme: "Only me", onlythem: `Only ${pName()}`, faves: "Faves", skipped: "Skipped" };
+  const SEG = { all: "All", together: "Together", mine: "My list", want: "Our list", watching: "Watching", seasons: "New", watched: "Watched", onlyme: "Only me", onlythem: `Only ${pName()}`, faves: "Faves", skipped: "Skipped", person: F.person || "" };
   const seg = grouped() && shown.length >= 2;
   $("tabs").className = seg ? "tabs seg" : "tabs";
   if (seg) { $("tabs").innerHTML = shown.map(([k]) => `<button class="chip ${F.view === k ? "on" : ""}" data-view="${k}">${esc(SEG[k] || k)}</button>`).join(""); }
@@ -1043,6 +1047,7 @@ function filteredAll(cats = [F.cat]) {
   if (F.view === "watching") return all().filter((t) => isWatching(t.id) && matchesSearch(t, q));
   if (F.view === "onlyme") return all().filter((t) => onlyMe(t.id) && matchesSearch(t, q));
   if (F.view === "onlythem") return all().filter((t) => onlyThem(t.id) && matchesSearch(t, q));
+  if (F.view === "person") return all().filter((t) => byPerson(t, F.person) && matchesSearch(t, q));
   if (F.view === "faves") return all().filter((t) => S.pRate.get(t.id) && matchesSearch(t, q));
   if (F.view === "watched") return all().filter((t) => watched(t.id) && matchesSearch(t, q));
   if (F.view === "skipped") return all().filter((t) => S.marks.get(t.id) === "skipped" && matchesSearch(t, q));
@@ -1236,7 +1241,7 @@ function render() {
   else list.sort((x, y) => pri(y) - pri(x) || dir * (sortVal(x, k) - sortVal(y, k)) || imdbOrTmdb(y) - imdbOrTmdb(x));
   const q = $("q").value.trim();
   const noun = F.view === "all" || F.view === "together" ? (list.length === 1 ? "match" : "matches") : (list.length === 1 ? "title" : "titles");
-  $("status").textContent = `${list.length} ${noun}${q ? ` for “${q}”` : ""}${q && (F.view === "all" || F.view === "together") ? " in everything (filters paused while you search)" : ""}`;
+  $("status").textContent = `${list.length} ${noun}${F.view === "person" ? ` with ${F.person} on your services, any section or score` : ""}${q ? ` for “${q}”` : ""}${q && (F.view === "all" || F.view === "together") ? " in everything (filters paused while you search)" : ""}`;
   // offer to look beyond the catalog for a director / actor / title
   const fm = $("findmore"), dq = (F.director || "").trim();
   if (F.view === "all" && dq.length >= 2) { fm.hidden = false; fm.dataset.role = "director"; fm.dataset.q = dq; fm.textContent = `Find more by “${dq}”`; fm.title = "Looks up this director’s or creator’s work and adds whatever is included with your services"; }
@@ -1481,16 +1486,17 @@ function renderDirectors() {
     <div class="acclaimed">${ACCLAIMED.map((n) => `<button class="${have.has(n) ? "have" : ""}" data-${have.has(n) ? "seedir" : "finddir"}="${esc(n)}">${have.has(n) ? "✓ " : ""}${esc(n)}</button>`).join("")}</div>
   </div>`;
 }
-function showDirector(name) {
-  const ts = all().filter((t) => (t.dirs || []).includes(name));
+const byPerson = (t, n) => t.kind !== "yt" && ((t.dirs || []).includes(n) || (t.cast || []).includes(n));
+function showPerson(name) { // every title by this director or actor on your services: all sections, any score
+  const ts = all().filter((t) => byPerson(t, name));
   const counts = {}; ts.forEach((t) => (counts[categoryOf(t)] = (counts[categoryOf(t)] || 0) + 1));
   const cat = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
-  rememberCatScores();
-  if (cat) { F.cat = cat[0]; useCatScores(); }
-  Object.assign(F, { director: name, view: "all" }); $("q").value = "";
+  if (cat && F.cat === "youtube") { rememberCatScores(); F.cat = cat[0]; useCatScores(); }
+  Object.assign(F, { person: name, view: "person" }); $("q").value = ""; openRow = null;
+  if (page !== "home") showPage("home");
   saveF(); render(); scrollTo({ top: 0, behavior: "smooth" });
-  toast(`Showing titles by ${name}${ts.length ? "" : ""}. Lower the score filters if some are missing.`);
 }
+function showDirector(name) { showPerson(name); }
 function renderTips() {
   const box = $("tipsbox");
   if (local.get("wf-tips-done", false) || !S.me) { box.innerHTML = ""; return; }
@@ -1711,7 +1717,7 @@ async function onClick(e) {
     try {
       const r = await api.lookup(n, "director"); await reload();
       if (!r.streaming) { toast(`None of ${r.person || n}’s titles are included free with your services right now.`); render(); }
-      else showDirector(r.person || n);
+      else { showPerson(r.person || n); toast(`${r.streaming} of ${r.found} titles for ${r.person || n} are on your services. They’re all listed here.`); }
     } catch (er) { toast("Lookup failed: " + er.message); render(); }
     return;
   }
@@ -1726,8 +1732,8 @@ async function onClick(e) {
   if (b.dataset.smin) { surpriseMin = b.dataset.smin; local.set("wf-surprise-min", surpriseMin); if (page === "mood") { if (moodRes) moodRes.picks = moodPicks(moodRes.want); renderMood(); return; } if (pickId) { pickId = null; surprise(); } else renderPick(); return; }
   if (b.dataset.pick != null) { pickType = b.dataset.pick; surprise(); return; }
   if (b.dataset.view) { F.view = b.dataset.view; saveF(); render(); return; }
-  if (b.dataset.dirpick) { Object.assign(F, { director: b.dataset.dirpick, view: "all" }); saveF(); render(); scrollTo({ top: 0, behavior: "smooth" }); toast(`Showing titles by ${b.dataset.dirpick}`); return; }
-  if (b.dataset.actor) { $("q").value = b.dataset.actor; F.view = "all"; saveF(); render(); scrollTo({ top: 0, behavior: "smooth" }); return; }
+  if (b.dataset.dirpick) { showPerson(b.dataset.dirpick); return; }
+  if (b.dataset.actor) { showPerson(b.dataset.actor); return; }
   switch (b.id) {
     case "dir": F.desc = !F.desc; saveF(); render(); return;
     case "reset": {
@@ -1793,11 +1799,10 @@ async function onClick(e) {
       try {
         const r = await api.lookup(text, role);
         await reload();
-        if (role === "director" && r.person) { F.director = r.person; saveF(); render(); }
         const who = r.person || `“${text}”`;
         if (!r.found) toast(`Couldn’t find anything for ${who}.`);
         else if (!r.streaming) toast(`Found ${r.found} titles for ${who}, but none are included free with your services right now.`);
-        else toast(`${r.streaming} of ${r.found} titles for ${who} are on your services and are now in the list. Some may be in another section or below your score settings.`);
+        else { if (r.person) showPerson(r.person); toast(`${r.streaming} of ${r.found} titles for ${who} are on your services. They’re all listed here.`); }
       } catch (er) { toast("Lookup failed: " + er.message); render(); }
       finally { b.disabled = false; }
       return;
