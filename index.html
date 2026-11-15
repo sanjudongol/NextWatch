@@ -826,7 +826,7 @@ function demoApi() {
     async signOut() { signedIn = false; local.set("demo-in", false); },
     async load() {
       return { titles, me: { id: "me", name: "You", invite_code: "AB12CD", partner_id: partner && "p" }, partner, lastUpdated: new Date().toISOString(),
-        marks: new Map(db.marks), pMarks: new Map([["tv-3", "want"], ["tv-1", "watching"]].filter(() => partner)), pSkip: new Set(partner ? ["movie-4"] : []), views: new Set(db.views.get("me")), pViews: new Set(partner ? db.views.get("p") : []), seen: new Map(db.seen), pSeen: new Map(), rate: new Map(db.rate), pRate: new Map(partner ? [["tv-3", 1]] : []) };
+        marks: new Map(db.marks), pMarks: new Map([["tv-3", "want"], ["tv-1", "watching"]].filter(() => partner)), pSkip: new Set(partner ? ["movie-4"] : []), views: new Set(db.views.get("me")), pViews: new Set(partner ? db.views.get("p") : []), seen: new Map(db.seen), pSeen: new Map(), rate: new Map(db.rate), pRate: new Map(partner ? [["tv-3", 1], ["movie-2", 2], ["movie-6", 1]] : []) };
     },
     async setMark(t, s) { s ? db.marks.set(t, s) : db.marks.delete(t); },
     async setView(u, t, on, n, r) { const k = u === "me" ? "me" : "p"; on ? db.views.get(k).add(t) : db.views.get(k).delete(t); if (k === "me") { on && n != null ? db.seen.set(t, n) : db.seen.delete(t); if (!on) db.rate.delete(t); else if (r !== undefined) r ? db.rate.set(t, r) : db.rate.delete(t); } },
@@ -904,7 +904,7 @@ const ICO = {home: `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><pat
 const GROUPS = [
   ["discover", "home", "Home", ["all", "together"]],
   ["ours", "star", "Lists", ["mine", "want", "watching", "seasons", "bothwant"]],
-  ["history", "check", "Watched", ["watched", "onlyme", "onlythem", "skipped"]],
+  ["history", "check", "Watched", ["watched", "faves", "onlyme", "onlythem", "skipped"]],
   ["directors", "film", "Directors", ["directors"]],
 ];
 const groupOf = (v) => (GROUPS.find((g) => g[3].includes(v)) || GROUPS[0])[0];
@@ -959,16 +959,17 @@ function syncControls() {
     : k === "bothwant" ? all().filter((t) => bothWant(t.id)).length
     : k === "onlyme" ? all().filter((t) => onlyMe(t.id)).length
     : k === "onlythem" ? all().filter((t) => onlyThem(t.id)).length
+    : k === "faves" ? all().filter((t) => S.pRate.get(t.id)).length
     : k === "watched" ? all().filter((t) => watched(t.id)).length
     : all().filter((t) => S.marks.get(t.id) === "skipped").length;
-  const tabs = [["all", "All matches"], ...(seasonNews().length ? [["seasons", "New seasons"]] : []), ...(S.partner ? [["together", "Watch together"]] : []), ["mine", "My list"], ["want", "Our list"], ["watching", "Watching now"], ["directors", "Top directors"], ...(S.partner ? [["onlyme", "Only you’ve seen"], ["onlythem", `Only ${esc(pName())} has seen`]] : []), ["watched", "Watched"], ["skipped", "Not interested"]];
+  const tabs = [["all", "All matches"], ...(seasonNews().length ? [["seasons", "New seasons"]] : []), ...(S.partner ? [["together", "Watch together"]] : []), ["mine", "My list"], ["want", "Our list"], ["watching", "Watching now"], ["directors", "Top directors"], ...(S.partner ? [["onlyme", "Only you’ve seen"], ["onlythem", `Only ${esc(pName())} has seen`]] : []), ["watched", "Watched"], ...(S.partner ? [["faves", `${esc(pName())}’s favorites`]] : []), ["skipped", "Not interested"]];
   if (F.view === "one") F.view = "onlyme";
   if (!tabs.some(([k]) => k === F.view)) F.view = "all";
   // phones: the bottom bar picks the group, and only that group's tabs show here
   const notYt = ["seasons", "watching", "directors"]; // not about videos
   const shown = (grouped() ? tabs.filter(([k]) => groupOf(k) === groupOf(F.view)) : tabs).filter(([k]) => F.cat !== "youtube" || !notYt.includes(k) || F.view === k);
   renderNav(tabs, count);
-  const SEG = { all: "All", together: "Together", mine: "My list", want: "Our list", watching: "Watching", seasons: "New", watched: "Watched", onlyme: "Only me", onlythem: `Only ${pName()}`, skipped: "Skipped" };
+  const SEG = { all: "All", together: "Together", mine: "My list", want: "Our list", watching: "Watching", seasons: "New", watched: "Watched", onlyme: "Only me", onlythem: `Only ${pName()}`, faves: "Faves", skipped: "Skipped" };
   const seg = grouped() && shown.length >= 2;
   $("tabs").className = seg ? "tabs seg" : "tabs";
   if (seg) { $("tabs").innerHTML = shown.map(([k]) => `<button class="chip ${F.view === k ? "on" : ""}" data-view="${k}">${esc(SEG[k] || k)}</button>`).join(""); }
@@ -1027,6 +1028,7 @@ function filteredAll(cats = [F.cat]) {
   if (F.view === "watching") return all().filter((t) => isWatching(t.id) && matchesSearch(t, q));
   if (F.view === "onlyme") return all().filter((t) => onlyMe(t.id) && matchesSearch(t, q));
   if (F.view === "onlythem") return all().filter((t) => onlyThem(t.id) && matchesSearch(t, q));
+  if (F.view === "faves") return all().filter((t) => S.pRate.get(t.id) && matchesSearch(t, q));
   if (F.view === "watched") return all().filter((t) => watched(t.id) && matchesSearch(t, q));
   if (F.view === "skipped") return all().filter((t) => S.marks.get(t.id) === "skipped" && matchesSearch(t, q));
   if (cats.length === 1 && cats[0] === "youtube") {
@@ -1113,8 +1115,8 @@ function row(t) {
     ${ns ? btn(`data-season="${ns}"`, false, "", `✓ Seen S${ns}`, `I’ve watched season ${ns}`) : ""}
     ${btn('data-seen="me"', iSaw(id), "", `${iSaw(id) ? "✓ " : ""}${S.partner ? "Me" : "Seen"}`, S.partner ? "I watched" : "Watched")}
     ${S.partner ? btn('data-seen="partner"', theySaw(id), "", `${theySaw(id) ? "✓ " : ""}${esc(pName())}`, `${pName()} watched`) : ""}
-    ${iSaw(id) ? btn('data-rate="cycle"', !!S.rate.get(id), "mk-like", ["Like", "Liked", "Loved"][S.rate.get(id) || 0], "Tap to go Like → Loved → no rating") : ""}
-    ${btn('data-mark="want"', mk === "want", "mk-want", "Want", "Want to watch")}
+    ${iSaw(id) ? btn('data-rate="1"', S.rate.get(id) === 1, "mk-like", S.rate.get(id) === 1 ? "✓ Liked" : "Liked", "Liked it") + btn('data-rate="2"', S.rate.get(id) === 2, "mk-like", S.rate.get(id) === 2 ? "✓ Loved" : "Loved", "Loved it")
+      : btn('data-mark="want"', mk === "want", "mk-want", "Want", "Want to watch")}
     ${t.type === "Series" ? btn('data-mark="watching"', mk === "watching", "mk-watching", "Watching", "Watching now: keeps it at the top until you finish") : ""}
     ${btn('data-mark="skipped"', mk === "skipped", "mk-skipped", "✕", "Not interested")}
   </div>
@@ -1207,7 +1209,8 @@ function render() {
   $("dir").hidden = F.sort === "newest"; // already newest → oldest
   // pinned first: in "Watch together", what you both want; elsewhere, series you're in the middle of
   const pri = (t) => F.view === "together" ? wantCount(t.id) : F.view === "seasons" ? (newSeason(t) ? 1 : 0)
-    : F.view === "want" ? (bothWant(t.id) ? 3 : 0) + (newSeason(t) ? 2 : isWatching(t.id) ? 1 : 0) : F.view === "all" || F.view === "mine" ? (newSeason(t) ? 2 : isWatching(t.id) ? 1 : 0) : 0;
+    : F.view === "want" ? (bothWant(t.id) ? 3 : 0) + (newSeason(t) ? 2 : isWatching(t.id) ? 1 : 0) : F.view === "all" || F.view === "mine" ? (newSeason(t) ? 2 : isWatching(t.id) ? 1 : 0)
+    : F.view === "faves" ? (iSaw(t.id) ? 0 : 2) + (S.pRate.get(t.id) === 2 ? 1 : 0) : 0;
   const newest = F.cat === "youtube" && (F.ytSub ? ((YT_SUBS[F.ytMode] || []).find((x) => x[0] === F.ytSub) || [])[2] : ["soccer", "f1"].includes(F.ytMode)); // "latest" tabs and sports: newest first
   const sq = $("q").value.trim().toLowerCase();
   const hit = (t) => { const ti = (t.title || "").toLowerCase(); return ti === sq ? 3 : ti.startsWith(sq) ? 2 : ti.includes(sq) ? 1 : 0; };
@@ -1232,6 +1235,7 @@ function render() {
   if (F.view === "want") empty = S.partner ? `Nothing on your shared list yet. Anything you or ${esc(pName())} tap Want on shows up here, with what you both want first.` : `<b>Our list</b> is what you and your partner both want to watch, in one place.<br><br><button class="btn primary" id="emptylink">Link your partner</button>`;
   if (F.view === "bothwant") empty = `Nothing you both want yet. When you and ${esc(pName())} both tap “Want to watch” on a title, it shows up here.`;
   if (F.view === "seasons") empty = "No new or upcoming seasons for series you’ve watched.";
+  if (F.view === "faves") empty = `Nothing here yet. When ${esc(pName())} taps Liked it or Loved it on something, it shows up here, with what you haven’t seen first.`;
   if (F.view === "watching") empty = "Nothing in progress. On a series, tap “Watching now” to keep it here until you finish.";
   if (F.view === "all" && F.cat === "youtube") empty = !S.ytOn ? "YouTube isn’t switched on yet: the site needs a YouTube key in Vercel (YOUTUBE_KEY). Once it’s added, tap Sync." : "No videos here yet. Tap Sync to load them.";
   else if (F.view === "all") empty = all().length ? "Nothing matches these filters. Try lowering a score, widening the dates, or tapping Reset filters." : "No titles yet. Tap Sync to pull in the catalog — the first sync takes a minute or two.";
@@ -1258,6 +1262,10 @@ function shelfRows(list) {
     const base = seen[daySeed(F.cat + "b") % seen.length], g = new Set(gl(base)), d = new Set(base.dirs || []);
     const sim = (t) => (t.dirs || []).filter((x) => d.has(x)).length * 3 + gl(t).filter((x) => g.has(x)).length;
     add(`Because you watched ${base.title}`, list.filter((t) => sim(t) >= 2).sort((a, b) => sim(b) - sim(a) || q(b) - q(a)));
+  }
+  if (S.partner) { // what your partner liked or loved that you haven't seen yet
+    const pr = (t) => S.pRate.get(t.id) || 0;
+    add(`${pName()}’s favorites`, list.filter((t) => pr(t)).sort((a, b) => pr(b) - pr(a) || q(b) - q(a)), 1);
   }
   const yr = new Date().getFullYear();
   add("New and well rated", byQ.filter((t) => t.year >= yr - 1));
