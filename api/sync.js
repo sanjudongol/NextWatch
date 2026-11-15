@@ -25,7 +25,7 @@ export async function syncPage(q) {
     const kind = q.kind === "tv" ? "tv" : "movie";
     const order = q.order === "new" ? "new" : "top";
     const page = Math.max(1, Math.min(20, parseInt(q.page, 10) || 1));
-    const genre = /^\d{1,6}(\|\d{1,6})*$/.test(q.genre || "") ? q.genre : "";  // e.g. 10764 = Reality, 99 = Documentary, 16 = Animation
+    const genre = /^\d{1,6}([|,]\d{1,6})*$/.test(q.genre || "") ? q.genre : "";  // "|" = any of, "," = all of (99,80 = true crime)  // e.g. 10764 = Reality, 99 = Documentary, 16 = Animation
     const lang = /^[a-z]{2}$/.test(q.lang || "") ? q.lang : "";
     const byId = await providerMap(kind);
     if (!byId.size) throw new Error("Couldn’t match any streaming services on TMDB.");
