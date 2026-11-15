@@ -360,7 +360,7 @@ body.noscroll{overflow:hidden}
         <label>Released<select id="recent"><option value="0">Any time</option><option value="1">This year &amp; last</option><option value="2">Last 2 years</option><option value="5">Last 5 years</option><option value="10">Last 10 years</option><option value="20">Last 20 years</option><option value="30">Last 30 years</option><option value="40">Last 40 years</option><option value="50">Last 50 years</option></select></label>
         <label id="lenbox">Movie length<select id="runtime"><option value="0">Any length</option><option value="90">Under 1½ hours</option><option value="120">Under 2 hours</option><option value="150">Under 2½ hours</option></select></label>
         <label id="statusbox">Series status<select id="status2"><option value="">Any</option><option value="Ongoing">Still airing</option><option value="done">Finished</option></select></label>
-        <label>Sort by<select id="sort"><option value="imdb">IMDb</option><option value="rt">Rotten Tomatoes</option><option value="popularity">Trending</option><option value="year">Release date</option><option value="len">Runtime / seasons</option></select></label>
+        <label>Sort by<select id="sort"><option value="newest">Newest first</option><option value="imdb">IMDb</option><option value="rt">Rotten Tomatoes</option><option value="popularity">Trending</option><option value="year">Release date</option><option value="len">Runtime / seasons</option></select></label>
         <button class="dirbtn" id="dir" type="button"></button>
         <button class="reset" id="reset" type="button">Reset filters</button>
         <div class="hint" id="scorehint"></div>
@@ -571,7 +571,7 @@ function demoApi() {
     T("movie-2", "Past Lives", "Movie", 2023, ["Drama", "Romance"], 7.8, 95, ["Paramount+"], ["Celine Song"], ["Greta Lee", "Teo Yoo"], 106, null, "Two childhood friends reunite decades later.", 40),
     T("movie-3", "The Holdovers", "Movie", 2023, ["Comedy", "Drama"], 7.9, 97, ["Peacock"], ["Alexander Payne"], ["Paul Giamatti"], 133, null, "A cranky teacher stuck at school over Christmas.", 35),
     T("movie-4", "Metropolis", "Movie", 1927, ["Sci-Fi", "Drama"], 8.3, 99, ["YouTube"], ["Fritz Lang"], ["Brigitte Helm"], 153, null, "A landmark silent sci-fi film.", 10),
-    T("tv-1", "Severance", "Series", 2022, ["Sci-Fi", "Thriller"], 8.7, 97, ["Apple TV+"], ["Dan Erickson"], ["Adam Scott", "Britt Lower"], 2, "Ongoing", "Workers with split memories.", 90),
+    T("tv-1", "Severance", "Series", 2022, ["Sci-Fi", "Thriller"], 8.7, 97, ["Apple TV"], ["Dan Erickson"], ["Adam Scott", "Britt Lower"], 2, "Ongoing", "Workers with split memories.", 90),
     T("tv-2", "Breaking Bad", "Series", 2008, ["Drama", "Crime"], 9.5, 96, ["Netflix"], ["Vince Gilligan"], ["Bryan Cranston", "Aaron Paul"], 5, "Ended", "A teacher turns to cooking meth.", 70),
     T("tv-3", "Abbott Elementary", "Series", 2021, ["Comedy"], 8.2, 98, ["Hulu"], ["Quinta Brunson"], ["Quinta Brunson"], 5, "Ongoing", "Teachers at an underfunded school.", 60),
     T("tv-4", "New Show Without IMDb", "Series", 2026, ["Drama"], null, null, ["Max"], ["Someone"], ["Actor"], 1, "Ongoing", "Too new for an IMDb score; TMDB score shown.", 95),
@@ -657,6 +657,7 @@ const imdbOrTmdb = (t) => (t.imdb ?? t.tmdb ?? 0);
 function sortVal(t, k) {
   if (k === "imdb") return imdbOrTmdb(t);
   if (k === "year") return Date.parse(t.released || (t.year + "-01-01")) || 0;
+  if (k === "newest") return -(Date.parse(t.released || (t.year + "-01-01")) || 0); // always newest → oldest
   return +t[k] || 0;
 }
 
@@ -960,7 +961,8 @@ function render() {
   $("layout").hidden = F.cat === "youtube" && F.view === "all";
   $("shelveson").hidden = !(F.shelves === false && F.view === "all" && F.cat !== "youtube");
   const list = filtered();
-  const k = F.cat === "youtube" && F.view === "all" && F.sort !== "year" ? "popularity" : F.sort, dir = F.desc ? -1 : 1;
+  const k = F.cat === "youtube" && F.view === "all" && !["year", "newest"].includes(F.sort) ? "popularity" : F.sort, dir = k === "newest" ? 1 : F.desc ? -1 : 1;
+  $("dir").hidden = F.sort === "newest"; // already newest → oldest
   // pinned first: in "Watch together", what you both want; elsewhere, series you're in the middle of
   const pri = (t) => F.view === "together" ? wantCount(t.id) : F.view === "seasons" ? (newSeason(t) ? 1 : 0)
     : F.view === "all" || F.view === "want" ? (newSeason(t) ? 2 : isWatching(t.id) ? 1 : 0) : 0;
