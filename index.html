@@ -54,9 +54,9 @@ select,.fgrid input{font:inherit;color:var(--tx);background:var(--bg);border:1px
 .chips{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px}
 .chips .chip{background:var(--bg)}
 .chips .chip.on{background:var(--ac)}
-.chips .chip:not(.on){text-decoration:line-through;opacity:.7}
 .chips .lbl{width:100%;font-size:12px;color:var(--mu)}
-.chips .chip.all{text-decoration:none;opacity:1;color:var(--ac);border-color:var(--ac)}
+.svc button{font:inherit;font-size:13px;background:var(--pill);border:0;border-radius:6px;padding:3px 9px;font-weight:600}
+.svc button.free{outline:1px solid var(--ok)}
 .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
 .cats{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:12px;background:var(--pill);border-radius:12px;padding:4px}
 .cats button{border:0;background:transparent;border-radius:9px;padding:8px 6px;font-size:14px;font-weight:600;color:var(--mu)}
@@ -217,7 +217,7 @@ const PRESETS = [
   { name: "🆕 New this year & last", set: { recent: "1", sort: "year" } },
   { name: "🔥 Trending now", set: { sort: "popularity" } },
 ];
-const DEFAULTS = { imdb: "7.5", rt: "83", mode: "any", type: "", genre: "", director: "", recent: "0", runtime: "0", status2: "", sort: "imdb", desc: true, mood: "", preset: -1, view: "all", svcOff: [], cat: "main", layout: "cards", byCat: {} };
+const DEFAULTS = { imdb: "7.5", rt: "83", mode: "any", type: "", genre: "", director: "", recent: "0", runtime: "0", status2: "", sort: "imdb", desc: true, mood: "", preset: -1, view: "all", svcOn: [], cat: "main", layout: "cards", byCat: {} };
 // each section remembers its own score bar; reality TV tends to score lower on IMDb
 const CAT_SCORES = { main: { imdb: "7.5", rt: "83", mode: "any" }, anime: { imdb: "7.5", rt: "83", mode: "any" }, reality: { imdb: "7.0", rt: "80", mode: "any" }, docs: { imdb: "7.5", rt: "83", mode: "any" } };
 const SCORE_KEYS = ["imdb", "rt", "mode"];
@@ -235,6 +235,7 @@ const SYNC_JOBS = [
 
 // ---------------- state ----------------
 let F = Object.assign({}, DEFAULTS, { byCat: {} }, local.get("wf-filters", {}));
+delete F.svcOff; if (!Array.isArray(F.svcOn)) F.svcOn = []; // old "hide a service" setting is replaced by "only these"
 let S = { titles: [], me: null, partner: null, marks: new Map(), pMarks: new Map(), views: new Set(), pViews: new Set(), pSkip: new Set(), lastUpdated: null };
 let openRow = null, installEvt = null;
 let api, pickId = null;
@@ -383,10 +384,10 @@ function buildFilters() {
 }
 function renderServiceChips() {
   const svcs = [...new Set(all().flatMap((t) => t.services || []))].sort();
-  const off = F.svcOff.filter((x) => svcs.includes(x)).length;
-  $("chips").innerHTML = `<div class="lbl">Streaming services: tap one to hide it, tap again to bring it back</div>` +
-    svcs.map((s) => `<button class="chip ${F.svcOff.includes(s) ? "" : "on"}" data-svc="${esc(s)}" aria-pressed="${!F.svcOff.includes(s)}" title="${F.svcOff.includes(s) ? "Hidden: tap to show titles on " : "Showing: tap to hide titles only on "}${esc(s)}">${F.svcOff.includes(s) ? "" : "✓ "}${esc(s)}</button>`).join("") +
-    (off ? `<button class="chip all" data-svcall="1">Show all services</button>` : "");
+  const on = F.svcOn.filter((x) => svcs.includes(x));
+  $("chips").innerHTML = `<div class="lbl">Streaming services: tap one to see only its titles; tap more to add them</div>` +
+    `<button class="chip ${on.length ? "" : "on"}" data-svcall="1">All services</button>` +
+    svcs.map((s) => `<button class="chip ${on.includes(s) ? "on" : ""}" data-svc="${esc(s)}" aria-pressed="${on.includes(s)}">${esc(s)}</button>`).join("");
 }
 function syncControls() {
   CTRL.forEach((k) => { if ($(k).value !== F[k]) $(k).value = F[k]; });
@@ -419,7 +420,7 @@ function filterSummary() {
   if (+F.recent) p.push(+F.recent === 1 ? "This year & last" : `Last ${F.recent} yrs`);
   if (+F.runtime) p.push(`Under ${F.runtime / 60}h`.replace(".5h", "½h"));
   if (F.status2) p.push(F.status2 === "done" ? "Finished" : "Still airing");
-  if (F.svcOff.length) p.push(`${F.svcOff.length} service${F.svcOff.length > 1 ? "s" : ""} off`);
+  if (F.svcOn.length) p.push(F.svcOn.length === 1 ? `${F.svcOn[0]} only` : F.svcOn.join(" / "));
   return p.join(" · ");
 }
 
@@ -459,7 +460,7 @@ function filtered() {
     if (+F.runtime && t.type === "Movie" && !(t.len && t.len <= +F.runtime)) return false;
     if (F.status2 && t.type === "Series" && (F.status2 === "done" ? t.status === "Ongoing" : t.status !== "Ongoing")) return false;
     if (F.mood && !moodsOf(t).includes(F.mood)) return false;
-    if (!(t.services || []).some((s) => !F.svcOff.includes(s))) return false;
+    if (F.svcOn.length && !(t.services || []).some((s) => F.svcOn.includes(s))) return false;
     return matchesSearch(t, q);
   });
 }
@@ -531,7 +532,7 @@ function card(t, collapsible) {
   <div class="scores"><div>${imdbCell}</div><div>Tomatometer<b>${t.rt != null ? t.rt + "%" : "—"}</b></div><div>Trending<b>${t.popularity ? "#" + rank(t) : "—"}</b></div></div>
   ${t.summary ? `<p class="sum" data-sum>${esc(t.summary)}</p>` : ""}
   ${dirs || cast ? `<div class="people">${dirs ? `${t.type === "Series" ? "Created by" : "Directed by"} ${dirs}<br>` : ""}${cast ? `Starring ${cast}` : ""}</div>` : ""}
-  <div><div class="where">Where to watch</div><div class="svc">${(t.services || []).map((x) => `<span class="${x === "YouTube" ? "free" : ""}">${esc(x)}${x === "YouTube" ? " · free w/ ads" : ""}</span>`).join("")}</div></div>
+  <div><div class="where">Where to watch</div><div class="svc">${(t.services || []).map((x) => `<button class="${x === "YouTube" ? "free" : ""}" data-svconly="${esc(x)}" title="Show only ${esc(x)} titles">${esc(x)}${x === "YouTube" ? " · free w/ ads" : ""}</button>`).join("")}</div></div>
   ${checks}
   <div class="acts ${t.type === "Series" ? "three" : ""}">
     <button class="mk-want ${mk === "want" ? "on" : ""}" data-mark="want" data-id="${esc(id)}">${mk === "want" ? "✓ " : ""}Want to watch</button>
@@ -686,11 +687,12 @@ document.addEventListener("click", async (e) => {
     return;
   }
   if (b.dataset.open) { openRow = openRow === b.dataset.open ? null : b.dataset.open; render(); return; }
-  if (b.dataset.svcall) { F.svcOff = []; saveF(); render(); return; }
-  if (b.dataset.svc) { const s = b.dataset.svc; F.svcOff = F.svcOff.includes(s) ? F.svcOff.filter((x) => x !== s) : F.svcOff.concat(s); saveF(); render(); return; }
+  if (b.dataset.svcall) { F.svcOn = []; saveF(); render(); return; }
+  if (b.dataset.svconly) { F.svcOn = [b.dataset.svconly]; F.view = F.view === "together" ? "together" : "all"; saveF(); render(); scrollTo({ top: 0, behavior: "smooth" }); toast(`Showing only ${b.dataset.svconly}. Tap “All services” in Filters to undo.`); return; }
+  if (b.dataset.svc) { const s = b.dataset.svc; F.svcOn = F.svcOn.includes(s) ? F.svcOn.filter((x) => x !== s) : F.svcOn.concat(s); saveF(); render(); return; }
   if (b.dataset.preset != null) {
     const i = +b.dataset.preset, wasOn = F.preset === i;
-    F = Object.assign({}, DEFAULTS, { desc: F.desc, svcOff: F.svcOff, cat: F.cat, byCat: F.byCat, layout: F.layout, view: F.view });
+    F = Object.assign({}, DEFAULTS, { desc: F.desc, svcOn: F.svcOn, cat: F.cat, byCat: F.byCat, layout: F.layout, view: F.view });
     useCatScores();
     if (!wasOn) { Object.assign(F, PRESETS[i].set); F.preset = i; }
     saveF(); render(); return;
