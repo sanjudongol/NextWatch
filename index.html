@@ -98,7 +98,11 @@ select,.fgrid input{font:inherit;color:var(--tx);background:var(--bg);border:1px
 .rowc{display:grid;grid-template-columns:56px minmax(0,1fr) auto;gap:10px;align-items:center;background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:8px 10px}
 .rowc.dim{opacity:.6}
 .cover.sm{width:56px;height:84px;font-size:8px;padding:3px;border-radius:6px}
-.rmain{background:none;border:0;padding:0;text-align:left;min-width:0}
+.rmain{background:none;border:0;padding:0 26px 0 0;text-align:left;min-width:0;position:relative;color:inherit;cursor:pointer}
+.rmain .chev{position:absolute;right:0;top:50%;width:18px;height:18px;margin-top:-9px;fill:none;stroke:var(--mu);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;opacity:.7}
+.rcover{background:none;border:0;padding:0;cursor:pointer;display:block}
+.summore{align-self:flex-start;background:none;border:0;padding:0;margin-top:-6px;color:var(--ac);font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+@media (hover:hover){.rowc:hover .chev{opacity:1;stroke:var(--ac)}}
 .rmain .t{font-size:15px}
 .rmain .meta{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rbtns{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;max-width:380px}
@@ -107,7 +111,7 @@ select,.fgrid input{font:inherit;color:var(--tx);background:var(--bg);border:1px
 .rb.on.mk-want,.rb.on.mk-watching{border-color:var(--want);color:var(--want)}
 .rb.on.mk-skipped{border-color:var(--ac);color:var(--ac)}
 @media (max-width:620px){.rowc{grid-template-columns:64px minmax(0,1fr)}.rbtns{grid-column:1/-1;justify-content:flex-start;max-width:none}}
-.less{align-self:flex-start;background:none;border:0;color:var(--mu);font-size:13px;padding:0}
+.less{align-self:flex-start;background:none;border:0;color:var(--ac);font-size:14px;font-weight:600;padding:0;display:inline-flex;align-items:center;gap:4px}.less .chev{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
 body.ondirs :is(.pageswitch,.topbar,.ctlrow,#ytsubs,#fp,#alert,#shelves){display:none!important}
 .dirs{display:grid;gap:8px;grid-template-columns:minmax(0,1fr);min-width:0;max-width:100%}.dirs>*{min-width:0}
 .drow .dn b{overflow-wrap:anywhere}
@@ -1115,8 +1119,9 @@ function row(t) {
   const btn = (attrs, on, cls, label, title) => `<button class="rb ${cls} ${on ? "on" : ""}" ${attrs} data-id="${esc(id)}" title="${esc(title)}">${label}</button>`;
   const ns = newSeason(t);
   return `<article data-row="${esc(id)}" class="rowc ${ns ? "fresh" : w || mk === "skipped" ? "dim" : ""}">
-  ${cover(t).replace('class="cover"', 'class="cover sm"')}
-  <button class="rmain" data-open="${esc(id)}" title="Show details">
+  <button class="rcover" data-open="${esc(id)}" tabindex="-1" aria-hidden="true">${cover(t).replace('class="cover"', 'class="cover sm"')}</button>
+  <button class="rmain" data-open="${esc(id)}" title="Show details" aria-expanded="false">
+    <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
     <div class="t">${esc(t.title)}</div>
     <div class="meta">${t.year || ""} · ${esc(lenText(t))} · ${esc(gl(t).slice(0, 2).join(", "))}</div>
     <div class="meta">${esc(sc)}${sc ? " · " : ""}${esc((t.services || []).join(", "))}</div>
@@ -1166,7 +1171,7 @@ function card(t, collapsible) {
   </div>`;
   const ns = newSeason(t);
   return `<article data-row="${esc(id)}" class="card ${ns ? "fresh" : w || mk === "skipped" ? "dim" : ""}">
-  ${collapsible ? `<button class="less" data-open="${esc(id)}">▴ Show less</button>` : ""}
+  ${collapsible ? `<button class="less" data-open="${esc(id)}"><svg class="chev up" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>Show less</button>` : ""}
   <div class="head">${cover(t)}<div>
     <div class="t">${esc(t.title)}</div>
     <div class="meta">${t.year || ""} · ${esc(lenText(t))}</div>
@@ -1174,7 +1179,7 @@ function card(t, collapsible) {
     <div class="badges">${badges.join("")}</div>
   </div></div>
   <div class="scores"><div>${imdbCell}</div><div>Tomatometer<b>${t.rt != null ? t.rt + "%" : "—"}</b></div><div>Trending<b>${t.popularity ? "#" + rank(t) : "—"}</b></div></div>
-  ${t.summary ? `<p class="sum" data-sum>${esc(t.summary)}</p>` : ""}
+  ${t.summary ? `<p class="sum" data-sum>${esc(t.summary)}</p>${t.summary.length > 110 ? `<button class="summore" data-summore>More</button>` : ""}` : ""}
   ${dirs || cast ? `<div class="people">${dirs ? `${t.type === "Series" ? "Created by" : "Directed by"} ${dirs}<br>` : ""}${cast ? `Starring ${cast}` : ""}</div>` : ""}
   <div><div class="where">Where to watch</div><div class="svc">${(t.services || []).map((x) => `<button class="${x === "YouTube" ? "free" : ""}" data-svconly="${esc(x)}" title="Show only ${esc(x)} titles">${esc(x)}${x === "YouTube" ? " · free w/ ads" : ""}</button>`).join("")}</div></div>
   ${ns ? `<button class="seasonbtn" data-season="${ns}" data-id="${esc(id)}">✓ I’ve watched season ${ns}</button>` : ""}
@@ -1491,6 +1496,7 @@ function renderTips() {
   if (local.get("wf-tips-done", false) || !S.me) { box.innerHTML = ""; return; }
   box.innerHTML = `<div class="tips"><div class="tipshead"><b>Quick tips</b><button class="btn" id="tipsok">Got it</button></div><ol>
     <li><b>Pick a section</b> at the top, or search. Videos live on their own <b>YouTube</b> page: History, Food & travel, Soccer and F1. Tap the logo or Home to get back.</li>
+    <li><b>See details:</b> tap any title (or the <b>›</b> arrow) for the summary, cast and where to watch. In Cards view, tap <b>More</b> to read the full summary.</li>
     <li><b>Mark titles:</b> tap Seen, Want or Not interested.${"ontouchstart" in window ? " On your phone you can also <b>swipe right</b> for Seen and <b>swipe left</b> for Not interested." : ""}</li>
     <li><b>Sync</b> refreshes the catalog. It also updates by itself every night.</li>
   </ol></div>`;
@@ -1645,7 +1651,8 @@ document.addEventListener("click", (e) => onClick(e).catch(showErr));
 function showErr(er) { console.error(er); toast("Something went wrong: " + (er && er.message || er) + ". Try reloading the page."); }
 addEventListener("error", (e) => showErr(e.error || e.message));
 async function onClick(e) {
-  const sum = e.target.closest("[data-sum]"); if (sum) { sum.classList.toggle("open"); return; }
+  const sum = e.target.closest("[data-sum]"); if (sum) { sum.classList.toggle("open"); const m = sum.nextElementSibling; if (m && m.dataset.summore != null) m.textContent = sum.classList.contains("open") ? "Less" : "More"; return; }
+  const sm = e.target.closest("[data-summore]"); if (sm) { const p = sm.previousElementSibling; p.classList.toggle("open"); sm.textContent = p.classList.contains("open") ? "Less" : "More"; return; }
   if (e.target.id === "detail") { detailId = null; renderDetail(); return; } // tap outside the pop-up
   const b = e.target.closest("button"); if (!b) return;
   if (b.dataset.detail) { detailId = b.dataset.detail; renderDetail(); return; }
