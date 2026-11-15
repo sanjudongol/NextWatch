@@ -224,9 +224,9 @@ const PRESETS = [
   { name: "🆕 New this year & last", set: { recent: "1", sort: "year" } },
   { name: "🔥 Trending now", set: { sort: "popularity" } },
 ];
-const DEFAULTS = { imdb: "7.5", rt: "83", mode: "any", type: "", genre: "", director: "", recent: "0", runtime: "0", status2: "", sort: "imdb", desc: true, mood: "", preset: -1, view: "all", svcOn: [], cat: "main", layout: "cards", byCat: {} };
+const DEFAULTS = { imdb: "6.5", rt: "70", mode: "any", type: "", genre: "", director: "", recent: "0", runtime: "0", status2: "", sort: "imdb", desc: true, mood: "", preset: -1, view: "all", svcOn: [], cat: "main", layout: "cards", byCat: {} };
 // each section remembers its own score bar; reality TV tends to score lower on IMDb
-const CAT_SCORES = { main: { imdb: "7.5", rt: "83", mode: "any" }, anime: { imdb: "7.5", rt: "83", mode: "any" }, reality: { imdb: "7.0", rt: "80", mode: "any" }, docs: { imdb: "7.5", rt: "83", mode: "any" } };
+const CAT_SCORES = { main: { imdb: "6.5", rt: "70", mode: "any" }, anime: { imdb: "6.5", rt: "70", mode: "any" }, reality: { imdb: "6.5", rt: "70", mode: "any" }, docs: { imdb: "6.5", rt: "70", mode: "any" } };
 const SCORE_KEYS = ["imdb", "rt", "mode"];
 const MARK_LABEL = { want: "Want to watch", watching: "Watching now", skipped: "Not interested" };
 const CTRL = ["imdb", "rt", "mode", "type", "genre", "director", "recent", "runtime", "status2", "sort"];
@@ -242,6 +242,8 @@ const SYNC_JOBS = [
 
 // ---------------- state ----------------
 let F = Object.assign({}, DEFAULTS, { byCat: {} }, local.get("wf-filters", {}));
+// one-time switch to the new score bar (IMDb 6.5 / RT 70%) in every section
+if (!local.get("wf-scores-v2", false)) { F.byCat = {}; Object.assign(F, { imdb: "6.5", rt: "70" }); local.set("wf-scores-v2", true); local.set("wf-filters", F); }
 delete F.svcOff; if (!Array.isArray(F.svcOn)) F.svcOn = []; // old "hide a service" setting is replaced by "only these"
 let S = { titles: [], me: null, partner: null, marks: new Map(), pMarks: new Map(), views: new Set(), pViews: new Set(), seen: new Map(), pSeen: new Map(), pSkip: new Set(), lastUpdated: null };
 let openRow = null, installEvt = null;

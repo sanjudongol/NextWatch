@@ -42,14 +42,14 @@ export async function syncPage(q) {
     const dateKey = kind === "movie" ? "primary_release_date" : "first_air_date";
     if (order === "top") {
       p.set("sort_by", "vote_count.desc");
-      p.set("vote_average.gte", "6.8");
+      p.set("vote_average.gte", "6.2");
     } else {
       p.set("sort_by", dateKey + ".desc");
       p.set(dateKey + ".lte", today);
       p.set("vote_count.gte", kind === "movie" ? "60" : "30");
-      p.set("vote_average.gte", "6.5");
+      p.set("vote_average.gte", "6.0");
     }
-    if (genre) { p.set("with_genres", genre); p.set("vote_average.gte", "6.0"); } // niche shows get fewer votes
+    if (genre) { p.set("with_genres", genre); p.set("vote_average.gte", "5.8"); } // niche shows get fewer votes
     if (lang) p.set("with_original_language", lang);
     const d = await tmdb(`/discover/${kind}?${p}`);
     const results = d.results || [];
