@@ -58,7 +58,7 @@ select,.fgrid input{font:inherit;color:var(--tx);background:var(--bg);border:1px
 .svc button{font:inherit;font-size:13px;background:var(--pill);border:0;border-radius:6px;padding:3px 9px;font-weight:600}
 .svc button.free{outline:1px solid var(--ok)}
 .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
-.cats{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:12px;background:var(--pill);border-radius:12px;padding:4px}
+.cats{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;margin-top:12px;background:var(--pill);border-radius:12px;padding:4px}
 .cats button{border:0;background:transparent;border-radius:9px;padding:8px 6px;font-size:14px;font-weight:600;color:var(--mu)}
 .cats button.on{background:var(--card);color:var(--tx);box-shadow:0 1px 3px rgba(0,0,0,.12)}
 @media (max-width:620px){.cats{grid-template-columns:repeat(6,1fr)}.cats button{grid-column:span 2}.cats button:nth-child(-n+2){grid-column:span 3}}
@@ -161,6 +161,15 @@ footer{color:var(--mu);font-size:12px;margin-top:24px}
 .rowc,.card{touch-action:pan-y;transition:transform .15s}
 .rowc.swiping,.card.swiping{transition:none}
 #pick,#tabs,#account,#grid{scroll-margin-top:140px}
+.vid{display:grid;grid-template-columns:168px minmax(0,1fr) auto;gap:12px;align-items:center;background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:8px 10px}
+.vid.dim{opacity:.6}
+.vthumb{position:relative;width:168px;aspect-ratio:16/9;border-radius:8px;overflow:hidden;background:linear-gradient(135deg,#c4302b,#6b1512)}
+.vthumb img{width:100%;height:100%;object-fit:cover;display:block}
+.vthumb .dur{position:absolute;right:4px;bottom:4px;background:rgba(0,0,0,.8);color:#fff;font-size:11px;font-weight:600;border-radius:4px;padding:1px 5px}
+.vid .t{font-size:15px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ytmodes{display:flex;gap:6px}
+#grid:has(.vid){grid-template-columns:1fr}
+@media (max-width:620px){.vid{grid-template-columns:128px minmax(0,1fr)}.vthumb{width:128px}.vid .rbtns{grid-column:1/-1;justify-content:flex-start;max-width:none}}
 .sw-r{box-shadow:inset 6px 0 0 var(--ok)}
 .sw-l{box-shadow:inset -6px 0 0 var(--ac)}
 .topbar{position:sticky;top:0;z-index:6;background:var(--bg);padding:6px 0 4px;margin:0 -16px;padding-left:16px;padding-right:16px}
@@ -258,10 +267,10 @@ footer{color:var(--mu);font-size:12px;margin-top:24px}
       <summary><div class="fsum" id="fsum"></div><span class="caret">▾</span></summary>
       <div class="fgrid">
         <div class="sheethead"><b>Filters</b><button type="button" id="sheetclose" aria-label="Close filters">✕</button></div>
-        <div class="scorechips" id="scorechips"></div>
-        <label>Min IMDb<input type="number" id="imdb" min="0" max="10" step="0.1"></label>
-        <label>Min Rotten Tomatoes %<input type="number" id="rt" min="0" max="100" step="1"></label>
-        <label>Score rule<select id="mode"><option value="any">IMDb or RT</option><option value="all">IMDb and RT</option></select></label>
+        <div class="scorechips noyt" id="scorechips"></div>
+        <label class="noyt">Min IMDb<input type="number" id="imdb" min="0" max="10" step="0.1"></label>
+        <label class="noyt">Min Rotten Tomatoes %<input type="number" id="rt" min="0" max="100" step="1"></label>
+        <label class="noyt">Score rule<select id="mode"><option value="any">IMDb or RT</option><option value="all">IMDb and RT</option></select></label>
         <label id="typebox">Type<select id="type"><option value="">Movies &amp; series</option><option>Movie</option><option>Series</option></select></label>
         <label>Genre<select id="genre"></select></label>
         <label>Director / creator<input type="search" id="director" list="dirlist" placeholder="Anyone · type a name" autocomplete="off" enterkeyhint="done"><datalist id="dirlist"></datalist></label>
@@ -287,6 +296,7 @@ footer{color:var(--mu);font-size:12px;margin-top:24px}
     <footer>
       Ratings from IMDb and Rotten Tomatoes via OMDb. When a title has no IMDb rating yet, its TMDB score is shown instead and marked “TMDB”.
       Only offers included with a subscription or free with ads are listed — never rent or buy.<br>
+      Video data from the YouTube Data API.
       Streaming availability data by JustWatch. This product uses the TMDB API but is not endorsed or certified by TMDB.
     </footer>
   </div>
@@ -325,8 +335,11 @@ const PRESETS = [
 ];
 const DEFAULTS = { imdb: "6.5", rt: "70", mode: "any", type: "", genre: "", director: "", recent: "0", runtime: "0", status2: "", sort: "imdb", desc: true, mood: "", preset: -1, view: "all", svcOn: [], cat: "movies", layout: "cards", byCat: {} };
 // each section remembers its own score bar; reality TV tends to score lower on IMDb
-const CAT_SCORES = { movies: { imdb: "6.5", rt: "70", mode: "any" }, series: { imdb: "6.5", rt: "70", mode: "any" }, anime: { imdb: "6.5", rt: "70", mode: "any" }, reality: { imdb: "6.5", rt: "70", mode: "any" }, docs: { imdb: "6.5", rt: "70", mode: "any" }, kids: { imdb: "6.5", rt: "70", mode: "any" }, truecrime: { imdb: "6.5", rt: "70", mode: "any" } };
+const CAT_SCORES = { movies: { imdb: "6.5", rt: "70", mode: "any" }, series: { imdb: "6.5", rt: "70", mode: "any" }, anime: { imdb: "6.5", rt: "70", mode: "any" }, reality: { imdb: "6.5", rt: "70", mode: "any" }, docs: { imdb: "6.5", rt: "70", mode: "any" }, kids: { imdb: "6.5", rt: "70", mode: "any" }, truecrime: { imdb: "6.5", rt: "70", mode: "any" }, youtube: { imdb: "0", rt: "0", mode: "any" } };
 const SCORE_KEYS = ["imdb", "rt", "mode"];
+const YT_MODES = [["trending", "🔥 Trending now"], ["alltime", "🏆 All-time most viewed"], ["history", "📜 History"]];
+const fmtViews = (n) => n >= 1e9 ? (n / 1e9).toFixed(1).replace(/\.0$/, "") + "B" : n >= 1e6 ? Math.round(n / 1e6) + "M" : n >= 1e3 ? Math.round(n / 1e3) + "K" : String(n || 0);
+const fmtDur = (s) => { if (!s) return ""; const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = String(s % 60).padStart(2, "0"); return h ? `${h}:${String(m).padStart(2, "0")}:${x}` : `${m}:${x}`; };
 const SCORE_PRESETS = [["🏆 Great · 7.5+ / 85%", "7.5", "85"], ["👍 Good · 6.5+ / 70%", "6.5", "70"], ["🎲 Anything", "0", "0"]];
 function activeFilterCount() {
   let n = 0;
@@ -365,7 +378,7 @@ if (F.cat === "main" || !F.cat) { // "Movies & series" became two sections
   if (F.byCat && F.byCat.main) { F.byCat.movies = F.byCat.series = F.byCat.main; delete F.byCat.main; }
   F.cat = F.type === "Series" ? "series" : "movies"; F.type = "";
 } if (!Array.isArray(F.svcOn)) F.svcOn = []; // old "hide a service" setting is replaced by "only these"
-let S = { titles: [], me: null, partner: null, marks: new Map(), pMarks: new Map(), views: new Set(), pViews: new Set(), seen: new Map(), pSeen: new Map(), pSkip: new Set(), lastUpdated: null };
+let S = { ytOn: DEMO, titles: [], me: null, partner: null, marks: new Map(), pMarks: new Map(), views: new Set(), pViews: new Set(), seen: new Map(), pSeen: new Map(), pSkip: new Set(), lastUpdated: null };
 let openRow = null, installEvt = null;
 let api, pickId = null;
 const tid = (t) => t.id;
@@ -437,6 +450,13 @@ async function supabaseApi(cfg) {
       if (!r.ok) throw new Error(body.error || "Lookup failed");
       return body;
     },
+    async youtubeStep() {
+      const token = (await a.session())?.access_token;
+      const r = await fetch("/api/youtube", { method: "POST", headers: { Authorization: "Bearer " + token } });
+      const body = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(body.error || "YouTube refresh failed");
+      return body;
+    },
     async syncStep(params) {
       const token = (await a.session())?.access_token;
       const r = await fetch("/api/sync?" + new URLSearchParams(params), { method: "POST", headers: { Authorization: "Bearer " + token } });
@@ -468,6 +488,12 @@ function demoApi() {
   titles.push(T("movie-6", "Interstellar", "Movie", 2014, ["Sci-Fi", "Drama"], 8.7, 73, ["Paramount+"], ["Christopher Nolan"], ["Matthew McConaughey"], 169, null, "Explorers travel through a wormhole.", 60));
   titles.push(T("movie-7", "The Grand Budapest Hotel", "Movie", 2014, ["Comedy"], 8.1, 92, ["Hulu"], ["Wes Anderson"], ["Ralph Fiennes"], 99, null, "A legendary concierge and his lobby boy.", 30));
   titles.push(T("movie-8", "Fantastic Mr. Fox", "Movie", 2009, ["Animation", "Comedy"], 7.9, 93, ["Disney+"], ["Wes Anderson"], ["George Clooney"], 87, null, "A fox plans one last heist.", 25));
+  const V = (id, title, channel, views, year, genre, secs, extra) => ({ id: "yt-" + id, kind: "yt", type: "Video", title, channel, views, popularity: views, year, released: year + "-01-01", genres: [genre], secs, services: ["YouTube"], poster: null, dirs: [], cast: [], ...extra });
+  const nowIso = new Date().toISOString();
+  titles.push(V("a", "Trending sample: a big new music video", "Some Artist", 48e6, 2026, "Music", 214, { trendingAt: nowIso }));
+  titles.push(V("b", "Trending sample: how bridges are built", "Science Channel", 3.1e6, 2026, "Science & Tech", 1290, { trendingAt: nowIso }));
+  titles.push(V("c", "All-time sample: the most-watched video", "Big Channel", 8.2e9, 2017, "Music", 236, { alltime: true }));
+  titles.push(V("d", "History sample: the fall of Rome in 20 minutes", "History Explained", 21e6, 2019, "History", 1250, { alltime: true, topic: "history" }));
   titles.push(T("movie-5", "My Octopus Teacher", "Movie", 2020, ["Documentary"], 8.1, 95, ["Netflix"], ["Pippa Ehrlich"], [], 85, null, "A filmmaker befriends an octopus.", 20));
   let signedIn = !!local.get("demo-in", false);
   // demo: you've seen Abbott Elementary up to season 4 (season 5 is out) and Severance season 2 (season 3 announced)
@@ -547,7 +573,7 @@ function opts(el, first, items) {
   el.value = items.includes(cur) ? cur : "";
 }
 function buildFilters() {
-  opts($("genre"), "All genres", [...new Set(all().flatMap(gl))].sort());
+  opts($("genre"), F.cat === "youtube" ? "All topics" : "All genres", [...new Set(all().filter((t) => (categoryOf(t) === "youtube") === (F.cat === "youtube")).flatMap(gl))].sort());
   const dirs = [...new Set(all().flatMap((t) => t.dirs || []))].sort((a, b) => a.split(" ").pop().localeCompare(b.split(" ").pop()));
   $("dirlist").innerHTML = dirs.map((d) => `<option value="${esc(d)}"></option>`).join("");
   renderServiceChips();
@@ -580,15 +606,18 @@ function syncControls() {
   CTRL.forEach((k) => { if ($(k).value !== F[k]) $(k).value = F[k]; });
   renderServiceChips();
   $("dir").textContent = F.desc ? "Highest first ↓" : "Lowest first ↑";
-  const SHORT = { movies: "🎬 Movies", series: "📺 Series", anime: "🍥 Anime", reality: "🏆 Reality", docs: "🎥 Docs", truecrime: "🔪 True crime", kids: "🧸 Kids" };
+  const SHORT = { movies: "🎬 Movies", series: "📺 Series", anime: "🍥 Anime", reality: "🏆 Reality", docs: "🎥 Docs", truecrime: "🔪 True crime", kids: "🧸 Kids", youtube: "▶️ YouTube" };
   $("cats").innerHTML = CATS.map(([k, l]) => `<button class="${F.cat === k ? "on" : ""}" data-cat="${k}"><span class="long">${l}</span><span class="short">${SHORT[k]}</span></button>`).join("");
   const topCat = F.cat === "movies" || F.cat === "series";
 
   $("typebox").hidden = topCat; // the section already picks movies or series
   $("lenbox").hidden = F.cat === "series"; $("statusbox").hidden = F.cat === "movies";
+  const isYt = F.cat === "youtube";
+  document.querySelectorAll(".noyt").forEach((el) => (el.hidden = isYt));
+  if (isYt) { $("typebox").hidden = $("lenbox").hidden = $("statusbox").hidden = true; }
   const nOn = activeFilterCount();
   $("presets").hidden = false;
-  $("presets").innerHTML = `<button class="chip fchip ${nOn ? "active" : ""}" id="openfilters">⚙︎ Filters${nOn ? ` · ${nOn}` : ""}</button>` + (!topCat ? "" : PRESETS.map((p, i) => p.only && p.only !== F.cat ? "" : `<button class="chip ${F.preset === i ? "on" : ""}" data-preset="${i}">${p.name}</button>`).join(""));
+  $("presets").innerHTML = `<button class="chip fchip ${nOn ? "active" : ""}" id="openfilters">⚙︎ Filters${nOn ? ` · ${nOn}` : ""}</button>` + (isYt ? YT_MODES.map(([k, l]) => `<button class="chip ${(F.ytMode || "trending") === k ? "on" : ""}" data-ytmode="${k}">${l}</button>`).join("") : !topCat ? "" : PRESETS.map((p, i) => p.only && p.only !== F.cat ? "" : `<button class="chip ${F.preset === i ? "on" : ""}" data-preset="${i}">${p.name}</button>`).join(""));
   const sp = SCORE_PRESETS.find(([, im, rt]) => F.imdb === im && F.rt === rt);
   $("scorechips").innerHTML = `<span class="muted">Scores:</span>` + SCORE_PRESETS.map(([l, im, rt]) => `<button type="button" class="chip ${sp && sp[1] === im ? "on" : ""}" data-score="${im}|${rt}">${l}</button>`).join("");
   const count = (k) => k === "want" ? all().filter((t) => (S.marks.get(t.id) === "want" || S.pMarks.get(t.id) === "want") && !iSaw(t.id)).length
@@ -607,13 +636,14 @@ function syncControls() {
   renderNav(tabs, count);
   $("tabs").innerHTML = (shown.length < 2 && phone() ? [] : shown).map(([k, l]) => `<button class="chip ${F.view === k ? "on" : ""}" data-view="${k}" ${k === "directors" ? `title="Directors and creators whose titles on your services score best, plus acclaimed directors to explore"` : ""} ${k === "together" ? `title="Only what neither of you has seen, with what you both want first. Uses the filters and section above."` : ""}>${l}${k === "all" || k === "together" || k === "directors" ? "" : ` (${count(k)})`}</button>`).join("");
   $("layout").textContent = F.layout === "list" ? "▦ Cards" : "☰ Compact list";
-  const sectionName = { movies: "Movies", series: "Series", anime: "Anime", reality: "Reality & competition", docs: "Documentaries", kids: "Kids & family", truecrime: "True crime" }[F.cat];
+  const sectionName = { movies: "Movies", series: "Series", anime: "Anime", reality: "Reality & competition", docs: "Documentaries", kids: "Kids & family", truecrime: "True crime", youtube: "YouTube" }[F.cat];
   $("scorehint").textContent = `Score settings are remembered separately for each section (now: ${sectionName}).`;
 }
 const saveF = () => local.set("wf-filters", F);
 function filterSummary() {
   const p = [];
-  p.push({ movies: "Movies", series: "Series", anime: "Anime", reality: "Reality & competition", docs: "Documentaries", kids: "Kids & family", truecrime: "True crime" }[F.cat]);
+  p.push({ movies: "Movies", series: "Series", anime: "Anime", reality: "Reality & competition", docs: "Documentaries", kids: "Kids & family", truecrime: "True crime", youtube: "YouTube" }[F.cat]);
+  if (F.cat === "youtube") { p.push(YT_MODES.find((m) => m[0] === (F.ytMode || "trending"))[1].replace(/^\S+\s/, "")); if (F.genre) p.push(F.genre); if (+F.recent) p.push(`Last ${F.recent} yrs`); return p.join(" · "); }
   if (F.preset >= 0) p.push(PRESETS[F.preset].name.replace(/^\S+\s/, ""));
   p.push(`IMDb ${F.imdb}+ ${F.mode === "any" ? "or" : "and"} RT ${F.rt}%+`);
   if (F.type) p.push(F.type === "Movie" ? "Movies" : "Series");
@@ -629,11 +659,12 @@ function filterSummary() {
 // ---------------- matching ----------------
 function matchesSearch(t, q) {
   if (!q) return true;
-  const hay = (t.title + " " + (t.dirs || []).join(" ") + " " + (t.cast || []).join(" ")).toLowerCase();
+  const hay = (t.title + " " + (t.channel || "") + " " + (t.dirs || []).join(" ") + " " + (t.cast || []).join(" ")).toLowerCase();
   return q.toLowerCase().split(/\s+/).every((w) => hay.includes(w));
 }
-const CATS = [["movies", "🎬 Movies"], ["series", "📺 Series"], ["anime", "🍥 Anime"], ["reality", "🏆 Reality & competition"], ["docs", "🎥 Documentaries"], ["truecrime", "🔪 True crime"], ["kids", "🧸 Kids & family"]];
+const CATS = [["movies", "🎬 Movies"], ["series", "📺 Series"], ["anime", "🍥 Anime"], ["reality", "🏆 Reality & competition"], ["docs", "🎥 Documentaries"], ["truecrime", "🔪 True crime"], ["kids", "🧸 Kids & family"], ["youtube", "▶️ YouTube"]];
 function categoryOf(t) {
+  if (t.kind === "yt") return "youtube";
   const g = t.genres || [];
   if (g.includes("Reality")) return "reality";
   if (g.includes("Documentary") && g.includes("Crime")) return "truecrime";
@@ -654,6 +685,14 @@ function filtered(cats = [F.cat]) {
   if (F.view === "onlythem") return all().filter((t) => onlyThem(t.id) && matchesSearch(t, q));
   if (F.view === "watched") return all().filter((t) => watched(t.id) && matchesSearch(t, q));
   if (F.view === "skipped") return all().filter((t) => S.marks.get(t.id) === "skipped" && matchesSearch(t, q));
+  if (cats.length === 1 && cats[0] === "youtube") {
+    const mode = F.ytMode || "trending", fresh = Date.now() - 4 * 864e5;
+    const minY = +F.recent ? new Date().getFullYear() - +F.recent : 0;
+    return all().filter((t) => t.kind === "yt" && !iSaw(t.id) && S.marks.get(t.id) !== "skipped"
+      && (mode === "history" ? t.topic === "history" : mode === "alltime" ? t.alltime && t.topic !== "history" : t.trendingAt && Date.parse(t.trendingAt) > fresh)
+      && (!F.genre || gl(t).includes(F.genre)) && (!minY || t.year >= minY)
+      && (F.view !== "together" || (!theySaw(t.id) && !S.pSkip.has(t.id))));
+  }
   const imdb = parseFloat(F.imdb) || 0, rt = parseFloat(F.rt) || 0;
   const minYear = +F.recent ? new Date().getFullYear() - +F.recent : 0;
   return all().filter((t) => {
@@ -729,6 +768,24 @@ function row(t) {
   </div>
 </article>`;
 }
+function vid(t) {
+  const id = t.id, mk = S.marks.get(id) || "";
+  const btn = (attrs, on, cls, label, title) => `<button class="rb ${cls} ${on ? "on" : ""}" ${attrs} data-id="${esc(id)}" title="${esc(title)}">${label}</button>`;
+  const badges = badgeList(t);
+  return `<article data-row="${esc(id)}" class="vid ${mk === "skipped" ? "dim" : ""}">
+  <div class="vthumb">${t.poster ? `<img src="${esc(t.poster)}" alt="" loading="lazy" onerror="this.remove()">` : ""}${t.secs ? `<span class="dur">${fmtDur(t.secs)}</span>` : ""}</div>
+  <div style="min-width:0"><div class="t">${esc(t.title)}</div>
+    <div class="meta">${esc(t.channel)}</div>
+    <div class="meta">${fmtViews(t.views)} views${t.year ? " · " + t.year : ""} · ${esc(gl(t).join(", "))}</div>
+    ${badges.length ? `<div class="badges">${badges.join("")}</div>` : ""}</div>
+  <div class="rbtns">
+    ${btn('data-seen="me"', iSaw(id), "", `${iSaw(id) ? "✓" : "○"} ${S.partner ? "Me" : "Seen"}`, S.partner ? "I watched" : "Watched")}
+    ${S.partner ? btn('data-seen="partner"', theySaw(id), "", `${theySaw(id) ? "✓" : "○"} ${esc(pName())}`, `${pName()} watched`) : ""}
+    ${btn('data-mark="want"', mk === "want", "mk-want", "★ Want", "Want to watch")}
+    ${btn('data-mark="skipped"', mk === "skipped", "mk-skipped", "✕", "Not interested")}
+  </div>
+</article>`;
+}
 function card(t, collapsible) {
   const id = t.id, mk = S.marks.get(id) || "", w = watched(id);
   const badges = [`<span class="badge">${t.type}</span>`, ...badgeList(t)];
@@ -784,9 +841,9 @@ function render() {
   setTimeout(() => { $("sheetdone").textContent = `Show ${$("grid").querySelectorAll(".card,.rowc").length} results`; });
   $("fsum").innerHTML = searching ? `<b>Filters</b>paused while you search · clear the search box to use them again` : `<b>Filters</b>${esc(filterSummary())}`;
   if (F.view === "directors") { renderDirectors(); renderPick(); renderSub(); renderAlert(); $("findwrap").hidden = true; $("layout").hidden = true; return; }
-  $("layout").hidden = false;
+  $("layout").hidden = F.cat === "youtube" && F.view === "all";
   const list = filtered();
-  const k = F.sort, dir = F.desc ? -1 : 1;
+  const k = F.cat === "youtube" && F.view === "all" && F.sort !== "year" ? "popularity" : F.sort, dir = F.desc ? -1 : 1;
   // pinned first: in "Watch together", what you both want; elsewhere, series you're in the middle of
   const pri = (t) => F.view === "together" ? wantCount(t.id) : F.view === "seasons" ? (newSeason(t) ? 1 : 0)
     : F.view === "all" || F.view === "want" ? (newSeason(t) ? 2 : isWatching(t.id) ? 1 : 0) : 0;
@@ -808,10 +865,11 @@ function render() {
   if (F.view === "bothwant") empty = `Nothing you both want yet. When you and ${esc(pName())} both tap “Want to watch” on a title, it shows up here.`;
   if (F.view === "seasons") empty = "No new or upcoming seasons for series you’ve watched.";
   if (F.view === "watching") empty = "Nothing in progress. On a series, tap “Watching now” to keep it here until you finish.";
-  if (F.view === "all") empty = all().length ? "Nothing matches these filters. Try lowering a score, widening the dates, or tapping Reset filters." : "No titles yet. Tap ↻ Sync to pull in the catalog — the first sync takes a minute or two.";
+  if (F.view === "all" && F.cat === "youtube") empty = !S.ytOn ? "YouTube isn’t switched on yet: the site needs a YouTube key in Vercel (YOUTUBE_KEY). Once it’s added, tap ↻ Sync." : "No videos here yet. Tap ↻ Sync to load them.";
+  else if (F.view === "all") empty = all().length ? "Nothing matches these filters. Try lowering a score, widening the dates, or tapping Reset filters." : "No titles yet. Tap ↻ Sync to pull in the catalog — the first sync takes a minute or two.";
   const compact = F.layout === "list";
   $("grid").className = compact ? "list" : "";
-  $("grid").innerHTML = list.length ? list.map((t) => compact ? (openRow === t.id ? card(t, true) : row(t)) : card(t)).join("") : `<div class="empty">${empty}</div>`;
+  $("grid").innerHTML = list.length ? list.map((t) => t.kind === "yt" ? vid(t) : compact ? (openRow === t.id ? card(t, true) : row(t)) : card(t)).join("") : `<div class="empty">${empty}</div>`;
   renderPick(); renderSub(); renderAlert(); renderTips();
 }
 // ---------------- top directors ----------------
@@ -893,7 +951,7 @@ function renderPick() {
     el.hidden = false; return;
   }
   if (!t) { el.hidden = true; el.innerHTML = ""; return; }
-  el.innerHTML = `<div class="pickhead">🎲 Tonight’s ${t.type === "Movie" ? "movie" : "series"}<div>${typeChips()}<button class="chip" id="sharepick">📤 Share</button><button class="chip" id="again">Pick another</button><button class="chip" id="closepick">Close</button></div></div>${card(t)}`;
+  el.innerHTML = `<div class="pickhead">🎲 Tonight’s ${t.type === "Movie" ? "movie" : "series"}<div>${typeChips()}<button class="chip" id="sharepick">📤 Share</button><button class="chip" id="again">Pick another</button><button class="chip" id="closepick">Close</button></div></div>${t.kind === "yt" ? vid(t) : card(t)}`;
   el.hidden = false;
 }
 function surprise() {
@@ -1011,6 +1069,7 @@ async function onClick(e) {
     F.view = last && g[3].includes(last) ? last : g[3][0];
     saveF(); render(); scrollTo({ top: 0 }); return;
   }
+  if (b.dataset.ytmode) { F.ytMode = b.dataset.ytmode; F.view = F.view === "together" ? "together" : "all"; saveF(); render(); return; }
   if (b.dataset.score) {
     const [im, rt] = b.dataset.score.split("|");
     Object.assign(F, { imdb: im, rt, preset: F.preset }); rememberCatScores(); saveF(); render(); return;
@@ -1036,7 +1095,7 @@ async function onClick(e) {
     if (!wasOn) { Object.assign(F, PRESETS[i].set); F.preset = i; }
     saveF(); render(); return;
   }
-  if (b.dataset.cat) { rememberCatScores(); F.cat = b.dataset.cat; useCatScores(); if (F.view !== "together") F.view = "all"; if (!["movies", "series"].includes(F.cat)) { F.mood = ""; F.preset = -1; }
+  if (b.dataset.cat) { rememberCatScores(); const wasYt = F.cat === "youtube"; F.cat = b.dataset.cat; useCatScores(); if (wasYt !== (F.cat === "youtube")) { F.genre = ""; buildFilters(); } if (F.view !== "together") F.view = "all"; if (!["movies", "series"].includes(F.cat)) { F.mood = ""; F.preset = -1; }
     if (F.preset >= 0 && PRESETS[F.preset].only && PRESETS[F.preset].only !== F.cat) { Object.keys(PRESETS[F.preset].set).forEach((k) => (F[k] = DEFAULTS[k])); F.preset = -1; } saveF(); render(); return; }
   if (b.dataset.pick != null) { pickType = b.dataset.pick; surprise(); return; }
   if (b.dataset.view) { F.view = b.dataset.view; saveF(); render(); return; }
@@ -1180,6 +1239,7 @@ async function runSync() {
     }
     btn.textContent = innerWidth < 620 ? "↻ …" : "Refreshing older titles…";
     await api.syncStep({ mode: "stale" });
+    if (S.ytOn) { btn.textContent = innerWidth < 620 ? "↻ ▶️" : "Refreshing YouTube…"; try { const y = await api.youtubeStep(); saved += (y.trending || 0) + (y.alltime || 0) + (y.history || 0); } catch (e) { errs.push(e.message); } }
     await reload();
     toast(`Sync done: ${saved} title${saved === 1 ? "" : "s"} added or refreshed.` + (errs.length ? ` (${errs.length} had problems: ${errs[0]})` : ""));
   } catch (e) {
@@ -1279,6 +1339,7 @@ async function start() {
       else {
         const cfg = await fetch("/api/config", { cache: "no-store" }).then((r) => r.json()).catch(() => ({ ready: false }));
         siteVersion = cfg.version || null;
+        S.ytOn = !!cfg.youtube;
         if (!cfg.ready) return gate(`<h1>Almost there</h1><p class="muted">The site is running, but its Supabase settings aren’t in Vercel yet (SUPABASE_URL and SUPABASE_ANON_KEY). Add them, redeploy, and reload this page.</p>`);
         api = await supabaseApi(cfg);
         api.onAuth((_s, ev) => { if (ev === "PASSWORD_RECOVERY") { RECOVERY = true; showNewPassword(); } });

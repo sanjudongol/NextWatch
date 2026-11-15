@@ -2,6 +2,7 @@
 // Vercel sends "Authorization: Bearer <CRON_SECRET>"; anything else is turned away.
 import { env, json } from "../lib/server.js";
 import { syncPage, refreshStale, NEEDED_ENV } from "./sync.js";
+import { refreshYouTube } from "./youtube.js";
 
 export const config = { maxDuration: 60 };
 const BUDGET_MS = 50_000; // stop starting new work after this, so we finish inside the limit
@@ -42,6 +43,7 @@ export default async function handler(req, res) {
       if (/rate limit|rejected the key/i.test(String(e.message))) break;
     }
   }
+  try { done.push({ job: { youtube: true }, ...(await refreshYouTube()) }); } catch (e) { done.push({ job: { youtube: true }, error: String(e.message || e) }); }
   const saved = done.reduce((n, d) => n + (d.saved || 0), 0);
   console.log("nightly sync", JSON.stringify({ seconds: Math.round((Date.now() - started) / 1000), saved, steps: done.length }));
   return json(res, 200, { ok: true, saved, steps: done });

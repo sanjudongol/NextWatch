@@ -6,5 +6,5 @@ export default function handler(req, res) {
   const supabaseUrl = env("SUPABASE_URL");
   const supabaseAnonKey = env("SUPABASE_ANON_KEY");
   if (!supabaseUrl || !supabaseAnonKey) return json(res, 200, { ready: false });
-  json(res, 200, { ready: true, supabaseUrl, supabaseAnonKey, version: env("VERCEL_GIT_COMMIT_SHA").slice(0, 7) || null });
+  json(res, 200, { ready: true, supabaseUrl, supabaseAnonKey, version: env("VERCEL_GIT_COMMIT_SHA").slice(0, 7) || null, youtube: !!env("YOUTUBE_KEY") });
 }
