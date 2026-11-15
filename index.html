@@ -210,7 +210,11 @@ body.noscroll{overflow:hidden}
   .tile{width:96px}.tile .cover{width:96px;height:144px}.shelfrow{scrollbar-width:none;margin:0 -16px;padding:0 16px 4px}.shelfrow::-webkit-scrollbar{display:none}
   #detail{place-items:end center;padding:0}.dsheet{width:100%;max-height:88vh;border-radius:18px 18px 0 0}.dsheet>article{border-radius:18px 18px 0 0;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}}
 .tipshead{display:flex;justify-content:space-between;align-items:center;gap:8px}.tipshead .btn{padding:5px 12px;font-size:13px}
-.scorechips{grid-column:1/-1;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.scorebar{display:flex;align-items:center;gap:6px;padding:8px 0 2px;flex-wrap:wrap}
+.scorebar[hidden]{display:none}
+.sb{display:flex;flex-direction:row;align-items:center;gap:2px;color:var(--tx);background:var(--card);border:1px solid var(--bd);border-radius:999px;padding:3px 4px 3px 11px;font-size:14px;font-weight:600;white-space:nowrap;cursor:pointer}
+.scorebar select{-webkit-appearance:none;appearance:none;border-radius:0}.sb select,.sbmode{border:0;background:transparent;font:inherit;font-weight:700;color:var(--ac);padding:3px 2px;cursor:pointer;min-height:0;width:auto}
+.sb .car{font-size:11px;color:var(--mu);margin-right:4px}.sbmode{font-size:13px;color:var(--mu);font-weight:600;text-align:center}
 .scorechips .chip{background:var(--bg)}
 .scorechips .chip.on{background:var(--ac)}
 .rowc,.card{touch-action:pan-y;transition:transform .15s}
@@ -346,15 +350,16 @@ body.noscroll{overflow:hidden}
     </div>
     <div class="presets" id="presets"></div>
     <div class="presets subchips" id="ytsubs" hidden></div>
+    <div class="scorebar noyt" id="scorebar" title="Only show titles that score at least this well">
+      <label class="sb"><span>⭐ IMDb</span><select id="imdb" aria-label="Minimum IMDb score"><option value="0">Any</option><option value="6">6+</option><option value="6.5">6.5+</option><option value="7">7+</option><option value="7.5">7.5+</option><option value="8">8+</option><option value="8.5">8.5+</option></select><span class="car">▾</span></label>
+      <select id="mode" class="sbmode" aria-label="Score rule"><option value="any">or</option><option value="all">and</option></select>
+      <label class="sb"><span>🍅 RT</span><select id="rt" aria-label="Minimum Rotten Tomatoes score"><option value="0">Any</option><option value="50">50%+</option><option value="60">60%+</option><option value="70">70%+</option><option value="80">80%+</option><option value="85">85%+</option><option value="90">90%+</option><option value="95">95%+</option></select><span class="car">▾</span></label>
+    </div>
 
     <details class="panel box" id="fp">
       <summary><div class="fsum" id="fsum"></div><span class="caret">▾</span></summary>
       <div class="fgrid">
         <div class="sheethead"><b>Filters</b><button type="button" id="sheetclose" aria-label="Close filters">✕</button></div>
-        <div class="scorechips noyt" id="scorechips"></div>
-        <label class="noyt">Min IMDb<input type="number" id="imdb" min="0" max="10" step="0.1"></label>
-        <label class="noyt">Min Rotten Tomatoes %<input type="number" id="rt" min="0" max="100" step="1"></label>
-        <label class="noyt">Score rule<select id="mode"><option value="any">IMDb or RT</option><option value="all">IMDb and RT</option></select></label>
         <label id="typebox">Type<select id="type"><option value="">Movies &amp; series</option><option>Movie</option><option>Series</option></select></label>
         <label>Genre<select id="genre"></select></label>
         <label>Director / creator<input type="search" id="director" list="dirlist" placeholder="Anyone · type a name" autocomplete="off" enterkeyhint="done"><datalist id="dirlist"></datalist></label>
@@ -440,7 +445,6 @@ function activeFilterCount() {
   let n = 0;
   if (F.genre) n++; if (F.director) n++; if (+F.recent) n++; if (+F.runtime) n++; if (F.status2) n++; if (F.svcOn.length) n++;
   if (F.type && !["movies", "series"].includes(F.cat)) n++;
-  const d = CAT_SCORES[F.cat] || CAT_SCORES.movies; if (F.imdb !== d.imdb || F.rt !== d.rt || F.mode !== d.mode) n++;
   return n;
 }
 const MARK_LABEL = { want: "Want to watch", watching: "Watching now", skipped: "Not interested" };
@@ -699,6 +703,7 @@ function renderNav(tabs, count) {
   }).join("");
 }
 function syncControls() {
+  ["imdb", "rt"].forEach((k) => { const el = $(k), v = String(+F[k] || 0); if (![...el.options].some((o) => o.value === v)) { el.add(new Option(k === "rt" ? v + "%+" : v + "+", v)); [...el.options].sort((a, b) => +a.value - +b.value).forEach((o) => el.add(o)); } F[k] = v; });
   CTRL.forEach((k) => { if ($(k).value !== F[k]) $(k).value = F[k]; });
   renderServiceChips();
   $("dir").textContent = F.desc ? "Highest first ↓" : "Lowest first ↑";
@@ -724,8 +729,6 @@ function syncControls() {
   $("presets").classList.toggle("ytmodes", isYt);
   $("presets").innerHTML = isYt ? YT_MODES.map(([k, l]) => `<button class="ytmode ${(F.ytMode || "history") === k ? "on" : ""}" data-ytmode="${k}">${l}</button>`).join("")
  : fchip + (!topCat ? "" : PRESETS.map((p, i) => p.only && p.only !== F.cat ? "" : `<button class="chip ${F.preset === i ? "on" : ""}" data-preset="${i}">${p.name}</button>`).join(""));
-  const sp = SCORE_PRESETS.find(([, im, rt]) => F.imdb === im && F.rt === rt);
-  $("scorechips").innerHTML = `<span class="muted">Scores:</span>` + SCORE_PRESETS.map(([l, im, rt]) => `<button type="button" class="chip ${sp && sp[1] === im ? "on" : ""}" data-score="${im}|${rt}">${l}</button>`).join("");
   const all = () => pool(); // counts cover only this page (videos on YouTube, movies & TV elsewhere)
   const count = (k) => k === "want" ? all().filter((t) => (S.marks.get(t.id) === "want" || S.pMarks.get(t.id) === "want") && !iSaw(t.id)).length
     : k === "watching" ? all().filter((t) => isWatching(t.id)).length
@@ -753,7 +756,6 @@ function filterSummary() {
   p.push({ movies: "Movies", series: "Series", anime: "Anime", reality: "Reality & competition", docs: "Documentaries", kids: "Kids & family", truecrime: "True crime", youtube: "YouTube" }[F.cat]);
   if (F.cat === "youtube") { p.push(YT_MODES.find((m) => m[0] === (F.ytMode || "history"))[1].replace(/^\S+\s/, "")); if (F.ytSub && YT_SUBS[F.ytMode]) p.push((YT_SUBS[F.ytMode].find((x) => x[0] === F.ytSub) || ["", ""])[1].replace(/^\S+\s/, "")); if (F.genre) p.push(F.genre); if (+F.recent) p.push(`Last ${F.recent} yrs`); return p.join(" · "); }
   if (F.preset >= 0) p.push(PRESETS[F.preset].name.replace(/^\S+\s/, ""));
-  p.push(`IMDb ${F.imdb}+ ${F.mode === "any" ? "or" : "and"} RT ${F.rt}%+`);
   if (F.type) p.push(F.type === "Movie" ? "Movies" : "Series");
   if (F.genre) p.push(F.genre);
   if (F.director) p.push("by " + F.director.trim());
