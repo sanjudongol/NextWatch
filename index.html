@@ -1244,22 +1244,26 @@ const typeChips = () => [["Movie", "🎬 Movie"], ["Series", "📺 Series"], [""
 function renderPick() {
   const el = $("pick"), t = pickId && all().find((x) => x.id === pickId);
   if (choosing && !t) {
-    el.innerHTML = `<div class="pagehead"><button class="btn" id="closepick" aria-label="Back">←</button><h2>🎲 Surprise me with…</h2></div>
+    el.innerHTML = `<div class="pagehead"><button class="btn" id="closepick" aria-label="Back">←</button><h2>🎲 Surprise me with…</h2></div><div class="muted">Picks from everything you haven’t seen, whatever filters you have on.</div>${minChips()}
       <div class="choose"><button class="btn primary" data-pick="Movie">🎬 A movie</button><button class="btn primary" data-pick="Series">📺 A series</button><button class="btn" data-pick="">🎲 Either</button></div>`;
     el.hidden = page !== "pick"; return;
   }
   if (!t) { el.innerHTML = ""; if (page === "pick") showPage("home"); return; }
-  el.innerHTML = `<div class="pagehead"><button class="btn" id="closepick" aria-label="Back">←</button><h2>🎲 Surprise pick</h2></div><div class="pickhead">Tonight’s ${t.type === "Movie" ? "movie" : "series"}<div>${typeChips()}<button class="chip" id="sharepick">📤 Share</button><button class="chip" id="again">Pick another</button></div></div>${t.kind === "yt" ? vid(t) : card(t)}`;
+  el.innerHTML = `<div class="pagehead"><button class="btn" id="closepick" aria-label="Back">←</button><h2>🎲 Surprise pick</h2></div>${minChips()}<div class="pickhead">Tonight’s ${t.type === "Movie" ? "movie" : "series"}<div>${typeChips()}<button class="chip" id="sharepick">📤 Share</button><button class="chip" id="again">Pick another</button></div></div>${t.kind === "yt" ? vid(t) : card(t)}`;
   el.hidden = page !== "pick";
 }
+// Surprise me ignores the filters and search: any movie or series you haven't seen, above one simple score bar
+const SURPRISE_MIN = [["any", "Any", 0, 0], ["good", "Good: 6.5+ / 70%", 6.5, 70], ["great", "Great: 7.5+ / 85%", 7.5, 85]];
+let surpriseMin = local.get("wf-surprise-min", "good");
+const minChips = () => `<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0" title="Minimum IMDb or Rotten Tomatoes score"><span class="muted">IMDb / RT:</span>${SURPRISE_MIN.map(([k, l]) => `<button class="chip ${surpriseMin === k ? "on" : ""}" data-smin="${k}">${l}</button>`).join("")}</div>`;
 function surprise() {
-  // uses whatever is on screen (category, filters, search), narrowed to the type asked for
-  const top = ["movies", "series"].includes(F.cat);
-  const cats = top ? (pickType === "Movie" ? ["movies"] : pickType === "Series" ? ["series"] : ["movies", "series"]) : [F.cat];
-  const pool = filtered(cats).filter((t) => !watched(t.id) && t.id !== pickId && (!pickType || t.type === pickType));
+  const [, , im, rt] = SURPRISE_MIN.find((x) => x[0] === surpriseMin) || SURPRISE_MIN[1];
+  const pool = S.titles.filter((t) => t.kind !== "yt" && (t.type === "Movie" || t.type === "Series") && (!pickType || t.type === pickType)
+    && !iSaw(t.id) && !watched(t.id) && S.marks.get(t.id) !== "skipped" && t.id !== pickId
+    && (!im || imdbOrTmdb(t) >= im || (t.rt ?? -1) >= rt));
   if (!pool.length) {
     pickId = null; choosing = true; renderPick();
-    toast(`No ${pickType ? (pickType === "Movie" ? "movies" : "series") : "titles"} left to pick from here. Try another choice or loosen the filters.`);
+    toast(`No ${pickType ? (pickType === "Movie" ? "movies" : "series") : "titles"} left at that score. Try a lower score.`);
     return;
   }
   pickId = pool[Math.floor(Math.random() * pool.length)].id; choosing = false;
@@ -1427,6 +1431,7 @@ async function onClick(e) {
   if (b.dataset.page) { const yt = b.dataset.page === "youtube"; showPage("home"); if (yt && F.cat !== "youtube") { F.ytMode = "history"; F.ytSub = (F.ytSubs || {}).history || ""; }
     if (yt !== (F.cat === "youtube")) setCat(yt ? "youtube" : (F.lastCat || "movies")); else render(); scrollTo({ top: 0 }); return; }
   if (b.dataset.cat) { setCat(b.dataset.cat); return; }
+  if (b.dataset.smin) { surpriseMin = b.dataset.smin; local.set("wf-surprise-min", surpriseMin); if (pickId) { pickId = null; surprise(); } else renderPick(); return; }
   if (b.dataset.pick != null) { pickType = b.dataset.pick; surprise(); return; }
   if (b.dataset.view) { F.view = b.dataset.view; saveF(); render(); return; }
   if (b.dataset.dirpick) { Object.assign(F, { director: b.dataset.dirpick, view: "all" }); saveF(); render(); scrollTo({ top: 0, behavior: "smooth" }); toast(`Showing titles by ${b.dataset.dirpick}`); return; }
