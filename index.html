@@ -44,6 +44,12 @@ select,.fgrid input{font:inherit;color:var(--tx);background:var(--bg);border:1px
 .chips .chip{background:var(--bg)}
 .chips .chip.on{background:var(--ac)}
 .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.cats{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:12px;background:var(--pill);border-radius:12px;padding:4px}
+.cats button{border:0;background:transparent;border-radius:9px;padding:8px 6px;font-size:14px;font-weight:600;color:var(--mu)}
+.cats button.on{background:var(--card);color:var(--tx);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+@media (max-width:620px){.cats{grid-template-columns:1fr 1fr}}
+.choose{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;padding:6px 0 4px}
+.choose .btn{min-width:120px}
 #status{font-size:13px;color:var(--mu);min-height:18px;margin-bottom:10px}
 #grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:12px}
 .card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
@@ -76,8 +82,8 @@ select,.fgrid input{font:inherit;color:var(--tx);background:var(--bg);border:1px
 .acts .on.mk-want{border-color:var(--want);color:var(--want);font-weight:650}
 .acts .on.mk-skipped{border-color:var(--ac);color:var(--ac);font-weight:650}
 #pick{margin-bottom:16px;border:2px solid var(--ac);border-radius:16px;padding:12px;background:color-mix(in srgb,var(--ac) 6%,var(--bg))}
-.pickhead{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;font-weight:650}
-.pickhead div{display:flex;gap:6px}
+.pickhead{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;font-weight:650;flex-wrap:wrap}
+.pickhead div{display:flex;gap:6px;flex-wrap:wrap}
 .empty{grid-column:1/-1;text-align:center;color:var(--mu);padding:40px 0}
 #account{padding:14px;margin:12px 0;display:grid;gap:12px}
 #account h2{margin:0;font-size:16px}
@@ -113,6 +119,7 @@ footer{color:var(--mu);font-size:12px;margin-top:24px}
     <section id="account" class="box" hidden></section>
 
     <input class="search" id="q" type="search" placeholder="Search titles, directors or actors…" autocomplete="off">
+    <div class="cats" id="cats"></div>
     <div class="presets" id="presets"></div>
 
     <details class="panel box" id="fp">
@@ -175,11 +182,16 @@ const PRESETS = [
   { name: "🆕 New this year & last", set: { recent: "1", sort: "year" } },
   { name: "🔥 Trending now", set: { sort: "popularity" } },
 ];
-const DEFAULTS = { imdb: "7.5", rt: "83", mode: "any", type: "", genre: "", director: "", recent: "0", runtime: "0", status2: "", sort: "imdb", desc: true, mood: "", preset: -1, view: "all", svcOff: [] };
+const DEFAULTS = { imdb: "7.5", rt: "83", mode: "any", type: "", genre: "", director: "", recent: "0", runtime: "0", status2: "", sort: "imdb", desc: true, mood: "", preset: -1, view: "all", svcOff: [], cat: "main" };
 const CTRL = ["imdb", "rt", "mode", "type", "genre", "director", "recent", "runtime", "status2", "sort"];
 const SYNC_JOBS = [
   { kind: "movie", order: "top", pages: 10 }, { kind: "movie", order: "new", pages: 3 },
   { kind: "tv", order: "top", pages: 8 }, { kind: "tv", order: "new", pages: 3 },
+  { kind: "tv", order: "top", pages: 4, genre: "10764", label: "reality shows" },   // TMDB: Reality (incl. competition)
+  { kind: "tv", order: "top", pages: 3, genre: "99", label: "docuseries" },         // TMDB: Documentary
+  { kind: "movie", order: "top", pages: 3, genre: "99", label: "documentaries" },
+  { kind: "tv", order: "top", pages: 4, genre: "16", lang: "ja", label: "anime series" },     // Animation + Japanese
+  { kind: "movie", order: "top", pages: 2, genre: "16", lang: "ja", label: "anime movies" },
 ];
 
 // ---------------- state ----------------
@@ -267,6 +279,9 @@ function demoApi() {
     T("tv-4", "New Show Without IMDb", "Series", 2026, ["Drama"], null, null, ["Max"], ["Someone"], ["Actor"], 1, "Ongoing", "Too new for an IMDb score; TMDB score shown.", 95),
   ];
   titles[7].tmdb = 8.0;
+  titles.push(Object.assign(T("tv-5", "Frieren", "Series", 2023, ["Animation", "Drama"], 8.9, 100, ["Netflix"], ["Keiichiro Saito"], ["Atsumi Tanezaki"], 1, "Ongoing", "An elf mage reflects on life after her hero party’s quest.", 50), { lang: "ja" }));
+  titles.push(T("tv-6", "The Great British Bake Off", "Series", 2010, ["Reality"], 8.6, 100, ["Netflix"], [], ["Noel Fielding"], 15, "Ongoing", "Amateur bakers compete in a tent.", 45));
+  titles.push(T("movie-5", "My Octopus Teacher", "Movie", 2020, ["Documentary"], 8.1, 95, ["Netflix"], ["Pippa Ehrlich"], [], 85, null, "A filmmaker befriends an octopus.", 20));
   let signedIn = !!local.get("demo-in", false);
   const db = { marks: new Map(), views: new Map([["me", new Set()], ["p", new Set()]]) };
   let partner = null;
@@ -320,6 +335,8 @@ function buildFilters() {
 function syncControls() {
   CTRL.forEach((k) => { if ($(k).value !== F[k]) $(k).value = F[k]; });
   $("dir").textContent = F.desc ? "Highest first ↓" : "Lowest first ↑";
+  $("cats").innerHTML = CATS.map(([k, l]) => `<button class="${F.cat === k ? "on" : ""}" data-cat="${k}">${l}</button>`).join("");
+  $("presets").hidden = F.cat !== "main";
   $("presets").innerHTML = PRESETS.map((p, i) => `<button class="chip ${F.preset === i ? "on" : ""}" data-preset="${i}">${p.name}</button>`).join("");
   const count = (k) => k === "want" ? all().filter((t) => S.marks.get(t.id) === "want" || S.pMarks.get(t.id) === "want").length
     : k === "one" ? all().filter((t) => oneSeen(t.id)).length
@@ -332,6 +349,7 @@ function syncControls() {
 const saveF = () => local.set("wf-filters", F);
 function filterSummary() {
   const p = [];
+  if (F.cat !== "main") p.push({ anime: "Anime", reality: "Reality & competition", docs: "Documentaries" }[F.cat]);
   if (F.preset >= 0) p.push(PRESETS[F.preset].name.replace(/^\S+\s/, ""));
   p.push(`IMDb ${F.imdb}+ ${F.mode === "any" ? "or" : "and"} RT ${F.rt}%+`);
   if (F.type) p.push(F.type === "Movie" ? "Movies" : "Series");
@@ -350,6 +368,14 @@ function matchesSearch(t, q) {
   const hay = (t.title + " " + (t.dirs || []).join(" ") + " " + (t.cast || []).join(" ")).toLowerCase();
   return q.toLowerCase().split(/\s+/).every((w) => hay.includes(w));
 }
+const CATS = [["main", "🎬 Movies & series"], ["anime", "🍥 Anime"], ["reality", "🏆 Reality & competition"], ["docs", "🎥 Documentaries"]];
+function categoryOf(t) {
+  const g = t.genres || [];
+  if (g.includes("Reality")) return "reality";
+  if (g.includes("Documentary")) return "docs";
+  if (g.includes("Animation") && t.lang === "ja") return "anime"; // Japanese animation
+  return "main";
+}
 function filtered() {
   const q = $("q").value.trim();
   if (F.view === "want") return all().filter((t) => (S.marks.get(t.id) === "want" || S.pMarks.get(t.id) === "want") && !watched(t.id) && matchesSearch(t, q));
@@ -360,6 +386,7 @@ function filtered() {
   const minYear = +F.recent ? new Date().getFullYear() - +F.recent : 0;
   return all().filter((t) => {
     if (watched(t.id) || S.marks.get(t.id) === "skipped") return false;
+    if (categoryOf(t) !== F.cat) return false;
     const a = imdbOrTmdb(t) >= imdb, b = (t.rt ?? -1) >= rt;
     if (F.mode === "any" ? !(a || b) : !(a && b)) return false;
     if (F.type && t.type !== F.type) return false;
@@ -441,16 +468,29 @@ function render() {
   $("grid").innerHTML = list.length ? list.map(card).join("") : `<div class="empty">${empty}</div>`;
   renderPick(); renderSub();
 }
+let choosing = false, pickType = "";
+const typeChips = () => [["Movie", "🎬 Movie"], ["Series", "📺 Series"], ["", "🎲 Either"]]
+  .map(([v, l]) => `<button class="chip ${pickType === v && pickId ? "on" : ""}" data-pick="${v}">${l}</button>`).join("");
 function renderPick() {
   const el = $("pick"), t = pickId && all().find((x) => x.id === pickId);
+  if (choosing && !t) {
+    el.innerHTML = `<div class="pickhead">🎲 Surprise me with…<div><button class="chip" id="closepick">Close</button></div></div>
+      <div class="choose"><button class="btn primary" data-pick="Movie">🎬 A movie</button><button class="btn primary" data-pick="Series">📺 A series</button><button class="btn" data-pick="">🎲 Either</button></div>`;
+    el.hidden = false; return;
+  }
   if (!t) { el.hidden = true; el.innerHTML = ""; return; }
-  el.innerHTML = `<div class="pickhead">🎲 Tonight’s pick<div><button class="chip" id="again">Pick another</button><button class="chip" id="closepick">Close</button></div></div>${card(t)}`;
+  el.innerHTML = `<div class="pickhead">🎲 Tonight’s ${t.type === "Movie" ? "movie" : "series"}<div>${typeChips()}<button class="chip" id="again">Pick another</button><button class="chip" id="closepick">Close</button></div></div>${card(t)}`;
   el.hidden = false;
 }
 function surprise() {
-  const pool = filtered().filter((t) => !watched(t.id) && t.id !== pickId);
-  if (!pool.length) { pickId = null; renderPick(); toast("Nothing left to pick from. Try loosening the filters."); return; }
-  pickId = pool[Math.floor(Math.random() * pool.length)].id;
+  // uses whatever is on screen (category, filters, search), narrowed to the type asked for
+  const pool = filtered().filter((t) => !watched(t.id) && t.id !== pickId && (!pickType || t.type === pickType));
+  if (!pool.length) {
+    pickId = null; choosing = true; renderPick();
+    toast(`No ${pickType ? (pickType === "Movie" ? "movies" : "series") : "titles"} left to pick from here. Try another choice or loosen the filters.`);
+    return;
+  }
+  pickId = pool[Math.floor(Math.random() * pool.length)].id; choosing = false;
   renderPick(); $("pick").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
@@ -527,18 +567,21 @@ document.addEventListener("click", async (e) => {
   if (b.dataset.svc) { const s = b.dataset.svc; F.svcOff = F.svcOff.includes(s) ? F.svcOff.filter((x) => x !== s) : F.svcOff.concat(s); saveF(); render(); return; }
   if (b.dataset.preset != null) {
     const i = +b.dataset.preset, wasOn = F.preset === i;
-    F = Object.assign({}, DEFAULTS, { desc: F.desc, svcOff: F.svcOff });
+    F = Object.assign({}, DEFAULTS, { desc: F.desc, svcOff: F.svcOff, cat: F.cat });
     if (!wasOn) { Object.assign(F, PRESETS[i].set); F.preset = i; }
     saveF(); render(); return;
   }
+  if (b.dataset.cat) { F.cat = b.dataset.cat; F.view = "all"; if (F.cat !== "main") { F.mood = ""; F.preset = -1; } saveF(); render(); return; }
+  if (b.dataset.pick != null) { pickType = b.dataset.pick; surprise(); return; }
   if (b.dataset.view) { F.view = b.dataset.view; saveF(); render(); return; }
   if (b.dataset.dirpick) { Object.assign(F, { director: b.dataset.dirpick, view: "all" }); saveF(); render(); scrollTo({ top: 0, behavior: "smooth" }); toast(`Showing titles by ${b.dataset.dirpick}`); return; }
   if (b.dataset.actor) { $("q").value = b.dataset.actor; F.view = "all"; saveF(); render(); scrollTo({ top: 0, behavior: "smooth" }); return; }
   switch (b.id) {
     case "dir": F.desc = !F.desc; saveF(); render(); return;
-    case "reset": F = Object.assign({}, DEFAULTS, { view: F.view }); $("q").value = ""; saveF(); render(); return;
-    case "surprise": case "again": surprise(); return;
-    case "closepick": pickId = null; renderPick(); return;
+    case "reset": F = Object.assign({}, DEFAULTS, { view: F.view, cat: F.cat }); $("q").value = ""; saveF(); render(); return;
+    case "surprise": pickId = null; choosing = true; renderPick(); $("pick").scrollIntoView({ behavior: "smooth", block: "start" }); return;
+    case "again": surprise(); return;
+    case "closepick": pickId = null; choosing = false; renderPick(); return;
     case "acctBtn": $("account").hidden = !$("account").hidden; if (!$("account").hidden) renderAccount(); return;
     case "copycode": try { await navigator.clipboard.writeText(S.me.invite_code); toast("Code copied"); } catch { toast("Your code is " + S.me.invite_code); } return;
     case "savename": {
@@ -578,8 +621,8 @@ async function runSync() {
     for (const job of SYNC_JOBS) {
       let total = job.pages;
       for (let page = 1; page <= total; page++) {
-        btn.textContent = `Syncing ${job.kind === "movie" ? "movies" : "series"} ${page}/${total}…`;
-        const r = await api.syncStep({ kind: job.kind, order: job.order, page });
+        btn.textContent = `Syncing ${job.label || (job.kind === "movie" ? "movies" : "series")} ${page}/${total}…`;
+        const r = await api.syncStep({ kind: job.kind, order: job.order, page, ...(job.genre ? { genre: job.genre } : {}), ...(job.lang ? { lang: job.lang } : {}) });
         saved += r.saved || 0; if (r.firstError) errs.push(r.firstError);
         total = Math.min(job.pages, r.totalPages || total);
       }

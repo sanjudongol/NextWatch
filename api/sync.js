@@ -16,6 +16,8 @@ export default async function handler(req, res) {
     const kind = q.kind === "tv" ? "tv" : "movie";
     const order = q.order === "new" ? "new" : "top";
     const page = Math.max(1, Math.min(20, parseInt(q.page, 10) || 1));
+    const genre = /^\d{1,6}(\|\d{1,6})*$/.test(q.genre || "") ? q.genre : "";  // e.g. 10764 = Reality, 99 = Documentary, 16 = Animation
+    const lang = /^[a-z]{2}$/.test(q.lang || "") ? q.lang : "";
     const byId = await providerMap(kind);
     if (!byId.size) return json(res, 500, { error: "Couldn’t match any streaming services on TMDB." });
 
@@ -38,6 +40,8 @@ export default async function handler(req, res) {
       p.set("vote_count.gte", kind === "movie" ? "60" : "30");
       p.set("vote_average.gte", "6.5");
     }
+    if (genre) { p.set("with_genres", genre); p.set("vote_average.gte", "6.0"); } // niche shows get fewer votes
+    if (lang) p.set("with_original_language", lang);
     const d = await tmdb(`/discover/${kind}?${p}`);
     const results = d.results || [];
     const fresh = await freshIds(results.map((r) => `${kind}-${r.id}`));
