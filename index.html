@@ -5,7 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Watch Finder</title>
 <meta name="description" content="Find well-rated movies and series included with your streaming subscriptions.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>">
+<link rel="icon" href="/icons/favicon-64.png" type="image/png">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="theme-color" content="#d6336c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Watch Finder">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <style>
 :root{--bg:#f6f5f2;--card:#fff;--tx:#1d1d1f;--mu:#6b6b70;--bd:#e3e1dc;--ac:#d6336c;--ok:#2f9e63;--want:#3b6fd8;--pill:#efece6;color-scheme:light}
 @media (prefers-color-scheme:dark){:root{--bg:#141417;--card:#1e1e23;--tx:#f0f0f2;--mu:#9a9aa3;--bd:#2d2d34;--ac:#ff6b9a;--ok:#4cc38a;--want:#7aa2ff;--pill:#2a2a31;color-scheme:dark}}
@@ -54,7 +61,23 @@ select,.fgrid input{font:inherit;color:var(--tx);background:var(--bg);border:1px
 @media (max-width:620px){.cats{grid-template-columns:1fr 1fr}}
 .choose{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;padding:6px 0 4px}
 .choose .btn{min-width:120px}
-#status{font-size:13px;color:var(--mu);min-height:18px;margin-bottom:10px}
+.statusbar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+#status{font-size:13px;color:var(--mu);min-height:18px}
+#grid.list{grid-template-columns:1fr;gap:6px}
+.rowc{display:grid;grid-template-columns:48px minmax(0,1fr) auto;gap:10px;align-items:center;background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:8px 10px}
+.rowc.dim{opacity:.6}
+.cover.sm{width:48px;height:72px;font-size:8px;padding:3px;border-radius:6px}
+.rmain{background:none;border:0;padding:0;text-align:left;min-width:0}
+.rmain .t{font-size:15px}
+.rmain .meta{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rbtns{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;max-width:380px}
+.rb{border:1px solid var(--bd);background:transparent;border-radius:8px;padding:5px 8px;font-size:12px;color:var(--mu);white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis}
+.rb.on{border-color:var(--ok);color:var(--ok);font-weight:650}
+.rb.on.mk-want,.rb.on.mk-watching{border-color:var(--want);color:var(--want)}
+.rb.on.mk-skipped{border-color:var(--ac);color:var(--ac)}
+@media (max-width:620px){.rowc{grid-template-columns:48px minmax(0,1fr)}.rbtns{grid-column:1/-1;justify-content:flex-start;max-width:none}}
+.less{align-self:flex-start;background:none;border:0;color:var(--mu);font-size:13px;padding:0}
+.hint{grid-column:1/-1;font-size:12px;color:var(--mu);margin-top:-4px}
 #grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:12px}
 .card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
 .card.dim{opacity:.6}
@@ -85,6 +108,8 @@ select,.fgrid input{font:inherit;color:var(--tx);background:var(--bg);border:1px
 .acts button{border:1px solid var(--bd);background:transparent;border-radius:8px;padding:7px 4px;font-size:13px}
 .acts .on.mk-want{border-color:var(--want);color:var(--want);font-weight:650}
 .acts .on.mk-skipped{border-color:var(--ac);color:var(--ac);font-weight:650}
+.acts .on.mk-watching{border-color:var(--want);color:var(--want);font-weight:650}
+.acts.three{grid-template-columns:1fr 1fr 1fr}
 #pick{margin-bottom:16px;border:2px solid var(--ac);border-radius:16px;padding:12px;background:color-mix(in srgb,var(--ac) 6%,var(--bg))}
 .pickhead{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;font-weight:650;flex-wrap:wrap}
 .pickhead div{display:flex;gap:6px;flex-wrap:wrap}
@@ -116,7 +141,7 @@ footer{color:var(--mu);font-size:12px;margin-top:24px}
       <div class="hbtns">
         <button class="btn" id="surprise" title="Can’t decide? Pick a random movie or series from what’s showing now">🎲 Surprise me</button>
         <button class="btn" id="acctBtn" title="Your name, password, partner link and sign-out">👤 Account</button>
-        <button class="btn primary" id="sync" title="Refresh the catalog: adds new titles, updates ratings and checks which services carry them. Takes a few minutes; your marks are kept.">↻ Sync</button>
+        <button class="btn primary" id="sync" title="Refresh the catalog now: adds new titles, updates ratings and checks which services carry them. Takes a few minutes; your marks are kept. The catalog also refreshes by itself every night.">↻ Sync</button>
       </div>
     </header>
 
@@ -141,13 +166,14 @@ footer{color:var(--mu);font-size:12px;margin-top:24px}
         <label>Sort by<select id="sort"><option value="imdb">IMDb</option><option value="rt">Rotten Tomatoes</option><option value="popularity">Trending</option><option value="year">Release date</option><option value="len">Runtime / seasons</option></select></label>
         <button class="dirbtn" id="dir" type="button"></button>
         <button class="reset" id="reset" type="button">Reset filters</button>
+        <div class="hint" id="scorehint"></div>
         <div class="chips" id="chips"></div>
       </div>
     </details>
 
     <div class="tabs" id="tabs"></div>
     <section id="pick" hidden></section>
-    <div id="status"></div>
+    <div class="statusbar"><div id="status"></div><button class="chip" id="layout" title="Switch between detailed cards and a compact list"></button></div>
     <div id="grid"></div>
 
     <footer>
@@ -161,6 +187,8 @@ footer{color:var(--mu);font-size:12px;margin-top:24px}
 
 <script type="module">
 const DEMO = new URLSearchParams(location.search).has("demo");
+// arriving from a "reset your password" email (read before Supabase tidies the address bar)
+let RECOVERY = /type=recovery/.test(location.hash) || new URLSearchParams(location.search).has("reset");
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const local = {
@@ -186,7 +214,11 @@ const PRESETS = [
   { name: "🆕 New this year & last", set: { recent: "1", sort: "year" } },
   { name: "🔥 Trending now", set: { sort: "popularity" } },
 ];
-const DEFAULTS = { imdb: "7.5", rt: "83", mode: "any", type: "", genre: "", director: "", recent: "0", runtime: "0", status2: "", sort: "imdb", desc: true, mood: "", preset: -1, view: "all", svcOff: [], cat: "main" };
+const DEFAULTS = { imdb: "7.5", rt: "83", mode: "any", type: "", genre: "", director: "", recent: "0", runtime: "0", status2: "", sort: "imdb", desc: true, mood: "", preset: -1, view: "all", svcOff: [], cat: "main", layout: "cards", byCat: {} };
+// each section remembers its own score bar; reality TV tends to score lower on IMDb
+const CAT_SCORES = { main: { imdb: "7.5", rt: "83", mode: "any" }, anime: { imdb: "7.5", rt: "83", mode: "any" }, reality: { imdb: "7.0", rt: "80", mode: "any" }, docs: { imdb: "7.5", rt: "83", mode: "any" } };
+const SCORE_KEYS = ["imdb", "rt", "mode"];
+const MARK_LABEL = { want: "Want to watch", watching: "Watching now", skipped: "Not interested" };
 const CTRL = ["imdb", "rt", "mode", "type", "genre", "director", "recent", "runtime", "status2", "sort"];
 const SYNC_JOBS = [
   { kind: "movie", order: "top", pages: 10 }, { kind: "movie", order: "new", pages: 3 },
@@ -199,8 +231,9 @@ const SYNC_JOBS = [
 ];
 
 // ---------------- state ----------------
-let F = Object.assign({}, DEFAULTS, local.get("wf-filters", {}));
-let S = { titles: [], me: null, partner: null, marks: new Map(), pMarks: new Map(), views: new Set(), pViews: new Set(), lastUpdated: null };
+let F = Object.assign({}, DEFAULTS, { byCat: {} }, local.get("wf-filters", {}));
+let S = { titles: [], me: null, partner: null, marks: new Map(), pMarks: new Map(), views: new Set(), pViews: new Set(), pSkip: new Set(), lastUpdated: null };
+let openRow = null, installEvt = null;
 let api, pickId = null;
 const tid = (t) => t.id;
 const pName = () => (S.partner && S.partner.name) || "Partner";
@@ -212,7 +245,8 @@ async function supabaseApi(cfg) {
   const must = ({ data, error }) => { if (error) throw new Error(error.message); return data; };
   const a = {
     async session() { return (await sb.auth.getSession()).data.session; },
-    onAuth(fn) { sb.auth.onAuthStateChange((_e, s) => fn(s)); },
+    onAuth(fn) { sb.auth.onAuthStateChange((e, s) => fn(s, e)); },
+    async resetPassword(email) { must(await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + "/?reset" })); },
     async sendLink(email) { must(await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin + location.pathname } })); },
     async signInPassword(email, password) { return must(await sb.auth.signInWithPassword({ email, password })); },
     async signUp(email, password) {
@@ -237,7 +271,10 @@ async function supabaseApi(cfg) {
       }
       const marks = must(await sb.from("marks").select("user_id,title_id,status"));
       const views = must(await sb.from("views").select("user_id,title_id"));
+      // titles your partner isn't interested in: only used to leave them out of "Watch together"
+      const pSkip = partner ? (must(await sb.rpc("partner_skipped")) || []).map((x) => (typeof x === "string" ? x : Object.values(x)[0])) : [];
       return {
+        pSkip: new Set(pSkip),
         titles, me, partner, lastUpdated: last,
         marks: new Map(marks.filter((m) => m.user_id === uid).map((m) => [m.title_id, m.status])),
         pMarks: new Map(marks.filter((m) => partner && m.user_id === partner.id).map((m) => [m.title_id, m.status])),
@@ -293,12 +330,13 @@ function demoApi() {
     async session() { return signedIn ? { user: { id: "me" } } : null; },
     onAuth() {},
     async sendLink() { signedIn = true; local.set("demo-in", true); },
+    async resetPassword() {},
     async signInPassword(e, p) { if (p !== "secret1") throw new Error("Invalid login credentials"); signedIn = true; local.set("demo-in", true); return { session: {} }; },
     async signUp() { signedIn = true; local.set("demo-in", true); return { session: {} }; },
     async signOut() { signedIn = false; local.set("demo-in", false); },
     async load() {
       return { titles, me: { id: "me", name: "You", invite_code: "AB12CD", partner_id: partner && "p" }, partner, lastUpdated: new Date().toISOString(),
-        marks: new Map(db.marks), pMarks: new Map([["tv-3", "want"]].filter(() => partner)), views: new Set(db.views.get("me")), pViews: new Set(partner ? db.views.get("p") : []) };
+        marks: new Map(db.marks), pMarks: new Map([["tv-3", "want"], ["tv-1", "watching"]].filter(() => partner)), pSkip: new Set(partner ? ["movie-4"] : []), views: new Set(db.views.get("me")), pViews: new Set(partner ? db.views.get("p") : []) };
     },
     async setMark(t, s) { s ? db.marks.set(t, s) : db.marks.delete(t); },
     async setView(u, t, on) { const k = u === "me" ? "me" : "p"; on ? db.views.get(k).add(t) : db.views.get(k).delete(t); },
@@ -317,6 +355,10 @@ const iSaw = (id) => S.views.has(id);
 const theySaw = (id) => S.pViews.has(id);
 const watched = (id) => iSaw(id) && (!S.partner || theySaw(id));
 const oneSeen = (id) => !!S.partner && iSaw(id) !== theySaw(id);
+const isWatching = (id) => !watched(id) && (S.marks.get(id) === "watching" || S.pMarks.get(id) === "watching");
+const wantCount = (id) => (S.marks.get(id) === "want" ? 1 : 0) + (S.pMarks.get(id) === "want" ? 1 : 0);
+function useCatScores() { Object.assign(F, CAT_SCORES[F.cat] || CAT_SCORES.main, (F.byCat || {})[F.cat] || {}); }
+function rememberCatScores() { F.byCat = Object.assign({}, F.byCat, { [F.cat]: { imdb: F.imdb, rt: F.rt, mode: F.mode } }); }
 const imdbOrTmdb = (t) => (t.imdb ?? t.tmdb ?? 0);
 function sortVal(t, k) {
   if (k === "imdb") return imdbOrTmdb(t);
@@ -342,13 +384,17 @@ function syncControls() {
   $("cats").innerHTML = CATS.map(([k, l]) => `<button class="${F.cat === k ? "on" : ""}" data-cat="${k}">${l}</button>`).join("");
   $("presets").hidden = F.cat !== "main";
   $("presets").innerHTML = PRESETS.map((p, i) => `<button class="chip ${F.preset === i ? "on" : ""}" data-preset="${i}">${p.name}</button>`).join("");
-  const count = (k) => k === "want" ? all().filter((t) => S.marks.get(t.id) === "want" || S.pMarks.get(t.id) === "want").length
+  const count = (k) => k === "want" ? all().filter((t) => (S.marks.get(t.id) === "want" || S.pMarks.get(t.id) === "want") && !watched(t.id)).length
+    : k === "watching" ? all().filter((t) => isWatching(t.id)).length
     : k === "one" ? all().filter((t) => oneSeen(t.id)).length
     : k === "watched" ? all().filter((t) => watched(t.id)).length
     : all().filter((t) => S.marks.get(t.id) === "skipped").length;
-  const tabs = [["all", "All matches"], ["want", "Want to watch"], ...(S.partner ? [["one", "Seen by one of you"]] : []), ["watched", "Watched"], ["skipped", "Not interested"]];
+  const tabs = [["all", "All matches"], ...(S.partner ? [["together", "👫 Watch together"]] : []), ["watching", "▶ Watching now"], ["want", "Want to watch"], ...(S.partner ? [["one", "Seen by one of you"]] : []), ["watched", "Watched"], ["skipped", "Not interested"]];
   if (!tabs.some(([k]) => k === F.view)) F.view = "all";
-  $("tabs").innerHTML = tabs.map(([k, l]) => `<button class="chip ${F.view === k ? "on" : ""}" data-view="${k}">${l}${k === "all" ? "" : ` (${count(k)})`}</button>`).join("");
+  $("tabs").innerHTML = tabs.map(([k, l]) => `<button class="chip ${F.view === k ? "on" : ""}" data-view="${k}" ${k === "together" ? `title="Only what neither of you has seen, with what you both want first. Uses the filters and section above."` : ""}>${l}${k === "all" || k === "together" ? "" : ` (${count(k)})`}</button>`).join("");
+  $("layout").textContent = F.layout === "list" ? "▦ Cards" : "☰ Compact list";
+  const sectionName = { main: "Movies & series", anime: "Anime", reality: "Reality & competition", docs: "Documentaries" }[F.cat];
+  $("scorehint").textContent = `Score settings are remembered separately for each section (now: ${sectionName}).`;
 }
 const saveF = () => local.set("wf-filters", F);
 function filterSummary() {
@@ -383,6 +429,7 @@ function categoryOf(t) {
 function filtered() {
   const q = $("q").value.trim();
   if (F.view === "want") return all().filter((t) => (S.marks.get(t.id) === "want" || S.pMarks.get(t.id) === "want") && !watched(t.id) && matchesSearch(t, q));
+  if (F.view === "watching") return all().filter((t) => isWatching(t.id) && matchesSearch(t, q));
   if (F.view === "one") return all().filter((t) => oneSeen(t.id) && matchesSearch(t, q));
   if (F.view === "watched") return all().filter((t) => watched(t.id) && matchesSearch(t, q));
   if (F.view === "skipped") return all().filter((t) => S.marks.get(t.id) === "skipped" && matchesSearch(t, q));
@@ -390,6 +437,7 @@ function filtered() {
   const minYear = +F.recent ? new Date().getFullYear() - +F.recent : 0;
   return all().filter((t) => {
     if (watched(t.id) || S.marks.get(t.id) === "skipped") return false;
+    if (F.view === "together" && (iSaw(t.id) || theySaw(t.id) || S.pSkip.has(t.id))) return false;
     if (categoryOf(t) !== F.cat) return false;
     const a = imdbOrTmdb(t) >= imdb, b = (t.rt ?? -1) >= rt;
     if (F.mode === "any" ? !(a || b) : !(a && b)) return false;
@@ -417,14 +465,43 @@ function lenText(t) {
   if (t.type === "Movie") return `${Math.floor(t.len / 60)}h ${String(t.len % 60).padStart(2, "0")}m`;
   return `${t.len} season${t.len > 1 ? "s" : ""}${t.status ? " · " + (t.status === "Limited" ? "Limited series" : t.status) : ""}`;
 }
-function card(t) {
+function badgeList(t) {
   const id = t.id, mk = S.marks.get(id) || "", pmk = S.pMarks.get(id) || "", w = watched(id);
-  const badges = [`<span class="badge">${t.type}</span>`];
+  const badges = [];
   if (w) badges.push(`<span class="badge b-watched">Watched</span>`);
+  if (!w && mk === "watching" && pmk === "watching") badges.push(`<span class="badge b-want">▶ You’re both watching</span>`);
+  else if (!w && mk === "watching") badges.push(`<span class="badge b-want">▶ Watching now</span>`);
+  else if (!w && pmk === "watching") badges.push(`<span class="badge b-want">▶ ${esc(pName())} is watching</span>`);
   if (mk === "want" && pmk === "want") badges.push(`<span class="badge b-want">You both want this</span>`);
   else if (mk === "want") badges.push(`<span class="badge b-want">Want to watch</span>`);
   else if (pmk === "want") badges.push(`<span class="badge b-want">${esc(pName())} wants this</span>`);
   if (mk === "skipped") badges.push(`<span class="badge b-skipped">Not interested</span>`);
+  return badges;
+}
+function row(t) {
+  const id = t.id, mk = S.marks.get(id) || "", w = watched(id);
+  const sc = [t.imdb != null ? `IMDb ${t.imdb.toFixed(1)}` : t.tmdb != null ? `TMDB ${t.tmdb.toFixed(1)}` : "", t.rt != null ? `RT ${t.rt}%` : ""].filter(Boolean).join(" · ");
+  const btn = (attrs, on, cls, label, title) => `<button class="rb ${cls} ${on ? "on" : ""}" ${attrs} data-id="${esc(id)}" title="${esc(title)}">${label}</button>`;
+  return `<article class="rowc ${w || mk === "skipped" ? "dim" : ""}">
+  ${cover(t).replace('class="cover"', 'class="cover sm"')}
+  <button class="rmain" data-open="${esc(id)}" title="Show details">
+    <div class="t">${esc(t.title)}</div>
+    <div class="meta">${t.year || ""} · ${esc(lenText(t))} · ${esc((t.genres || []).slice(0, 2).join(", "))}</div>
+    <div class="meta">${esc(sc)}${sc ? " · " : ""}${esc((t.services || []).join(", "))}</div>
+    ${badgeList(t).length ? `<div class="badges">${badgeList(t).join("")}</div>` : ""}
+  </button>
+  <div class="rbtns">
+    ${btn('data-seen="me"', iSaw(id), "", `${iSaw(id) ? "✓" : "○"} ${S.partner ? "Me" : "Seen"}`, S.partner ? "I watched" : "Watched")}
+    ${S.partner ? btn('data-seen="partner"', theySaw(id), "", `${theySaw(id) ? "✓" : "○"} ${esc(pName())}`, `${pName()} watched`) : ""}
+    ${btn('data-mark="want"', mk === "want", "mk-want", "★ Want", "Want to watch")}
+    ${t.type === "Series" ? btn('data-mark="watching"', mk === "watching", "mk-watching", "▶ Watching", "Watching now: keeps it at the top until you finish") : ""}
+    ${btn('data-mark="skipped"', mk === "skipped", "mk-skipped", "✕", "Not interested")}
+  </div>
+</article>`;
+}
+function card(t, collapsible) {
+  const id = t.id, mk = S.marks.get(id) || "", w = watched(id);
+  const badges = [`<span class="badge">${t.type}</span>`, ...badgeList(t)];
   const dirs = (t.dirs || []).map((d) => `<button data-dirpick="${esc(d)}">${esc(d)}</button>`).join(", ");
   const cast = (t.cast || []).map((a) => `<button data-actor="${esc(a)}">${esc(a)}</button>`).join(", ");
   const imdbCell = t.imdb != null ? `IMDb<b>${t.imdb.toFixed(1)}</b>` : t.tmdb != null ? `TMDB<b>${t.tmdb.toFixed(1)}</b>` : `IMDb<b>—</b>`;
@@ -433,6 +510,7 @@ function card(t) {
     ${S.partner ? `<button class="${theySaw(id) ? "on" : ""}" data-seen="partner" data-id="${esc(id)}"><span class="tick">${theySaw(id) ? "✓" : ""}</span>${esc(pName())} watched</button>` : ""}
   </div>`;
   return `<article class="card ${w || mk === "skipped" ? "dim" : ""}">
+  ${collapsible ? `<button class="less" data-open="${esc(id)}">▴ Show less</button>` : ""}
   <div class="head">${cover(t)}<div>
     <div class="t">${esc(t.title)}</div>
     <div class="meta">${t.year || ""} · ${esc(lenText(t))}</div>
@@ -444,8 +522,9 @@ function card(t) {
   ${dirs || cast ? `<div class="people">${dirs ? `${t.type === "Series" ? "Created by" : "Directed by"} ${dirs}<br>` : ""}${cast ? `Starring ${cast}` : ""}</div>` : ""}
   <div><div class="where">Where to watch</div><div class="svc">${(t.services || []).map((x) => `<span class="${x === "YouTube" ? "free" : ""}">${esc(x)}${x === "YouTube" ? " · free w/ ads" : ""}</span>`).join("")}</div></div>
   ${checks}
-  <div class="acts">
+  <div class="acts ${t.type === "Series" ? "three" : ""}">
     <button class="mk-want ${mk === "want" ? "on" : ""}" data-mark="want" data-id="${esc(id)}">${mk === "want" ? "✓ " : ""}Want to watch</button>
+    ${t.type === "Series" ? `<button class="mk-watching ${mk === "watching" ? "on" : ""}" data-mark="watching" data-id="${esc(id)}" title="Keeps it at the top until you finish">${mk === "watching" ? "✓ " : "▶ "}Watching now</button>` : ""}
     <button class="mk-skipped ${mk === "skipped" ? "on" : ""}" data-mark="skipped" data-id="${esc(id)}">${mk === "skipped" ? "✓ " : ""}Not interested</button>
   </div>
 </article>`;
@@ -456,7 +535,7 @@ const rank = (t) => rankMap.get(t.id) || "—";
 
 function renderSub(note) {
   const when = S.lastUpdated ? new Date(S.lastUpdated).toLocaleDateString() : "never";
-  $("sub").textContent = note || `${all().length} titles · last synced ${when} · signed in as ${S.me?.name || "you"}`;
+  $("sub").textContent = note || `${all().length} titles · last synced ${when} (refreshes nightly) · signed in as ${S.me?.name || "you"}`;
   const chip = $("partnerChip");
   if (S.me && !note) {
     chip.hidden = false;
@@ -470,13 +549,19 @@ function render() {
   $("fsum").innerHTML = `<b>Filters</b>${esc(filterSummary())}`;
   const list = filtered();
   const k = F.sort, dir = F.desc ? -1 : 1;
-  list.sort((x, y) => dir * (sortVal(x, k) - sortVal(y, k)) || imdbOrTmdb(y) - imdbOrTmdb(x));
+  // pinned first: in "Watch together", what you both want; elsewhere, series you're in the middle of
+  const pri = (t) => F.view === "together" ? wantCount(t.id) : F.view === "all" || F.view === "want" ? (isWatching(t.id) ? 1 : 0) : 0;
+  list.sort((x, y) => pri(y) - pri(x) || dir * (sortVal(x, k) - sortVal(y, k)) || imdbOrTmdb(y) - imdbOrTmdb(x));
   const q = $("q").value.trim();
-  const noun = F.view === "all" ? (list.length === 1 ? "match" : "matches") : (list.length === 1 ? "title" : "titles");
+  const noun = F.view === "all" || F.view === "together" ? (list.length === 1 ? "match" : "matches") : (list.length === 1 ? "title" : "titles");
   $("status").textContent = `${list.length} ${noun}${q ? ` for “${q}”` : ""}`;
   let empty = "Nothing here yet.";
+  if (F.view === "together") empty = "Nothing here that neither of you has seen. Try another section or loosen the filters.";
+  if (F.view === "watching") empty = "Nothing in progress. On a series, tap “Watching now” to keep it here until you finish.";
   if (F.view === "all") empty = all().length ? "Nothing matches these filters. Try lowering a score, widening the dates, or tapping Reset filters." : "No titles yet. Tap ↻ Sync to pull in the catalog — the first sync takes a minute or two.";
-  $("grid").innerHTML = list.length ? list.map(card).join("") : `<div class="empty">${empty}</div>`;
+  const compact = F.layout === "list";
+  $("grid").className = compact ? "list" : "";
+  $("grid").innerHTML = list.length ? list.map((t) => compact ? (openRow === t.id ? card(t, true) : row(t)) : card(t)).join("") : `<div class="empty">${empty}</div>`;
   renderPick(); renderSub();
 }
 let choosing = false, pickType = "";
@@ -514,10 +599,11 @@ function renderAccount() {
   ${S.partner ? `
     <div class="shared"><strong>👫 You’re linked with ${esc(pName())}.</strong> Here’s exactly what that means:
       <ul>
-        <li><b>You both see:</b> each other’s “watched” ticks and “Want to watch” picks (shown as “${esc(pName())} wants this”).</li>
+        <li><b>You both see:</b> each other’s “watched” ticks, “Want to watch” picks (shown as “${esc(pName())} wants this”) and “Watching now” series.</li>
         <li><b>Either of you can tick</b> the other’s “watched” box, handy when you watch on one screen.</li>
         <li>A title moves to <b>Watched</b> only when <b>both</b> boxes are ticked. If just one of you has seen it, it shows under “Seen by one of you”.</li>
-        <li><b>Stays private:</b> your “Not interested” list, your filters and your password.</li>
+        <li><b>Watch together</b> shows only what neither of you has seen, with titles you both want at the top.</li>
+        <li><b>Stays private:</b> your “Not interested” list, your filters and your password. Watch together quietly leaves out titles either of you isn’t interested in, without showing which.</li>
         <li>Unlinking keeps everyone’s ticks; you just stop seeing each other’s.</li>
       </ul></div>
     <div class="row"><button class="btn" id="unlink">Unlink partner</button></div>`
@@ -527,6 +613,11 @@ function renderAccount() {
     <div class="row"><input type="text" id="pcode" maxlength="6" placeholder="Partner’s code" style="text-transform:uppercase;width:150px"><button class="btn primary" id="linkbtn">Link</button></div>
     <div class="err" id="linkerr"></div>`}
   <label>Password (so you can sign in without an email link)<div class="row"><input type="password" id="newpw" minlength="6" placeholder="New password (6+ characters)" autocomplete="new-password"><button class="btn" id="savepw">Set password</button></div></label>
+  <div><strong>📱 Put it on your home screen</strong><div class="muted">
+    <b>iPhone / iPad:</b> open this site in Safari, tap the Share button, then “Add to Home Screen”.
+    <b>Android:</b> in Chrome, tap ⋮ then “Install app” (or “Add to Home screen”).
+    The first time you open the home-screen app, sign in with your email and password.</div>
+    ${installEvt ? `<div class="row" style="margin-top:8px"><button class="btn primary" id="install">Install app</button></div>` : ""}</div>
   <div class="row"><button class="btn" id="signout">Sign out</button></div>`;
 }
 
@@ -569,34 +660,41 @@ document.addEventListener("click", async (e) => {
   const name = (id) => (all().find((t) => t.id === id) || {}).title || "title";
   if (b.dataset.mark) {
     const id = b.dataset.id, cur = S.marks.get(id) || "", nx = cur === b.dataset.mark ? "" : b.dataset.mark;
-    change(id, { mk: nx }, nx ? `${nx === "want" ? "Want to watch" : "Not interested"}: ${name(id)}` : `Cleared: ${name(id)}`); return;
+    change(id, { mk: nx }, nx ? `${MARK_LABEL[nx]}: ${name(id)}` : `Cleared: ${name(id)}`); return;
   }
   if (b.dataset.seen) {
     const id = b.dataset.id, mine = b.dataset.seen === "me", s = snap(id);
     const patch = mine ? { me: !s.me } : { them: !s.them };
     const after = Object.assign({}, s, patch);
     const both = after.me && (!S.partner || after.them);
-    if (both && after.mk === "want") patch.mk = "";
+    if (both && (after.mk === "want" || after.mk === "watching")) patch.mk = "";
     const who = mine ? "You" : pName();
     const on = mine ? after.me : after.them;
     change(id, patch, both && S.partner ? `You’ve both seen ${name(id)}, moved to Watched` : on ? `${who} watched ${name(id)}` : `Unticked ${mine ? "you" : who} for ${name(id)}`);
     return;
   }
+  if (b.dataset.open) { openRow = openRow === b.dataset.open ? null : b.dataset.open; render(); return; }
   if (b.dataset.svc) { const s = b.dataset.svc; F.svcOff = F.svcOff.includes(s) ? F.svcOff.filter((x) => x !== s) : F.svcOff.concat(s); saveF(); render(); return; }
   if (b.dataset.preset != null) {
     const i = +b.dataset.preset, wasOn = F.preset === i;
-    F = Object.assign({}, DEFAULTS, { desc: F.desc, svcOff: F.svcOff, cat: F.cat });
+    F = Object.assign({}, DEFAULTS, { desc: F.desc, svcOff: F.svcOff, cat: F.cat, byCat: F.byCat, layout: F.layout, view: F.view });
+    useCatScores();
     if (!wasOn) { Object.assign(F, PRESETS[i].set); F.preset = i; }
     saveF(); render(); return;
   }
-  if (b.dataset.cat) { F.cat = b.dataset.cat; F.view = "all"; if (F.cat !== "main") { F.mood = ""; F.preset = -1; } saveF(); render(); return; }
+  if (b.dataset.cat) { rememberCatScores(); F.cat = b.dataset.cat; useCatScores(); if (F.view !== "together") F.view = "all"; if (F.cat !== "main") { F.mood = ""; F.preset = -1; } saveF(); render(); return; }
   if (b.dataset.pick != null) { pickType = b.dataset.pick; surprise(); return; }
   if (b.dataset.view) { F.view = b.dataset.view; saveF(); render(); return; }
   if (b.dataset.dirpick) { Object.assign(F, { director: b.dataset.dirpick, view: "all" }); saveF(); render(); scrollTo({ top: 0, behavior: "smooth" }); toast(`Showing titles by ${b.dataset.dirpick}`); return; }
   if (b.dataset.actor) { $("q").value = b.dataset.actor; F.view = "all"; saveF(); render(); scrollTo({ top: 0, behavior: "smooth" }); return; }
   switch (b.id) {
     case "dir": F.desc = !F.desc; saveF(); render(); return;
-    case "reset": F = Object.assign({}, DEFAULTS, { view: F.view, cat: F.cat }); $("q").value = ""; saveF(); render(); return;
+    case "reset": {
+      const byCat = Object.assign({}, F.byCat); delete byCat[F.cat];
+      F = Object.assign({}, DEFAULTS, { view: F.view, cat: F.cat, layout: F.layout, byCat }); useCatScores(); $("q").value = ""; saveF(); render(); return;
+    }
+    case "layout": F.layout = F.layout === "list" ? "cards" : "list"; openRow = null; saveF(); render(); return;
+    case "install": if (installEvt) { installEvt.prompt(); installEvt = null; renderAccount(); } return;
     case "surprise": pickId = null; choosing = true; renderPick(); $("pick").scrollIntoView({ behavior: "smooth", block: "start" }); return;
     case "again": surprise(); return;
     case "closepick": pickId = null; choosing = false; renderPick(); return;
@@ -625,7 +723,9 @@ document.addEventListener("click", async (e) => {
   }
 });
 function confirmUnlink() { const b = $("unlink"); if (b.dataset.sure) return true; b.dataset.sure = "1"; b.textContent = "Tap again to unlink"; return false; }
-CTRL.forEach((k) => $(k).addEventListener("input", () => { F[k] = $(k).value; F.preset = -1; saveF(); render(); }));
+CTRL.forEach((k) => $(k).addEventListener("input", () => { F[k] = $(k).value; F.preset = -1; if (SCORE_KEYS.includes(k)) rememberCatScores(); saveF(); render(); }));
+addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); installEvt = e; if (!$("account").hidden) renderAccount(); });
+if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("/sw.js").catch(() => {});
 let qT; $("q").addEventListener("input", () => { clearTimeout(qT); qT = setTimeout(render, 120); });
 $("fp").addEventListener("toggle", () => local.set("wf-panel-open", $("fp").open));
 document.addEventListener("visibilitychange", () => { if (!document.hidden && S.me && Date.now() - lastLoad > 60000) reload(); });
@@ -672,6 +772,10 @@ function friendly(msg) {
   return msg;
 }
 function showSignIn(state) {
+  if (state === "reset-sent") {
+    gate(`<h1>Check your email</h1><p class="muted">If there’s an account for that email, we sent a link to choose a new password. Open it on this device. It can take a minute to arrive — check spam too. This also works if you’ve never set a password.</p><button class="btn" id="back">Back</button>`);
+    $("back").onclick = () => showSignIn(); return;
+  }
   if (state === "sent") {
     gate(`<h1>Check your email</h1><p class="muted">We sent you a link. Open it on this device to finish signing in. It can take a minute to arrive — check spam too.</p><button class="btn" id="back">Back</button>`);
     $("back").onclick = () => showSignIn(); return;
@@ -682,16 +786,18 @@ function showSignIn(state) {
       <input type="password" id="pw" minlength="6" placeholder="Password (6+ characters)" autocomplete="current-password">
       <div class="row" style="justify-content:center"><button class="btn primary" data-act="in">Sign in</button><button class="btn" data-act="up">Create account</button></div>
       <button class="btn" data-act="link" type="button" style="font-weight:500">Email me a sign-in link instead</button>
+      <button class="btn" data-act="reset" type="button" style="font-weight:500;border:0;background:none;color:var(--mu);text-decoration:underline">Forgot your password, or never set one?</button>
     </form><div class="err" id="signerr"></div>`);
   const form = $("signin");
   const go = async (act, btn) => {
     const email = $("email").value.trim(), pw = $("pw").value;
     $("signerr").textContent = "";
     if (!email || !$("email").checkValidity()) { $("signerr").textContent = "Enter your email first."; return; }
-    if (act !== "link" && pw.length < 6) { $("signerr").textContent = "Enter a password of at least 6 characters."; return; }
+    if (act !== "link" && act !== "reset" && pw.length < 6) { $("signerr").textContent = "Enter a password of at least 6 characters."; return; }
     btn.disabled = true;
     try {
       if (act === "link") { await api.sendLink(email); if (DEMO) return start(); return showSignIn("sent"); }
+      if (act === "reset") { await api.resetPassword(email); return showSignIn("reset-sent"); }
       const res = act === "in" ? await api.signInPassword(email, pw) : await api.signUp(email, pw);
       if (res && res.session) return start();
       showSignIn("sent"); // sign-up needs email confirmation
@@ -699,6 +805,27 @@ function showSignIn(state) {
   };
   form.onsubmit = (e) => { e.preventDefault(); const b = e.submitter || form.querySelector('[data-act="in"]'); go(b.dataset.act || "in", b); };
   form.querySelector('[data-act="link"]').onclick = (e) => go("link", e.currentTarget);
+  form.querySelector('[data-act="reset"]').onclick = (e) => go("reset", e.currentTarget);
+}
+function showNewPassword() {
+  gate(`<h1>Choose a new password</h1><p class="muted">You’re signed in from the email link. Pick a password you’ll use to sign in from now on.</p>
+    <form id="newpwform" style="display:grid;gap:10px">
+      <input type="password" id="np1" minlength="6" placeholder="New password (6+ characters)" autocomplete="new-password">
+      <input type="password" id="np2" minlength="6" placeholder="Type it again" autocomplete="new-password">
+      <button class="btn primary">Save password</button>
+    </form><div class="err" id="nperr"></div>`);
+  $("newpwform").onsubmit = async (e) => {
+    e.preventDefault();
+    const a = $("np1").value, b = $("np2").value, btn = e.submitter;
+    if (a.length < 6) { $("nperr").textContent = "Use at least 6 characters."; return; }
+    if (a !== b) { $("nperr").textContent = "Those two don’t match."; return; }
+    btn.disabled = true;
+    try {
+      await api.setPassword(a);
+      RECOVERY = false; history.replaceState(null, "", location.pathname);
+      await start(); toast("Password saved. Use it next time you sign in.");
+    } catch (er) { $("nperr").textContent = friendly(er.message); btn.disabled = false; }
+  };
 }
 async function start() {
   try {
@@ -708,10 +835,12 @@ async function start() {
         const cfg = await fetch("/api/config").then((r) => r.json()).catch(() => ({ ready: false }));
         if (!cfg.ready) return gate(`<h1>Almost there</h1><p class="muted">The site is running, but its Supabase settings aren’t in Vercel yet (SUPABASE_URL and SUPABASE_ANON_KEY). Add them, redeploy, and reload this page.</p>`);
         api = await supabaseApi(cfg);
+        api.onAuth((_s, ev) => { if (ev === "PASSWORD_RECOVERY") { RECOVERY = true; showNewPassword(); } });
       }
     }
     const session = await api.session();
     if (!session) return showSignIn();
+    if (RECOVERY) return showNewPassword();
     $("gate").hidden = true; $("app").hidden = false;
     $("fp").open = local.get("wf-panel-open", innerWidth >= 760);
     renderSub("Loading…");

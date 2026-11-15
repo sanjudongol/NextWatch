@@ -19,13 +19,15 @@ create table if not exists public.profiles (
   created_at timestamptz not null default now()
 );
 
--- 3. "Want to watch" / "Not interested" (one row per person per title)
+-- 3. "Want to watch" / "Watching now" / "Not interested" (one row per person per title)
 create table if not exists public.marks (
   user_id uuid not null references auth.users on delete cascade,
   title_id text not null,
-  status text not null check (status in ('want', 'skipped')),
+  status text not null check (status in ('want', 'skipped', 'watching')),
   primary key (user_id, title_id)
 );
+alter table public.marks drop constraint if exists marks_status_check;
+alter table public.marks add constraint marks_status_check check (status in ('want', 'skipped', 'watching'));
 
 -- 4. "I watched it" (one row per person per title)
 create table if not exists public.views (
@@ -81,6 +83,14 @@ begin
   update public.profiles set partner_id = null where id = auth.uid();
 end $$;
 
+-- Titles your linked partner marked "Not interested": used only to hide them from "Watch together"
+create or replace function public.partner_skipped() returns setof text
+language sql stable security definer set search_path = public as $$
+  select m.title_id from public.marks m
+  join public.profiles me on me.id = auth.uid()
+  where m.user_id = me.partner_id and m.status = 'skipped' and public.is_my_partner(m.user_id);
+$$;
+
 -- Security: every table is locked down, then opened only as needed
 alter table public.titles enable row level security;
 alter table public.profiles enable row level security;
@@ -99,7 +109,7 @@ create policy "rename yourself" on public.profiles for update to authenticated
 
 drop policy if exists "own and partner marks: read" on public.marks;
 create policy "own and partner marks: read" on public.marks for select to authenticated
-  using (user_id = auth.uid() or (public.is_my_partner(user_id) and status = 'want'));  -- "Not interested" stays private
+  using (user_id = auth.uid() or (public.is_my_partner(user_id) and status in ('want', 'watching')));  -- "Not interested" stays private
 drop policy if exists "own marks: write" on public.marks;
 create policy "own marks: write" on public.marks for all to authenticated
   using (user_id = auth.uid()) with check (user_id = auth.uid());
@@ -122,8 +132,8 @@ grant update (name) on public.profiles to authenticated;   -- partner links chan
 grant select, insert, update, delete on public.marks, public.views to authenticated;
 grant all on public.titles, public.profiles, public.marks, public.views to service_role;
 revoke execute on function public.handle_new_user() from public, anon, authenticated;   -- only the sign-up trigger runs it
-revoke execute on function public.link_partner(text), public.unlink_partner(), public.is_my_partner(uuid) from public, anon;
-grant execute on function public.link_partner(text), public.unlink_partner(), public.is_my_partner(uuid) to authenticated;
+revoke execute on function public.link_partner(text), public.unlink_partner(), public.is_my_partner(uuid), public.partner_skipped() from public, anon;
+grant execute on function public.link_partner(text), public.unlink_partner(), public.is_my_partner(uuid), public.partner_skipped() to authenticated;
 
 -- Profiles for anyone who signed in before this script ran
 insert into public.profiles (id, name)

@@ -36,3 +36,12 @@ Authentication → URL Configuration → set **Site URL** to your Vercel address
 - One full sync uses a few hundred OMDb lookups the first time (free limit: about 1,000 a day). Later syncs only re-check titles older than a week.
 - Rotten Tomatoes' audience score (Popcornmeter) isn't available from any official source, so it isn't shown.
 - Streaming availability data by JustWatch, via TMDB. This product uses the TMDB API but is not endorsed or certified by TMDB.
+
+## Nightly refresh
+`vercel.json` schedules `/api/cron` once a day (about 3 am Pacific). It needs a `CRON_SECRET` environment variable in Vercel (any long random string); Vercel sends it automatically, and the endpoint refuses anything without it. Each run spends up to ~50 seconds on new releases, a rotating slice of the top lists, and re-checking the oldest titles.
+
+## Install as an app
+The site has a web app manifest and a small service worker, so it can be added to a phone's home screen (Safari → Share → Add to Home Screen, or Chrome → Install app).
+
+## Password reset
+"Forgot your password, or never set one?" on the sign-in screen emails a reset link (Supabase `resetPasswordForEmail`). The link returns to the site, which asks for a new password.

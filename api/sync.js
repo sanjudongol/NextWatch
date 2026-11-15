@@ -4,6 +4,8 @@ import { env, json, requireUser, tmdb, providerMap, buildTitle, freshIds, staleI
 
 const NEEDED = ["SUPABASE_URL", "SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY", "TMDB_TOKEN", "OMDB_KEY"];
 
+export const NEEDED_ENV = NEEDED;
+
 export default async function handler(req, res) {
   try {
     const missing = NEEDED.filter((k) => !env(k));
@@ -12,14 +14,21 @@ export default async function handler(req, res) {
 
     const q = req.query || Object.fromEntries(new URL(req.url, "http://x").searchParams);
     if (q.mode === "stale") return json(res, 200, await refreshStale());
+    return json(res, 200, await syncPage(q));
+  } catch (e) {
+    return json(res, 500, { error: String(e.message || e) });
+  }
+}
 
+// One page of TMDB discover results → catalog. Also used by the nightly job (api/cron.js).
+export async function syncPage(q) {
     const kind = q.kind === "tv" ? "tv" : "movie";
     const order = q.order === "new" ? "new" : "top";
     const page = Math.max(1, Math.min(20, parseInt(q.page, 10) || 1));
     const genre = /^\d{1,6}(\|\d{1,6})*$/.test(q.genre || "") ? q.genre : "";  // e.g. 10764 = Reality, 99 = Documentary, 16 = Animation
     const lang = /^[a-z]{2}$/.test(q.lang || "") ? q.lang : "";
     const byId = await providerMap(kind);
-    if (!byId.size) return json(res, 500, { error: "Couldn’t match any streaming services on TMDB." });
+    if (!byId.size) throw new Error("Couldn’t match any streaming services on TMDB.");
 
     const today = new Date().toISOString().slice(0, 10);
     const p = new URLSearchParams({
@@ -48,10 +57,7 @@ export default async function handler(req, res) {
     const todo = results.filter((r) => !fresh.has(`${kind}-${r.id}`));
     const built = await mapLimit(todo, 5, (r) => buildTitle(kind, r.id, byId));
     const summary = await store(built);
-    return json(res, 200, { page, totalPages: Math.min(d.total_pages || 1, 20), checked: results.length, skippedFresh: fresh.size, ...summary });
-  } catch (e) {
-    return json(res, 500, { error: String(e.message || e) });
-  }
+    return { page, totalPages: Math.min(d.total_pages || 1, 20), checked: results.length, skippedFresh: fresh.size, ...summary };
 }
 
 async function store(built) {
@@ -63,8 +69,8 @@ async function store(built) {
   return { saved: keep.length, removed: gone.length, errors: errors.length, firstError: errors[0] || null, ratingsPending: keep.filter((t) => t.needsRatings).length };
 }
 
-async function refreshStale() {
-  const ids = await staleIds(15);
+export async function refreshStale(n = 15) {
+  const ids = await staleIds(n);
   const maps = { movie: await providerMap("movie"), tv: await providerMap("tv") };
   const built = await mapLimit(ids, 5, (id) => {
     const [kind, num] = id.split("-");
