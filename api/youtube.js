@@ -12,6 +12,25 @@ async function yt(path) {
   if (!r.ok) throw new Error("YouTube: " + ((body.error && body.error.message) || r.status));
   return body;
 }
+// Learning sections: each sub-topic is one YouTube search for its most-viewed videos (refreshed weekly).
+export const YT_TOPICS = {
+  history: { label: "History", subs: {
+    world: ["World history", "world history explained"],
+    us: ["US history", "american history documentary"],
+    ancient: ["Ancient world", "ancient civilizations history"],
+    medieval: ["Medieval", "medieval history documentary"],
+    wars: ["World wars", "world war 2 history documentary"],
+    empires: ["Empires", "rise and fall of empires history"],
+    mysteries: ["Mysteries & archaeology", "archaeology mysteries history discovery"],
+  } },
+  food: { label: "Food & travel", subs: {
+    streetfood: ["Street food", "street food tour"],
+    cooking: ["Cooking", "cooking recipe how to make"],
+    foodtours: ["Food tours", "trying local food travel vlog"],
+    destinations: ["Destinations", "travel guide things to do"],
+    wonders: ["Amazing places", "most beautiful places in the world travel"],
+  } },
+};
 const secs = (iso) => { const m = /P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/.exec(iso || "") || []; return (+m[1] || 0) * 86400 + (+m[2] || 0) * 3600 + (+m[3] || 0) * 60 + (+m[4] || 0); };
 
 function toTitle(v, extra) {
@@ -45,8 +64,9 @@ async function save(list) {
   const now = new Date().toISOString();
   const rows = list.map((t) => {
     const p = prev.get(t.id) || {};
-    return { id: t.id, kind: "yt", updated_at: now, data: { ...t, alltime: t.alltime || p.alltime || false, trendingAt: t.trendingAt || p.trendingAt || null, topic: t.topic || p.topic || null,
-      genres: (t.topic || p.topic) === "history" ? ["History"] : t.genres } };
+    const topic = t.topic || p.topic || null;
+    return { id: t.id, kind: "yt", updated_at: now, data: { ...t, alltime: t.alltime || p.alltime || false, trendingAt: t.trendingAt || p.trendingAt || null, topic, sub: t.sub || p.sub || null,
+      genres: topic && YT_TOPICS[topic] ? [YT_TOPICS[topic].label] : t.genres } };
   });
   await sb("titles", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify(rows) });
 }
@@ -78,20 +98,25 @@ export async function refreshYouTube({ allTime = "auto" } = {}) {
       await save(list); out.alltime += list.length;
     } catch (e) { out.errors.push(e.message); if (/quota/i.test(e.message)) break; }
   }
-  // 3) learning: the most-viewed history videos (weekly, with the all-time pass)
-  if (doAll) for (const q of ["history", "history documentary", "ancient history", "world war history"]) {
+  // 3) learning sections (history, food & travel): each sub-topic refreshed weekly, searches run side by side
+  const weekAgo = encodeURIComponent(new Date(Date.now() - 7 * 864e5).toISOString());
+  const jobs = [];
+  for (const [topic, def] of Object.entries(YT_TOPICS)) for (const [sub, [, q]] of Object.entries(def.subs)) jobs.push({ topic, sub, q });
+  await Promise.all(jobs.map(async ({ topic, sub, q }) => {
     try {
-      const sr = await yt(`search?part=id&type=video&order=viewCount&regionCode=US&relevanceLanguage=en&maxResults=25&videoDuration=medium&q=${encodeURIComponent(q)}`);
-      const sl = await yt(`search?part=id&type=video&order=viewCount&regionCode=US&relevanceLanguage=en&maxResults=15&videoDuration=long&q=${encodeURIComponent(q)}`);
-      const ids = [...(sr.items || []), ...(sl.items || [])].map((x) => x.id && x.id.videoId).filter(Boolean);
-      if (!ids.length) continue;
+      if (allTime !== true) {
+        const fresh = await sb(`titles?select=id&kind=eq.yt&data->>sub=eq.${sub}&updated_at=gt.${weekAgo}&limit=1`);
+        if (fresh && fresh.length) return;
+      }
+      const sr = await yt(`search?part=id&type=video&order=viewCount&regionCode=US&relevanceLanguage=en&maxResults=30&q=${encodeURIComponent(q)}`);
+      const ids = (sr.items || []).map((x) => x.id && x.id.videoId).filter(Boolean);
+      if (!ids.length) return;
       const d = await yt(`videos?part=snippet,statistics,contentDetails&id=${[...new Set(ids)].join(",")}`);
       const list = (d.items || []).filter((v) => (YT_CATS[(v.snippet || {}).categoryId] || "") !== "Music")
-        .map((v) => toTitle(v, { alltime: true, topic: "history" }));
-      list.forEach((t) => { t.genres = ["History"]; });
-      await save(list); out.history = (out.history || 0) + list.length;
-    } catch (e) { out.errors.push(e.message); if (/quota/i.test(e.message)) break; }
-  }
+        .map((v) => toTitle(v, { topic, sub })).filter((t) => t.secs >= 180); // skip Shorts and clips
+      await save(list); out[topic] = (out[topic] || 0) + list.length;
+    } catch (e) { out.errors.push(e.message); }
+  }));
   return out;
 }
 
