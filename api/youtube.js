@@ -59,6 +59,9 @@ export const YT_TOPICS = {
     f1docs: ["Documentaries", "Formula 1 documentary"],
   } },
 };
+// kids' videos: YouTube's own "made for kids" flag, plus the big kids' channels and nursery-rhyme titles
+export const KIDS_RE = /cocomelon|nursery rhyme|baby shark|kids songs?|songs for (kids|children)|for kids\b|toddler|peppa pig|blippi|ms ?rachel|pinkfong|little baby bum|super simple songs|chuchu|kids diana|vlad (and|&) niki|like nastya|bluey|paw patrol|learn (colors|numbers|abc)/i;
+const isKids = (v) => !!((v.status || {}).madeForKids) || KIDS_RE.test(((v.snippet || {}).title || "") + " " + ((v.snippet || {}).channelTitle || ""));
 const secs = (iso) => { const m = /P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/.exec(iso || "") || []; return (+m[1] || 0) * 86400 + (+m[2] || 0) * 3600 + (+m[3] || 0) * 60 + (+m[4] || 0); };
 
 function toTitle(v, extra) {
@@ -105,8 +108,8 @@ export async function refreshYouTube({ allTime = "auto" } = {}) {
   // 1) trending now: overall plus each category (1 quota unit per call)
   for (const cat of ["", ...Object.keys(YT_CATS)]) {
     try {
-      const d = await yt(`videos?part=snippet,statistics,contentDetails&chart=mostPopular&regionCode=US&maxResults=${cat ? 20 : 50}${cat ? "&videoCategoryId=" + cat : ""}`);
-      const list = (d.items || []).map((v) => toTitle(v, { trendingAt: now }));
+      const d = await yt(`videos?part=snippet,statistics,contentDetails,status&chart=mostPopular&regionCode=US&maxResults=${cat ? 20 : 50}${cat ? "&videoCategoryId=" + cat : ""}`);
+      const list = (d.items || []).filter((v) => !isKids(v)).map((v) => toTitle(v, { trendingAt: now }));
       await save(list); out.trending += list.length;
     } catch (e) { if (!/not found|invalid|not supported/i.test(e.message)) out.errors.push(e.message); }
   }
@@ -121,8 +124,8 @@ export async function refreshYouTube({ allTime = "auto" } = {}) {
       const s = await yt(`search?part=id&type=video&order=viewCount&regionCode=US&maxResults=25&videoCategoryId=${cat}`);
       const ids = (s.items || []).map((x) => x.id && x.id.videoId).filter(Boolean);
       if (!ids.length) continue;
-      const d = await yt(`videos?part=snippet,statistics,contentDetails&id=${ids.join(",")}`);
-      const list = (d.items || []).map((v) => toTitle(v, { alltime: true }));
+      const d = await yt(`videos?part=snippet,statistics,contentDetails,status&id=${ids.join(",")}`);
+      const list = (d.items || []).filter((v) => !isKids(v)).map((v) => toTitle(v, { alltime: true }));
       await save(list); out.alltime += list.length;
     } catch (e) { out.errors.push(e.message); if (/quota/i.test(e.message)) break; }
   }
@@ -140,9 +143,10 @@ export async function refreshYouTube({ allTime = "auto" } = {}) {
       const sr = await yt(`search?part=id&type=video&order=viewCount&regionCode=${def.region || "US"}&relevanceLanguage=en&maxResults=30${o.days ? "&publishedAfter=" + encodeURIComponent(ago(o.days)) : ""}&q=${encodeURIComponent(q)}`);
       const ids = (sr.items || []).map((x) => x.id && x.id.videoId).filter(Boolean);
       if (!ids.length) return;
-      const d = await yt(`videos?part=snippet,statistics,contentDetails&id=${[...new Set(ids)].join(",")}`);
+      const d = await yt(`videos?part=snippet,statistics,contentDetails,status&id=${[...new Set(ids)].join(",")}`);
       for (const v of d.items || []) {
         const sn = v.snippet || {}, text = (sn.title || "") + " " + (sn.channelTitle || "");
+        if (isKids(v)) continue;
         if ((YT_CATS[sn.categoryId] || "") === "Music" || (def.not && def.not.test(text))) continue;
         if (secs((v.contentDetails || {}).duration) < (o.days ? 90 : 180)) continue; // skip Shorts and clips
         if (o.minViews && (+(v.statistics || {}).viewCount || 0) < o.minViews) continue; // skip tiny channels and game sims
