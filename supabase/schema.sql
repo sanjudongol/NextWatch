@@ -121,6 +121,8 @@ revoke update on public.profiles from authenticated;
 grant update (name) on public.profiles to authenticated;   -- partner links change only through the functions above
 grant select, insert, update, delete on public.marks, public.views to authenticated;
 grant all on public.titles to service_role;
+revoke execute on function public.handle_new_user() from public, anon, authenticated;   -- only the sign-up trigger runs it
+revoke execute on function public.link_partner(text), public.unlink_partner(), public.is_my_partner(uuid) from public, anon;
 grant execute on function public.link_partner(text), public.unlink_partner(), public.is_my_partner(uuid) to authenticated;
 
 -- Profiles for anyone who signed in before this script ran
