@@ -58,10 +58,10 @@ select,.fgrid input{font:inherit;color:var(--tx);background:var(--bg);border:1px
 .svc button{font:inherit;font-size:13px;background:var(--pill);border:0;border-radius:6px;padding:3px 9px;font-weight:600}
 .svc button.free{outline:1px solid var(--ok)}
 .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
-.cats{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:12px;background:var(--pill);border-radius:12px;padding:4px}
+.cats{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:12px;background:var(--pill);border-radius:12px;padding:4px}
 .cats button{border:0;background:transparent;border-radius:9px;padding:8px 6px;font-size:14px;font-weight:600;color:var(--mu)}
 .cats button.on{background:var(--card);color:var(--tx);box-shadow:0 1px 3px rgba(0,0,0,.12)}
-@media (max-width:620px){.cats{grid-template-columns:1fr 1fr}}
+@media (max-width:620px){.cats{grid-template-columns:repeat(6,1fr)}.cats button{grid-column:span 2}.cats button:nth-child(-n+2){grid-column:span 3}}
 .choose{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;padding:6px 0 4px}
 .choose .btn{min-width:120px}
 .statusbar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
@@ -166,7 +166,7 @@ footer{color:var(--mu);font-size:12px;margin-top:24px}
         <label>Min IMDb<input type="number" id="imdb" min="0" max="10" step="0.1"></label>
         <label>Min Rotten Tomatoes %<input type="number" id="rt" min="0" max="100" step="1"></label>
         <label>Score rule<select id="mode"><option value="any">IMDb or RT</option><option value="all">IMDb and RT</option></select></label>
-        <label>Type<select id="type"><option value="">Movies &amp; series</option><option>Movie</option><option>Series</option></select></label>
+        <label id="typebox">Type<select id="type"><option value="">Movies &amp; series</option><option>Movie</option><option>Series</option></select></label>
         <label>Genre<select id="genre"></select></label>
         <label>Director / creator<input type="search" id="director" list="dirlist" placeholder="Anyone · type a name" autocomplete="off" enterkeyhint="done"><datalist id="dirlist"></datalist></label>
         <label>Released<select id="recent"><option value="0">Any time</option><option value="1">This year &amp; last</option><option value="2">Last 2 years</option><option value="5">Last 5 years</option><option value="10">Last 10 years</option></select></label>
@@ -219,14 +219,14 @@ const PRESETS = [
   { name: "😬 Edge of your seat", set: { mood: "tense" } },
   { name: "🖤 Dark & gripping", set: { mood: "dark" } },
   { name: "🏔️ Big & epic", set: { mood: "epic" } },
-  { name: "⏱️ Movie under 2h", set: { type: "Movie", runtime: "120" } },
-  { name: "✅ Finished series to binge", set: { type: "Series", status2: "done" } },
+  { name: "⏱️ Under 2 hours", set: { runtime: "120" }, only: "movies" },
+  { name: "✅ Finished, ready to binge", set: { status2: "done" }, only: "series" },
   { name: "🆕 New this year & last", set: { recent: "1", sort: "year" } },
   { name: "🔥 Trending now", set: { sort: "popularity" } },
 ];
-const DEFAULTS = { imdb: "6.5", rt: "70", mode: "any", type: "", genre: "", director: "", recent: "0", runtime: "0", status2: "", sort: "imdb", desc: true, mood: "", preset: -1, view: "all", svcOn: [], cat: "main", layout: "cards", byCat: {} };
+const DEFAULTS = { imdb: "6.5", rt: "70", mode: "any", type: "", genre: "", director: "", recent: "0", runtime: "0", status2: "", sort: "imdb", desc: true, mood: "", preset: -1, view: "all", svcOn: [], cat: "movies", layout: "cards", byCat: {} };
 // each section remembers its own score bar; reality TV tends to score lower on IMDb
-const CAT_SCORES = { main: { imdb: "6.5", rt: "70", mode: "any" }, anime: { imdb: "6.5", rt: "70", mode: "any" }, reality: { imdb: "6.5", rt: "70", mode: "any" }, docs: { imdb: "6.5", rt: "70", mode: "any" } };
+const CAT_SCORES = { movies: { imdb: "6.5", rt: "70", mode: "any" }, series: { imdb: "6.5", rt: "70", mode: "any" }, anime: { imdb: "6.5", rt: "70", mode: "any" }, reality: { imdb: "6.5", rt: "70", mode: "any" }, docs: { imdb: "6.5", rt: "70", mode: "any" } };
 const SCORE_KEYS = ["imdb", "rt", "mode"];
 const MARK_LABEL = { want: "Want to watch", watching: "Watching now", skipped: "Not interested" };
 const CTRL = ["imdb", "rt", "mode", "type", "genre", "director", "recent", "runtime", "status2", "sort"];
@@ -244,7 +244,11 @@ const SYNC_JOBS = [
 let F = Object.assign({}, DEFAULTS, { byCat: {} }, local.get("wf-filters", {}));
 // one-time switch to the new score bar (IMDb 6.5 / RT 70%) in every section
 if (!local.get("wf-scores-v2", false)) { F.byCat = {}; Object.assign(F, { imdb: "6.5", rt: "70" }); local.set("wf-scores-v2", true); local.set("wf-filters", F); }
-delete F.svcOff; if (!Array.isArray(F.svcOn)) F.svcOn = []; // old "hide a service" setting is replaced by "only these"
+delete F.svcOff;
+if (F.cat === "main" || !F.cat) { // "Movies & series" became two sections
+  if (F.byCat && F.byCat.main) { F.byCat.movies = F.byCat.series = F.byCat.main; delete F.byCat.main; }
+  F.cat = F.type === "Series" ? "series" : "movies"; F.type = "";
+} if (!Array.isArray(F.svcOn)) F.svcOn = []; // old "hide a service" setting is replaced by "only these"
 let S = { titles: [], me: null, partner: null, marks: new Map(), pMarks: new Map(), views: new Set(), pViews: new Set(), seen: new Map(), pSeen: new Map(), pSkip: new Set(), lastUpdated: null };
 let openRow = null, installEvt = null;
 let api, pickId = null;
@@ -398,7 +402,7 @@ const seasonNews = () => all().filter((t) => newSeason(t) || comingSeason(t));
 let byId = new Map();
 const isWatching = (id) => (!iSaw(id) || (byId.has(id) && newSeason(byId.get(id)))) && (S.marks.get(id) === "watching" || S.pMarks.get(id) === "watching");
 const wantCount = (id) => (S.marks.get(id) === "want" ? 1 : 0) + (S.pMarks.get(id) === "want" ? 1 : 0);
-function useCatScores() { Object.assign(F, CAT_SCORES[F.cat] || CAT_SCORES.main, (F.byCat || {})[F.cat] || {}); }
+function useCatScores() { Object.assign(F, CAT_SCORES[F.cat] || CAT_SCORES.movies, (F.byCat || {})[F.cat] || {}); }
 function rememberCatScores() { F.byCat = Object.assign({}, F.byCat, { [F.cat]: { imdb: F.imdb, rt: F.rt, mode: F.mode } }); }
 const imdbOrTmdb = (t) => (t.imdb ?? t.tmdb ?? 0);
 function sortVal(t, k) {
@@ -431,8 +435,10 @@ function syncControls() {
   renderServiceChips();
   $("dir").textContent = F.desc ? "Highest first ↓" : "Lowest first ↑";
   $("cats").innerHTML = CATS.map(([k, l]) => `<button class="${F.cat === k ? "on" : ""}" data-cat="${k}">${l}</button>`).join("");
-  $("presets").hidden = F.cat !== "main";
-  $("presets").innerHTML = PRESETS.map((p, i) => `<button class="chip ${F.preset === i ? "on" : ""}" data-preset="${i}">${p.name}</button>`).join("");
+  const topCat = F.cat === "movies" || F.cat === "series";
+  $("presets").hidden = !topCat;
+  $("typebox").hidden = topCat; // the section already picks movies or series
+  $("presets").innerHTML = PRESETS.map((p, i) => p.only && p.only !== F.cat ? "" : `<button class="chip ${F.preset === i ? "on" : ""}" data-preset="${i}">${p.name}</button>`).join("");
   const count = (k) => k === "want" ? all().filter((t) => (S.marks.get(t.id) === "want" || S.pMarks.get(t.id) === "want") && !iSaw(t.id)).length
     : k === "watching" ? all().filter((t) => isWatching(t.id)).length
     : k === "seasons" ? seasonNews().length
@@ -443,13 +449,13 @@ function syncControls() {
   if (!tabs.some(([k]) => k === F.view)) F.view = "all";
   $("tabs").innerHTML = tabs.map(([k, l]) => `<button class="chip ${F.view === k ? "on" : ""}" data-view="${k}" ${k === "together" ? `title="Only what neither of you has seen, with what you both want first. Uses the filters and section above."` : ""}>${l}${k === "all" || k === "together" ? "" : ` (${count(k)})`}</button>`).join("");
   $("layout").textContent = F.layout === "list" ? "▦ Cards" : "☰ Compact list";
-  const sectionName = { main: "Movies & series", anime: "Anime", reality: "Reality & competition", docs: "Documentaries" }[F.cat];
+  const sectionName = { movies: "Movies", series: "Series", anime: "Anime", reality: "Reality & competition", docs: "Documentaries" }[F.cat];
   $("scorehint").textContent = `Score settings are remembered separately for each section (now: ${sectionName}).`;
 }
 const saveF = () => local.set("wf-filters", F);
 function filterSummary() {
   const p = [];
-  if (F.cat !== "main") p.push({ anime: "Anime", reality: "Reality & competition", docs: "Documentaries" }[F.cat]);
+  p.push({ movies: "Movies", series: "Series", anime: "Anime", reality: "Reality & competition", docs: "Documentaries" }[F.cat]);
   if (F.preset >= 0) p.push(PRESETS[F.preset].name.replace(/^\S+\s/, ""));
   p.push(`IMDb ${F.imdb}+ ${F.mode === "any" ? "or" : "and"} RT ${F.rt}%+`);
   if (F.type) p.push(F.type === "Movie" ? "Movies" : "Series");
@@ -468,15 +474,15 @@ function matchesSearch(t, q) {
   const hay = (t.title + " " + (t.dirs || []).join(" ") + " " + (t.cast || []).join(" ")).toLowerCase();
   return q.toLowerCase().split(/\s+/).every((w) => hay.includes(w));
 }
-const CATS = [["main", "🎬 Movies & series"], ["anime", "🍥 Anime"], ["reality", "🏆 Reality & competition"], ["docs", "🎥 Documentaries"]];
+const CATS = [["movies", "🎬 Movies"], ["series", "📺 Series"], ["anime", "🍥 Anime"], ["reality", "🏆 Reality & competition"], ["docs", "🎥 Documentaries"]];
 function categoryOf(t) {
   const g = t.genres || [];
   if (g.includes("Reality")) return "reality";
   if (g.includes("Documentary")) return "docs";
   if (g.includes("Animation") && t.lang === "ja") return "anime"; // Japanese animation
-  return "main";
+  return t.type === "Movie" ? "movies" : "series";
 }
-function filtered() {
+function filtered(cats = [F.cat]) {
   const q = $("q").value.trim();
   if (F.view === "want") return all().filter((t) => (S.marks.get(t.id) === "want" || S.pMarks.get(t.id) === "want") && !iSaw(t.id) && matchesSearch(t, q));
   if (F.view === "seasons") return seasonNews().filter((t) => matchesSearch(t, q));
@@ -489,13 +495,14 @@ function filtered() {
   return all().filter((t) => {
     if (S.marks.get(t.id) === "skipped") return false;
     if (newSeason(t) && F.view === "all") // a series you've seen with a new season: back on your list, whatever the score filters
-      return categoryOf(t) === F.cat && (!F.svcOn.length || (t.services || []).some((s) => F.svcOn.includes(s))) && matchesSearch(t, q);
+      return cats.includes(categoryOf(t)) && (!F.svcOn.length || (t.services || []).some((s) => F.svcOn.includes(s))) && matchesSearch(t, q);
     if (iSaw(t.id)) return false; // once you've seen it, it leaves your list
     if (F.view === "together" && (iSaw(t.id) || theySaw(t.id) || S.pSkip.has(t.id))) return false;
-    if (categoryOf(t) !== F.cat) return false;
+    if (!cats.includes(categoryOf(t))) return false;
+    if (F.type && !["movies", "series"].includes(F.cat) && t.type !== F.type) return false;
     const a = imdbOrTmdb(t) >= imdb, b = (t.rt ?? -1) >= rt;
     if (F.mode === "any" ? !(a || b) : !(a && b)) return false;
-    if (F.type && t.type !== F.type) return false;
+
     if (F.genre && !gl(t).includes(F.genre)) return false;
     if (F.director && !(t.dirs || []).some((d) => d.toLowerCase().includes(F.director.trim().toLowerCase()))) return false; // partial names work too
     if (minYear && !(t.year >= minYear)) return false;
@@ -618,7 +625,7 @@ function render() {
   const noun = F.view === "all" || F.view === "together" ? (list.length === 1 ? "match" : "matches") : (list.length === 1 ? "title" : "titles");
   $("status").textContent = `${list.length} ${noun}${q ? ` for “${q}”` : ""}`;
   const inSection = all().filter((t) => categoryOf(t) === F.cat).length;
-  if (F.view === "all" && F.cat !== "main" && inSection < 15)
+  if (F.view === "all" && !["movies", "series"].includes(F.cat) && inSection < 15)
     $("status").textContent += ` · only ${inSection} in this section so far. Tap ↻ Sync to pull in more`;
   let empty = "Nothing here yet.";
   if (F.view === "together") empty = "Nothing here that neither of you has seen. Try another section or loosen the filters.";
@@ -657,7 +664,9 @@ function renderPick() {
 }
 function surprise() {
   // uses whatever is on screen (category, filters, search), narrowed to the type asked for
-  const pool = filtered().filter((t) => !watched(t.id) && t.id !== pickId && (!pickType || t.type === pickType));
+  const top = ["movies", "series"].includes(F.cat);
+  const cats = top ? (pickType === "Movie" ? ["movies"] : pickType === "Series" ? ["series"] : ["movies", "series"]) : [F.cat];
+  const pool = filtered(cats).filter((t) => !watched(t.id) && t.id !== pickId && (!pickType || t.type === pickType));
   if (!pool.length) {
     pickId = null; choosing = true; renderPick();
     toast(`No ${pickType ? (pickType === "Movie" ? "movies" : "series") : "titles"} left to pick from here. Try another choice or loosen the filters.`);
@@ -772,7 +781,8 @@ async function onClick(e) {
     if (!wasOn) { Object.assign(F, PRESETS[i].set); F.preset = i; }
     saveF(); render(); return;
   }
-  if (b.dataset.cat) { rememberCatScores(); F.cat = b.dataset.cat; useCatScores(); if (F.view !== "together") F.view = "all"; if (F.cat !== "main") { F.mood = ""; F.preset = -1; } saveF(); render(); return; }
+  if (b.dataset.cat) { rememberCatScores(); F.cat = b.dataset.cat; useCatScores(); if (F.view !== "together") F.view = "all"; if (!["movies", "series"].includes(F.cat)) { F.mood = ""; F.preset = -1; }
+    if (F.preset >= 0 && PRESETS[F.preset].only && PRESETS[F.preset].only !== F.cat) { Object.keys(PRESETS[F.preset].set).forEach((k) => (F[k] = DEFAULTS[k])); F.preset = -1; } saveF(); render(); return; }
   if (b.dataset.pick != null) { pickType = b.dataset.pick; surprise(); return; }
   if (b.dataset.view) { F.view = b.dataset.view; saveF(); render(); return; }
   if (b.dataset.dirpick) { Object.assign(F, { director: b.dataset.dirpick, view: "all" }); saveF(); render(); scrollTo({ top: 0, behavior: "smooth" }); toast(`Showing titles by ${b.dataset.dirpick}`); return; }
