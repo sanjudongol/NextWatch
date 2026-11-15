@@ -386,6 +386,8 @@ textarea:focus,input:focus{outline:2px solid color-mix(in srgb,var(--ac) 60%,tra
 .popbtn .ud{width:15px;height:15px;color:var(--mu);stroke-width:2.2}
 .sortpop{flex-direction:row}
 .sortpop .sl{color:var(--mu);font-weight:500}
+.vibepop.set{background:color-mix(in srgb,var(--ac) 14%,transparent);color:var(--ac)}.vibepop.set .sl{color:inherit;opacity:.75}
+.vibepop select{position:absolute;inset:0;opacity:0;width:100%}
 .sortpop select{border:0;background:none;padding:0;font:inherit;font-weight:600;color:var(--tx);-webkit-appearance:none;appearance:none;cursor:pointer;min-height:34px}
 .popover{position:absolute;top:calc(100% + 8px);left:0;z-index:25;width:min(300px,calc(100vw - 32px));background:var(--pop);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.2),0 0 0 .5px var(--sep);padding:4px 0}
 .poptitle,.popnote{font-size:.765rem;color:var(--mu);padding:8px 16px}
@@ -952,7 +954,7 @@ function syncControls() {
   $("presets").classList.toggle("ytmodes", isYt);
   $("fchipbox").innerHTML = isYt ? "" : fchip;
   $("presets").innerHTML = isYt ? YT_MODES.map(([k, l]) => `<button class="ytmode ${(F.ytMode || "history") === k ? "on" : ""}" data-ytmode="${k}">${l}</button>`).join("")
- : (!topCat ? "" : PRESETS.map((p, i) => p.only && p.only !== F.cat ? "" : `<button class="chip ${F.preset === i ? "on" : ""}" data-preset="${i}">${p.name}</button>`).join(""));
+ : (!topCat ? "" : `<label class="popbtn sortpop vibepop ${F.preset >= 0 ? "set" : ""}" title="Pick a vibe"><span class="sl">Vibe:</span><span>${F.preset >= 0 ? esc(PRESETS[F.preset].name) : "Any"}</span><select id="vibe" aria-label="Vibe"><option value="-1">Any</option>${PRESETS.map((p, i) => p.only && p.only !== F.cat ? "" : `<option value="${i}" ${F.preset === i ? "selected" : ""}>${esc(p.name)}</option>`).join("")}</select><svg class="ico ud" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 9.5 12 5.5l4 4M8 14.5l4 4 4-4"/></svg></label>`);
   const all = () => pool(); // counts cover only this page (videos on YouTube, movies & TV elsewhere)
   const count = (k) => k === "mine" ? all().filter((t) => S.marks.get(t.id) === "want" && !iSaw(t.id)).length
     : k === "want" ? !S.partner ? 0 : all().filter((t) => (S.marks.get(t.id) === "want" || S.pMarks.get(t.id) === "want") && !iSaw(t.id)).length
@@ -1699,13 +1701,7 @@ async function onClick(e) {
   if (b.dataset.svcall) { F.svcOn = []; saveF(); render(); return; }
   if (b.dataset.svconly) { F.svcOn = [b.dataset.svconly]; F.view = F.view === "together" ? "together" : "all"; saveF(); render(); scrollTo({ top: 0, behavior: "smooth" }); toast(`Showing only ${b.dataset.svconly}. Tap “All services” in Filters to undo.`); return; }
   if (b.dataset.svc) { const s = b.dataset.svc; F.svcOn = F.svcOn.includes(s) ? F.svcOn.filter((x) => x !== s) : F.svcOn.concat(s); saveF(); render(); return; }
-  if (b.dataset.preset != null) {
-    const i = +b.dataset.preset, wasOn = F.preset === i;
-    F = Object.assign({}, DEFAULTS, { desc: F.desc, svcOn: F.svcOn, cat: F.cat, byCat: F.byCat, layout: F.layout, view: F.view });
-    useCatScores();
-    if (!wasOn) { Object.assign(F, PRESETS[i].set); F.preset = i; }
-    saveF(); render(); return;
-  }
+  if (b.dataset.preset != null) { const i = +b.dataset.preset; setPreset(F.preset === i ? -1 : i); return; }
   if (b.dataset.page) { const yt = b.dataset.page === "youtube"; showPage("home"); if (yt && F.cat !== "youtube") { F.ytMode = "history"; F.ytSub = (F.ytSubs || {}).history || ""; }
     if (yt !== (F.cat === "youtube")) setCat(yt ? "youtube" : (F.lastCat || "movies")); else render(); scrollTo({ top: 0 }); return; }
   if (b.dataset.cat) { setCat(b.dataset.cat); return; }
@@ -1791,6 +1787,13 @@ async function onClick(e) {
   }
 }
 function confirmUnlink() { const b = $("unlink"); if (b.dataset.sure) return true; b.dataset.sure = "1"; b.textContent = "Tap again to unlink"; return false; }
+function setPreset(i) { // a vibe resets the other filters, then applies its own
+  F = Object.assign({}, DEFAULTS, { desc: F.desc, svcOn: F.svcOn, cat: F.cat, byCat: F.byCat, layout: F.layout, view: F.view });
+  useCatScores();
+  if (i >= 0) { Object.assign(F, PRESETS[i].set); F.preset = i; }
+  saveF(); render();
+}
+document.addEventListener("change", (e) => { if (e.target.id === "vibe") setPreset(+e.target.value); });
 CTRL.forEach((k) => $(k).addEventListener("input", () => { F[k] = $(k).value; F.preset = -1; if (SCORE_KEYS.includes(k)) rememberCatScores(); saveF(); render(); }));
 addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); installEvt = e; if (!$("account").hidden) renderAccount(); });
 if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("/sw.js").catch(() => {});
