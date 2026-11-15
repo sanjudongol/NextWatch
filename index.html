@@ -361,11 +361,13 @@ const DEFAULTS = { imdb: "6.5", rt: "70", mode: "any", type: "", genre: "", dire
 // each section remembers its own score bar; reality TV tends to score lower on IMDb
 const CAT_SCORES = { movies: { imdb: "6.5", rt: "70", mode: "any" }, series: { imdb: "6.5", rt: "70", mode: "any" }, anime: { imdb: "6.5", rt: "70", mode: "any" }, reality: { imdb: "6.5", rt: "70", mode: "any" }, docs: { imdb: "6.5", rt: "70", mode: "any" }, kids: { imdb: "6.5", rt: "70", mode: "any" }, truecrime: { imdb: "6.5", rt: "70", mode: "any" }, youtube: { imdb: "0", rt: "0", mode: "any" } };
 const SCORE_KEYS = ["imdb", "rt", "mode"];
-const YT_MODES = [["trending", "🔥 Trending now"], ["alltime", "🏆 All-time most viewed"], ["history", "📜 History"], ["food", "🍜 Food & travel"]];
+const YT_MODES = [["trending", "🔥 Trending now"], ["alltime", "🏆 All-time most viewed"], ["history", "📜 History"], ["food", "🍜 Food & travel"], ["soccer", "⚽ Soccer"]];
 const YT_SUBS = { // same keys as YT_TOPICS in api/youtube.js
   history: [["world", "🌍 World"], ["us", "🇺🇸 US history"], ["ancient", "🏛️ Ancient"], ["medieval", "🏰 Medieval"], ["wars", "⚔️ World wars"], ["empires", "👑 Empires"], ["mysteries", "🔍 Mysteries & archaeology"]],
   food: [["streetfood", "🌮 Street food"], ["cooking", "🍳 Cooking"], ["foodtours", "🍜 Food tours"], ["destinations", "🧳 Destinations"], ["wonders", "🏞️ Amazing places"]],
+  soccer: [["highlights", "📺 Latest highlights", 10], ["pl", "🦁 Premier League", 10], ["ucl", "⭐ Champions League", 16], ["transfers", "🔁 Transfer news", 6], ["fpl", "📋 FPL", 9], ["tactics", "🧠 Tactics & analysis"], ["goals", "🥅 Best goals"], ["legends", "🐐 Legends"], ["worldcup", "🏆 World Cup"], ["skills", "✨ Skills"], ["stories", "🎬 Stories & documentaries"]],
 };
+const ytMaxAge = (t) => ((YT_SUBS[t.topic] || []).find((x) => x[0] === t.sub) || [])[2]; // e.g. highlights: last 10 days only
 const fmtViews = (n) => n >= 1e9 ? (n / 1e9).toFixed(1).replace(/\.0$/, "") + "B" : n >= 1e6 ? Math.round(n / 1e6) + "M" : n >= 1e3 ? Math.round(n / 1e3) + "K" : String(n || 0);
 const fmtDur = (s) => { if (!s) return ""; const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = String(s % 60).padStart(2, "0"); return h ? `${h}:${String(m).padStart(2, "0")}:${x}` : `${m}:${x}`; };
 const SCORE_PRESETS = [["🏆 Great · 7.5+ / 85%", "7.5", "85"], ["👍 Good · 6.5+ / 70%", "6.5", "70"], ["🎲 Anything", "0", "0"]];
@@ -721,7 +723,7 @@ function filtered(cats = [F.cat]) {
     const mode = F.ytMode || "trending", fresh = Date.now() - 4 * 864e5;
     const minY = +F.recent ? new Date().getFullYear() - +F.recent : 0;
     return all().filter((t) => t.kind === "yt" && !iSaw(t.id) && S.marks.get(t.id) !== "skipped"
-      && (YT_SUBS[mode] ? t.topic === mode && (!F.ytSub || t.sub === F.ytSub) : mode === "alltime" ? t.alltime && !t.topic : t.trendingAt && Date.parse(t.trendingAt) > fresh)
+      && (YT_SUBS[mode] ? t.topic === mode && (!F.ytSub || t.sub === F.ytSub) && (!ytMaxAge(t) || Date.parse(t.released) > Date.now() - ytMaxAge(t) * 864e5) : mode === "alltime" ? t.alltime && !t.topic : t.trendingAt && Date.parse(t.trendingAt) > fresh)
       && (!F.genre || gl(t).includes(F.genre)) && (!minY || t.year >= minY)
       && (F.view !== "together" || (!theySaw(t.id) && !S.pSkip.has(t.id))));
   }

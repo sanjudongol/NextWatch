@@ -30,6 +30,20 @@ export const YT_TOPICS = {
     destinations: ["Destinations", "travel guide things to do"],
     wonders: ["Amazing places", "most beautiful places in the world travel"],
   } },
+  // a third item { days, every } = only videos from the last N days, refreshed every M days (default: all-time, weekly)
+  soccer: { label: "Soccer", subs: {
+    highlights: ["Latest highlights", "football highlights", { days: 7, every: 1 }],
+    pl: ["Premier League", "premier league highlights", { days: 7, every: 1 }],
+    ucl: ["Champions League", "champions league highlights", { days: 14, every: 1 }],
+    transfers: ["Transfer news", "football transfer news", { days: 4, every: 1 }],
+    fpl: ["FPL", "FPL gameweek tips team selection", { days: 7, every: 1 }],
+    tactics: ["Tactics & analysis", "football tactics explained"],
+    goals: ["Best goals", "best football goals of all time"],
+    legends: ["Legends", "messi ronaldo best moments"],
+    worldcup: ["World Cup", "world cup best moments"],
+    skills: ["Skills", "best football skills"],
+    stories: ["Stories & documentaries", "football documentary"],
+  } },
 };
 const secs = (iso) => { const m = /P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/.exec(iso || "") || []; return (+m[1] || 0) * 86400 + (+m[2] || 0) * 3600 + (+m[3] || 0) * 60 + (+m[4] || 0); };
 
@@ -99,21 +113,21 @@ export async function refreshYouTube({ allTime = "auto" } = {}) {
     } catch (e) { out.errors.push(e.message); if (/quota/i.test(e.message)) break; }
   }
   // 3) learning sections (history, food & travel): each sub-topic refreshed weekly, searches run side by side
-  const weekAgo = encodeURIComponent(new Date(Date.now() - 7 * 864e5).toISOString());
+  const ago = (d) => new Date(Date.now() - d * 864e5).toISOString();
   const jobs = [];
-  for (const [topic, def] of Object.entries(YT_TOPICS)) for (const [sub, [, q]] of Object.entries(def.subs)) jobs.push({ topic, sub, q });
-  await Promise.all(jobs.map(async ({ topic, sub, q }) => {
+  for (const [topic, def] of Object.entries(YT_TOPICS)) for (const [sub, [, q, o = {}]] of Object.entries(def.subs)) jobs.push({ topic, sub, q, o });
+  await Promise.all(jobs.map(async ({ topic, sub, q, o }) => {
     try {
       if (allTime !== true) {
-        const fresh = await sb(`titles?select=id&kind=eq.yt&data->>sub=eq.${sub}&updated_at=gt.${weekAgo}&limit=1`);
+        const fresh = await sb(`titles?select=id&kind=eq.yt&data->>sub=eq.${sub}&updated_at=gt.${encodeURIComponent(ago((o.every || 7) - 0.1))}&limit=1`);
         if (fresh && fresh.length) return;
       }
-      const sr = await yt(`search?part=id&type=video&order=viewCount&regionCode=US&relevanceLanguage=en&maxResults=30&q=${encodeURIComponent(q)}`);
+      const sr = await yt(`search?part=id&type=video&order=viewCount&regionCode=US&relevanceLanguage=en&maxResults=30${o.days ? "&publishedAfter=" + encodeURIComponent(ago(o.days)) : ""}&q=${encodeURIComponent(q)}`);
       const ids = (sr.items || []).map((x) => x.id && x.id.videoId).filter(Boolean);
       if (!ids.length) return;
       const d = await yt(`videos?part=snippet,statistics,contentDetails&id=${[...new Set(ids)].join(",")}`);
       const list = (d.items || []).filter((v) => (YT_CATS[(v.snippet || {}).categoryId] || "") !== "Music")
-        .map((v) => toTitle(v, { topic, sub })).filter((t) => t.secs >= 180); // skip Shorts and clips
+        .map((v) => toTitle(v, { topic, sub })).filter((t) => t.secs >= (o.days ? 90 : 180)); // skip Shorts and clips
       await save(list); out[topic] = (out[topic] || 0) + list.length;
     } catch (e) { out.errors.push(e.message); }
   }));
