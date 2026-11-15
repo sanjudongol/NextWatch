@@ -493,6 +493,27 @@ textarea:focus,input:focus{outline:2px solid color-mix(in srgb,var(--ac) 60%,tra
 .ctlrow .presets.ytmodes{flex:1 0 100%;order:-1}
 .ytmode{border:0;background:var(--pill);border-radius:10px;min-height:36px}
 .ytmode.on{background:#e62117;color:#fff}
+
+/* ---------- wide screens: the tab bar becomes a sidebar ---------- */
+@media (min-width:900px){
+  body{padding-left:232px}
+  #bnav:not([hidden]){display:flex;flex-direction:column;gap:2px;position:fixed;top:0;bottom:0;left:0;width:232px;z-index:15;padding:calc(84px + env(safe-area-inset-top,0px)) 12px 16px;background:var(--card);border-right:.5px solid var(--sep)}
+  #bnav button{display:flex;align-items:center;gap:12px;min-height:44px;padding:0 12px;border:0;border-radius:10px;background:none;color:var(--tx);font-size:.882rem;font-weight:500;text-align:left;position:relative}
+  #bnav button .ic{line-height:0}
+  #bnav .ico{width:22px;height:22px;color:var(--ac);stroke-width:1.8}
+  #bnav button.on{background:var(--pill);font-weight:600}
+  #bnav button.on .ico path{fill:currentColor}
+  #bnav button.on .ico path.in{fill:none;stroke:var(--pill)}
+  #bnav .dot{position:static;margin-left:auto;min-width:20px;height:20px;border-radius:10px;background:var(--red);color:#fff;font-size:12px;line-height:20px;text-align:center;padding:0 6px}
+  #homeBtn{display:none}
+  .brand{position:fixed;top:calc(22px + env(safe-area-inset-top,0px));left:24px;z-index:16}
+  .brand h1{font-size:20px}
+  .brandwrap{min-height:44px;display:flex;flex-direction:column;justify-content:center;align-items:flex-start}
+  .ltitle{display:block;font-size:2rem;font-weight:700;margin:18px 0 0}
+  .tabs.seg{display:inline-flex;margin-top:4px}
+  .tabs.seg .chip{flex:none;padding:6px 18px}
+}
+@media (min-width:621px){.cats button.on{background:var(--seg)}}
 @keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
@@ -881,6 +902,7 @@ const GROUPS = [
 ];
 const groupOf = (v) => (GROUPS.find((g) => g[3].includes(v)) || GROUPS[0])[0];
 const phone = () => innerWidth < 620;
+const grouped = () => innerWidth < 620 || innerWidth >= 900; // phone tab bar or desktop sidebar
 function renderNav(tabs, count) {
   const nav = $("bnav");
   const ttl = { discover: F.cat === "youtube" ? "YouTube" : "Home", ours: "Lists", history: "Watched", directors: "Directors" }[groupOf(F.view)];
@@ -937,13 +959,13 @@ function syncControls() {
   if (!tabs.some(([k]) => k === F.view)) F.view = "all";
   // phones: the bottom bar picks the group, and only that group's tabs show here
   const notYt = ["seasons", "watching", "directors"]; // not about videos
-  const shown = (phone() ? tabs.filter(([k]) => groupOf(k) === groupOf(F.view)) : tabs).filter(([k]) => F.cat !== "youtube" || !notYt.includes(k) || F.view === k);
+  const shown = (grouped() ? tabs.filter(([k]) => groupOf(k) === groupOf(F.view)) : tabs).filter(([k]) => F.cat !== "youtube" || !notYt.includes(k) || F.view === k);
   renderNav(tabs, count);
   const SEG = { all: "All", together: "Together", mine: "My list", want: "Our list", watching: "Watching", seasons: "New", watched: "Watched", onlyme: "Only me", onlythem: `Only ${pName()}`, skipped: "Skipped" };
-  const seg = phone() && shown.length >= 2;
+  const seg = grouped() && shown.length >= 2;
   $("tabs").className = seg ? "tabs seg" : "tabs";
   if (seg) { $("tabs").innerHTML = shown.map(([k]) => `<button class="chip ${F.view === k ? "on" : ""}" data-view="${k}">${esc(SEG[k] || k)}</button>`).join(""); }
-  else $("tabs").innerHTML = (shown.length < 2 && phone() ? [] : shown).map(([k, l]) => `<button class="chip ${F.view === k ? "on" : ""}" data-view="${k}" ${k === "directors" ? `title="Directors and creators whose titles on your services score best, plus acclaimed directors to explore"` : ""} ${k === "together" ? `title="Only what neither of you has seen, with what you both want first. Uses the filters and section above."` : ""}>${l}${k === "all" || k === "together" || k === "directors" ? "" : ` (${count(k)})`}</button>`).join("");
+  else $("tabs").innerHTML = (shown.length < 2 && grouped() ? [] : shown).map(([k, l]) => `<button class="chip ${F.view === k ? "on" : ""}" data-view="${k}" ${k === "directors" ? `title="Directors and creators whose titles on your services score best, plus acclaimed directors to explore"` : ""} ${k === "together" ? `title="Only what neither of you has seen, with what you both want first. Uses the filters and section above."` : ""}>${l}${k === "all" || k === "together" || k === "directors" ? "" : ` (${count(k)})`}</button>`).join("");
   $("layout").textContent = F.layout === "list" ? "Cards" : "Compact list";
   const sectionName = { movies: "Movies", series: "Series", anime: "Anime", reality: "Reality & competition", docs: "Documentaries", kids: "Kids & family", truecrime: "True crime", youtube: "YouTube" }[F.cat];
   $("scorehint").textContent = `Score settings are remembered separately for each section (now: ${sectionName}).`;
