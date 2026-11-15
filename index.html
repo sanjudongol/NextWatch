@@ -14,8 +14,8 @@
 <meta name="apple-mobile-web-app-title" content="Watch Finder">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <style>
-:root{--bg:#f6f5f2;--card:#fff;--tx:#1d1d1f;--mu:#6b6b70;--bd:#e3e1dc;--ac:#d6336c;--ok:#2f9e63;--want:#3b6fd8;--pill:#efece6;color-scheme:light}
-@media (prefers-color-scheme:dark){:root{--bg:#141417;--card:#1e1e23;--tx:#f0f0f2;--mu:#9a9aa3;--bd:#2d2d34;--ac:#ff6b9a;--ok:#4cc38a;--want:#7aa2ff;--pill:#2a2a31;color-scheme:dark}}
+:root{--new:#c77700;--bg:#f6f5f2;--card:#fff;--tx:#1d1d1f;--mu:#6b6b70;--bd:#e3e1dc;--ac:#d6336c;--ok:#2f9e63;--want:#3b6fd8;--pill:#efece6;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#141417;--card:#1e1e23;--tx:#f0f0f2;--mu:#9a9aa3;--bd:#2d2d34;--ac:#ff6b9a;--ok:#4cc38a;--want:#7aa2ff;--pill:#2a2a31;--new:#f5b942;color-scheme:dark}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 main{max-width:1060px;margin:0 auto;padding:calc(20px + env(safe-area-inset-top,0px)) 16px calc(90px + env(safe-area-inset-bottom,0px))}
@@ -84,6 +84,12 @@ select,.fgrid input{font:inherit;color:var(--tx);background:var(--bg);border:1px
 #grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:12px}
 .card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
 .card.dim{opacity:.6}
+.card.fresh,.rowc.fresh{border:2px solid var(--new);opacity:1;box-shadow:0 0 0 3px color-mix(in srgb,var(--new) 15%,transparent)}
+.badge.b-new{background:var(--new);color:#fff;font-weight:700}
+.badge.b-soon{background:transparent;color:var(--new);outline:1px solid var(--new);font-weight:650}
+.seasonbtn{border:1px solid var(--new);background:color-mix(in srgb,var(--new) 10%,var(--card));color:var(--tx);border-radius:8px;padding:7px 8px;font-size:13px;font-weight:650}
+#alert{border:2px solid var(--new);background:color-mix(in srgb,var(--new) 9%,var(--card));border-radius:12px;padding:10px 12px;margin-bottom:10px;font-size:14px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+#alert button{background:var(--new);color:#fff;border:0;border-radius:8px;padding:6px 12px;font-weight:650}
 .head{display:flex;gap:12px}
 .cover{flex:none;width:72px;height:108px;border-radius:8px;display:flex;align-items:flex-end;padding:6px;color:#fff;font:700 11px/1.15 Georgia,serif;text-shadow:0 1px 3px rgba(0,0,0,.4);overflow:hidden;position:relative}
 .cover img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
@@ -174,6 +180,7 @@ footer{color:var(--mu);font-size:12px;margin-top:24px}
       </div>
     </details>
 
+    <div id="alert" hidden></div>
     <div class="tabs" id="tabs"></div>
     <section id="pick" hidden></section>
     <div class="statusbar"><div id="status"></div><button class="chip" id="layout" title="Switch between detailed cards and a compact list"></button></div>
@@ -236,7 +243,7 @@ const SYNC_JOBS = [
 // ---------------- state ----------------
 let F = Object.assign({}, DEFAULTS, { byCat: {} }, local.get("wf-filters", {}));
 delete F.svcOff; if (!Array.isArray(F.svcOn)) F.svcOn = []; // old "hide a service" setting is replaced by "only these"
-let S = { titles: [], me: null, partner: null, marks: new Map(), pMarks: new Map(), views: new Set(), pViews: new Set(), pSkip: new Set(), lastUpdated: null };
+let S = { titles: [], me: null, partner: null, marks: new Map(), pMarks: new Map(), views: new Set(), pViews: new Set(), seen: new Map(), pSeen: new Map(), pSkip: new Set(), lastUpdated: null };
 let openRow = null, installEvt = null;
 let api, pickId = null;
 const tid = (t) => t.id;
@@ -274,7 +281,7 @@ async function supabaseApi(cfg) {
         if (rows.length < 1000) break; from += 1000;
       }
       const marks = must(await sb.from("marks").select("user_id,title_id,status"));
-      const views = must(await sb.from("views").select("user_id,title_id"));
+      const views = must(await sb.from("views").select("user_id,title_id,seasons"));
       // titles your partner isn't interested in: only used to leave them out of "Watch together"
       const pSkip = partner ? (must(await sb.rpc("partner_skipped")) || []).map((x) => (typeof x === "string" ? x : Object.values(x)[0])) : [];
       return {
@@ -284,16 +291,19 @@ async function supabaseApi(cfg) {
         pMarks: new Map(marks.filter((m) => partner && m.user_id === partner.id).map((m) => [m.title_id, m.status])),
         views: new Set(views.filter((v) => v.user_id === uid).map((v) => v.title_id)),
         pViews: new Set(views.filter((v) => partner && v.user_id === partner.id).map((v) => v.title_id)),
+        seen: new Map(views.filter((v) => v.user_id === uid && v.seasons != null).map((v) => [v.title_id, v.seasons])),
+        pSeen: new Map(views.filter((v) => partner && v.user_id === partner.id && v.seasons != null).map((v) => [v.title_id, v.seasons])),
       };
     },
     async setMark(titleId, status) {
       if (status) must(await sb.from("marks").upsert({ user_id: S.me.id, title_id: titleId, status }));
       else must(await sb.from("marks").delete().eq("user_id", S.me.id).eq("title_id", titleId));
     },
-    async setView(userId, titleId, on) {
-      if (on) must(await sb.from("views").upsert({ user_id: userId, title_id: titleId }));
+    async setView(userId, titleId, on, seasons = null) {
+      if (on) must(await sb.from("views").upsert({ user_id: userId, title_id: titleId, seasons }));
       else must(await sb.from("views").delete().eq("user_id", userId).eq("title_id", titleId));
     },
+    async saveSeasons(rows) { if (rows.length) must(await sb.from("views").upsert(rows)); },
     async setPassword(password) { must(await sb.auth.updateUser({ password })); },
     async rename(name) { must(await sb.from("profiles").update({ name }).eq("id", S.me.id)); },
     async link(code) { return must(await sb.rpc("link_partner", { code })); },
@@ -328,7 +338,11 @@ function demoApi() {
   titles.push(T("tv-6", "The Great British Bake Off", "Series", 2010, ["Reality"], 8.6, 100, ["Netflix"], [], ["Noel Fielding"], 15, "Ongoing", "Amateur bakers compete in a tent.", 45));
   titles.push(T("movie-5", "My Octopus Teacher", "Movie", 2020, ["Documentary"], 8.1, 95, ["Netflix"], ["Pippa Ehrlich"], [], 85, null, "A filmmaker befriends an octopus.", 20));
   let signedIn = !!local.get("demo-in", false);
-  const db = { marks: new Map(), views: new Map([["me", new Set()], ["p", new Set()]]) };
+  // demo: you've seen Abbott Elementary up to season 4 (season 5 is out) and Severance season 2 (season 3 announced)
+  Object.assign(titles.find((t) => t.id === "tv-3"), { aired: 5, next: null });
+  Object.assign(titles.find((t) => t.id === "tv-1"), { aired: 2, next: { season: 3, date: "2027-01-16" } });
+  Object.assign(titles.find((t) => t.id === "tv-2"), { aired: 5, next: null });
+  const db = { marks: new Map(), views: new Map([["me", new Set(["tv-3", "tv-1"])], ["p", new Set()]]), seen: new Map([["tv-3", 4], ["tv-1", 2]]) };
   let partner = null;
   return {
     async session() { return signedIn ? { user: { id: "me" } } : null; },
@@ -340,10 +354,11 @@ function demoApi() {
     async signOut() { signedIn = false; local.set("demo-in", false); },
     async load() {
       return { titles, me: { id: "me", name: "You", invite_code: "AB12CD", partner_id: partner && "p" }, partner, lastUpdated: new Date().toISOString(),
-        marks: new Map(db.marks), pMarks: new Map([["tv-3", "want"], ["tv-1", "watching"]].filter(() => partner)), pSkip: new Set(partner ? ["movie-4"] : []), views: new Set(db.views.get("me")), pViews: new Set(partner ? db.views.get("p") : []) };
+        marks: new Map(db.marks), pMarks: new Map([["tv-3", "want"], ["tv-1", "watching"]].filter(() => partner)), pSkip: new Set(partner ? ["movie-4"] : []), views: new Set(db.views.get("me")), pViews: new Set(partner ? db.views.get("p") : []), seen: new Map(db.seen), pSeen: new Map() };
     },
     async setMark(t, s) { s ? db.marks.set(t, s) : db.marks.delete(t); },
-    async setView(u, t, on) { const k = u === "me" ? "me" : "p"; on ? db.views.get(k).add(t) : db.views.get(k).delete(t); },
+    async setView(u, t, on, n) { const k = u === "me" ? "me" : "p"; on ? db.views.get(k).add(t) : db.views.get(k).delete(t); if (k === "me") on && n != null ? db.seen.set(t, n) : db.seen.delete(t); },
+    async saveSeasons(rows) { rows.forEach((r) => r.user_id === "me" && db.seen.set(r.title_id, r.seasons)); },
     async rename() {},
     async setPassword() {},
     async link(code) { if (code.toUpperCase() !== "SAM123") throw new Error("No one has that code. Check it and try again."); partner = { id: "p", name: "Sam", partner_id: "me" }; return "Sam"; },
@@ -359,7 +374,27 @@ const iSaw = (id) => S.views.has(id);
 const theySaw = (id) => S.pViews.has(id);
 const watched = (id) => iSaw(id) && (!S.partner || theySaw(id));
 const oneSeen = (id) => !!S.partner && iSaw(id) !== theySaw(id);
-const isWatching = (id) => !iSaw(id) && (S.marks.get(id) === "watching" || S.pMarks.get(id) === "watching");
+// Japanese animation is shown as "Anime" everywhere genres are listed
+const gl = (t) => (t.genres || []).map((g) => (g === "Animation" && t.lang === "ja" ? "Anime" : g));
+// ---- new seasons of series you've seen ----
+const today = () => new Date().toISOString().slice(0, 10);
+const seenSeasons = (id) => S.seen.get(id);
+function newSeason(t) { // season number that's out but you haven't seen, else 0
+  if (t.type !== "Series" || !iSaw(t.id)) return 0;
+  const seen = seenSeasons(t.id); if (seen == null) return 0;
+  let out = t.aired || 0;
+  if (t.next && t.next.date && t.next.date <= today()) out = Math.max(out, t.next.season); // premiered since our last check
+  return out > seen ? out : 0;
+}
+function comingSeason(t) { // { season, date } announced but not out yet, for a series you've seen
+  if (t.type !== "Series" || !iSaw(t.id) || !t.next || newSeason(t)) return null;
+  if (t.next.date && t.next.date <= today()) return null;
+  return t.next.season > (seenSeasons(t.id) ?? t.aired ?? 0) ? t.next : null;
+}
+const fmtDate = (d) => new Date(d + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+const seasonNews = () => all().filter((t) => newSeason(t) || comingSeason(t));
+let byId = new Map();
+const isWatching = (id) => (!iSaw(id) || (byId.has(id) && newSeason(byId.get(id)))) && (S.marks.get(id) === "watching" || S.pMarks.get(id) === "watching");
 const wantCount = (id) => (S.marks.get(id) === "want" ? 1 : 0) + (S.pMarks.get(id) === "want" ? 1 : 0);
 function useCatScores() { Object.assign(F, CAT_SCORES[F.cat] || CAT_SCORES.main, (F.byCat || {})[F.cat] || {}); }
 function rememberCatScores() { F.byCat = Object.assign({}, F.byCat, { [F.cat]: { imdb: F.imdb, rt: F.rt, mode: F.mode } }); }
@@ -377,7 +412,7 @@ function opts(el, first, items) {
   el.value = items.includes(cur) ? cur : "";
 }
 function buildFilters() {
-  opts($("genre"), "All genres", [...new Set(all().flatMap((t) => t.genres || []))].sort());
+  opts($("genre"), "All genres", [...new Set(all().flatMap(gl))].sort());
   const dirs = [...new Set(all().flatMap((t) => t.dirs || []))].sort((a, b) => a.split(" ").pop().localeCompare(b.split(" ").pop()));
   $("dirlist").innerHTML = dirs.map((d) => `<option value="${esc(d)}"></option>`).join("");
   renderServiceChips();
@@ -398,10 +433,11 @@ function syncControls() {
   $("presets").innerHTML = PRESETS.map((p, i) => `<button class="chip ${F.preset === i ? "on" : ""}" data-preset="${i}">${p.name}</button>`).join("");
   const count = (k) => k === "want" ? all().filter((t) => (S.marks.get(t.id) === "want" || S.pMarks.get(t.id) === "want") && !iSaw(t.id)).length
     : k === "watching" ? all().filter((t) => isWatching(t.id)).length
+    : k === "seasons" ? seasonNews().length
     : k === "one" ? all().filter((t) => oneSeen(t.id)).length
     : k === "watched" ? all().filter((t) => watched(t.id)).length
     : all().filter((t) => S.marks.get(t.id) === "skipped").length;
-  const tabs = [["all", "All matches"], ...(S.partner ? [["together", "👫 Watch together"]] : []), ["watching", "▶ Watching now"], ["want", "Want to watch"], ...(S.partner ? [["one", "Seen by one of you"]] : []), ["watched", "Watched"], ["skipped", "Not interested"]];
+  const tabs = [["all", "All matches"], ...(seasonNews().length ? [["seasons", "🆕 New seasons"]] : []), ...(S.partner ? [["together", "👫 Watch together"]] : []), ["watching", "▶ Watching now"], ["want", "Want to watch"], ...(S.partner ? [["one", "Seen by one of you"]] : []), ["watched", "Watched"], ["skipped", "Not interested"]];
   if (!tabs.some(([k]) => k === F.view)) F.view = "all";
   $("tabs").innerHTML = tabs.map(([k, l]) => `<button class="chip ${F.view === k ? "on" : ""}" data-view="${k}" ${k === "together" ? `title="Only what neither of you has seen, with what you both want first. Uses the filters and section above."` : ""}>${l}${k === "all" || k === "together" ? "" : ` (${count(k)})`}</button>`).join("");
   $("layout").textContent = F.layout === "list" ? "▦ Cards" : "☰ Compact list";
@@ -441,6 +477,7 @@ function categoryOf(t) {
 function filtered() {
   const q = $("q").value.trim();
   if (F.view === "want") return all().filter((t) => (S.marks.get(t.id) === "want" || S.pMarks.get(t.id) === "want") && !iSaw(t.id) && matchesSearch(t, q));
+  if (F.view === "seasons") return seasonNews().filter((t) => matchesSearch(t, q));
   if (F.view === "watching") return all().filter((t) => isWatching(t.id) && matchesSearch(t, q));
   if (F.view === "one") return all().filter((t) => oneSeen(t.id) && matchesSearch(t, q));
   if (F.view === "watched") return all().filter((t) => watched(t.id) && matchesSearch(t, q));
@@ -448,13 +485,16 @@ function filtered() {
   const imdb = parseFloat(F.imdb) || 0, rt = parseFloat(F.rt) || 0;
   const minYear = +F.recent ? new Date().getFullYear() - +F.recent : 0;
   return all().filter((t) => {
-    if (iSaw(t.id) || S.marks.get(t.id) === "skipped") return false; // once you've seen it, it leaves your list
+    if (S.marks.get(t.id) === "skipped") return false;
+    if (newSeason(t) && F.view === "all") // a series you've seen with a new season: back on your list, whatever the score filters
+      return categoryOf(t) === F.cat && (!F.svcOn.length || (t.services || []).some((s) => F.svcOn.includes(s))) && matchesSearch(t, q);
+    if (iSaw(t.id)) return false; // once you've seen it, it leaves your list
     if (F.view === "together" && (iSaw(t.id) || theySaw(t.id) || S.pSkip.has(t.id))) return false;
     if (categoryOf(t) !== F.cat) return false;
     const a = imdbOrTmdb(t) >= imdb, b = (t.rt ?? -1) >= rt;
     if (F.mode === "any" ? !(a || b) : !(a && b)) return false;
     if (F.type && t.type !== F.type) return false;
-    if (F.genre && !(t.genres || []).includes(F.genre)) return false;
+    if (F.genre && !gl(t).includes(F.genre)) return false;
     if (F.director && !(t.dirs || []).some((d) => d.toLowerCase().includes(F.director.trim().toLowerCase()))) return false; // partial names work too
     if (minYear && !(t.year >= minYear)) return false;
     if (+F.runtime && t.type === "Movie" && !(t.len && t.len <= +F.runtime)) return false;
@@ -480,7 +520,10 @@ function lenText(t) {
 function badgeList(t) {
   const id = t.id, mk = S.marks.get(id) || "", pmk = S.pMarks.get(id) || "", w = watched(id);
   const badges = [];
-  if (w) badges.push(`<span class="badge b-watched">Watched</span>`);
+  const ns = newSeason(t), cs = comingSeason(t);
+  if (ns) badges.push(`<span class="badge b-new">🆕 Season ${ns} is out</span>`);
+  else if (cs) badges.push(`<span class="badge b-soon">📅 Season ${cs.season} ${cs.date ? "arrives " + esc(fmtDate(cs.date)) : "announced"}</span>`);
+  if (w && !ns) badges.push(`<span class="badge b-watched">Watched</span>`);
   if (!w && mk === "watching" && pmk === "watching") badges.push(`<span class="badge b-want">▶ You’re both watching</span>`);
   else if (!w && mk === "watching") badges.push(`<span class="badge b-want">▶ Watching now</span>`);
   else if (!w && pmk === "watching") badges.push(`<span class="badge b-want">▶ ${esc(pName())} is watching</span>`);
@@ -494,15 +537,17 @@ function row(t) {
   const id = t.id, mk = S.marks.get(id) || "", w = watched(id);
   const sc = [t.imdb != null ? `IMDb ${t.imdb.toFixed(1)}` : t.tmdb != null ? `TMDB ${t.tmdb.toFixed(1)}` : "", t.rt != null ? `RT ${t.rt}%` : ""].filter(Boolean).join(" · ");
   const btn = (attrs, on, cls, label, title) => `<button class="rb ${cls} ${on ? "on" : ""}" ${attrs} data-id="${esc(id)}" title="${esc(title)}">${label}</button>`;
-  return `<article class="rowc ${w || mk === "skipped" ? "dim" : ""}">
+  const ns = newSeason(t);
+  return `<article class="rowc ${ns ? "fresh" : w || mk === "skipped" ? "dim" : ""}">
   ${cover(t).replace('class="cover"', 'class="cover sm"')}
   <button class="rmain" data-open="${esc(id)}" title="Show details">
     <div class="t">${esc(t.title)}</div>
-    <div class="meta">${t.year || ""} · ${esc(lenText(t))} · ${esc((t.genres || []).slice(0, 2).join(", "))}</div>
+    <div class="meta">${t.year || ""} · ${esc(lenText(t))} · ${esc(gl(t).slice(0, 2).join(", "))}</div>
     <div class="meta">${esc(sc)}${sc ? " · " : ""}${esc((t.services || []).join(", "))}</div>
     ${badgeList(t).length ? `<div class="badges">${badgeList(t).join("")}</div>` : ""}
   </button>
   <div class="rbtns">
+    ${ns ? btn(`data-season="${ns}"`, false, "", `✓ Seen S${ns}`, `I’ve watched season ${ns}`) : ""}
     ${btn('data-seen="me"', iSaw(id), "", `${iSaw(id) ? "✓" : "○"} ${S.partner ? "Me" : "Seen"}`, S.partner ? "I watched" : "Watched")}
     ${S.partner ? btn('data-seen="partner"', theySaw(id), "", `${theySaw(id) ? "✓" : "○"} ${esc(pName())}`, `${pName()} watched`) : ""}
     ${btn('data-mark="want"', mk === "want", "mk-want", "★ Want", "Want to watch")}
@@ -521,18 +566,20 @@ function card(t, collapsible) {
     <button class="${iSaw(id) ? "on" : ""}" data-seen="me" data-id="${esc(id)}"><span class="tick">${iSaw(id) ? "✓" : ""}</span>${S.partner ? "I watched" : "Watched"}</button>
     ${S.partner ? `<button class="${theySaw(id) ? "on" : ""}" data-seen="partner" data-id="${esc(id)}"><span class="tick">${theySaw(id) ? "✓" : ""}</span>${esc(pName())} watched</button>` : ""}
   </div>`;
-  return `<article class="card ${w || mk === "skipped" ? "dim" : ""}">
+  const ns = newSeason(t);
+  return `<article class="card ${ns ? "fresh" : w || mk === "skipped" ? "dim" : ""}">
   ${collapsible ? `<button class="less" data-open="${esc(id)}">▴ Show less</button>` : ""}
   <div class="head">${cover(t)}<div>
     <div class="t">${esc(t.title)}</div>
     <div class="meta">${t.year || ""} · ${esc(lenText(t))}</div>
-    <div class="meta">${esc((t.genres || []).join(", "))}</div>
+    <div class="meta">${esc(gl(t).join(", "))}</div>
     <div class="badges">${badges.join("")}</div>
   </div></div>
   <div class="scores"><div>${imdbCell}</div><div>Tomatometer<b>${t.rt != null ? t.rt + "%" : "—"}</b></div><div>Trending<b>${t.popularity ? "#" + rank(t) : "—"}</b></div></div>
   ${t.summary ? `<p class="sum" data-sum>${esc(t.summary)}</p>` : ""}
   ${dirs || cast ? `<div class="people">${dirs ? `${t.type === "Series" ? "Created by" : "Directed by"} ${dirs}<br>` : ""}${cast ? `Starring ${cast}` : ""}</div>` : ""}
   <div><div class="where">Where to watch</div><div class="svc">${(t.services || []).map((x) => `<button class="${x === "YouTube" ? "free" : ""}" data-svconly="${esc(x)}" title="Show only ${esc(x)} titles">${esc(x)}${x === "YouTube" ? " · free w/ ads" : ""}</button>`).join("")}</div></div>
+  ${ns ? `<button class="seasonbtn" data-season="${ns}" data-id="${esc(id)}">✓ I’ve watched season ${ns}</button>` : ""}
   ${checks}
   <div class="acts ${t.type === "Series" ? "three" : ""}">
     <button class="mk-want ${mk === "want" ? "on" : ""}" data-mark="want" data-id="${esc(id)}">${mk === "want" ? "✓ " : ""}Want to watch</button>
@@ -542,7 +589,7 @@ function card(t, collapsible) {
 </article>`;
 }
 let rankMap = new Map();
-function buildRanks() { rankMap = new Map([...all()].sort((a, b) => (b.popularity || 0) - (a.popularity || 0)).map((t, i) => [t.id, i + 1])); }
+function buildRanks() { byId = new Map(all().map((t) => [t.id, t])); rankMap = new Map([...all()].sort((a, b) => (b.popularity || 0) - (a.popularity || 0)).map((t, i) => [t.id, i + 1])); }
 const rank = (t) => rankMap.get(t.id) || "—";
 
 function renderSub(note) {
@@ -562,19 +609,32 @@ function render() {
   const list = filtered();
   const k = F.sort, dir = F.desc ? -1 : 1;
   // pinned first: in "Watch together", what you both want; elsewhere, series you're in the middle of
-  const pri = (t) => F.view === "together" ? wantCount(t.id) : F.view === "all" || F.view === "want" ? (isWatching(t.id) ? 1 : 0) : 0;
+  const pri = (t) => F.view === "together" ? wantCount(t.id) : F.view === "seasons" ? (newSeason(t) ? 1 : 0)
+    : F.view === "all" || F.view === "want" ? (newSeason(t) ? 2 : isWatching(t.id) ? 1 : 0) : 0;
   list.sort((x, y) => pri(y) - pri(x) || dir * (sortVal(x, k) - sortVal(y, k)) || imdbOrTmdb(y) - imdbOrTmdb(x));
   const q = $("q").value.trim();
   const noun = F.view === "all" || F.view === "together" ? (list.length === 1 ? "match" : "matches") : (list.length === 1 ? "title" : "titles");
   $("status").textContent = `${list.length} ${noun}${q ? ` for “${q}”` : ""}`;
   let empty = "Nothing here yet.";
   if (F.view === "together") empty = "Nothing here that neither of you has seen. Try another section or loosen the filters.";
+  if (F.view === "seasons") empty = "No new or upcoming seasons for series you’ve watched.";
   if (F.view === "watching") empty = "Nothing in progress. On a series, tap “Watching now” to keep it here until you finish.";
   if (F.view === "all") empty = all().length ? "Nothing matches these filters. Try lowering a score, widening the dates, or tapping Reset filters." : "No titles yet. Tap ↻ Sync to pull in the catalog — the first sync takes a minute or two.";
   const compact = F.layout === "list";
   $("grid").className = compact ? "list" : "";
   $("grid").innerHTML = list.length ? list.map((t) => compact ? (openRow === t.id ? card(t, true) : row(t)) : card(t)).join("") : `<div class="empty">${empty}</div>`;
-  renderPick(); renderSub();
+  renderPick(); renderSub(); renderAlert();
+}
+function renderAlert() {
+  const out = all().filter((t) => newSeason(t)), soon = all().filter((t) => comingSeason(t));
+  const el = $("alert");
+  if (!out.length && !soon.length || F.view === "seasons") { el.hidden = true; return; }
+  const names = (list, f) => list.slice(0, 3).map(f).join(", ") + (list.length > 3 ? ` and ${list.length - 3} more` : "");
+  const parts = [];
+  if (out.length) parts.push(`<b>🆕 New season out:</b> ${esc(names(out, (t) => `${t.title} (season ${newSeason(t)})`))}`);
+  if (soon.length) parts.push(`<b>📅 Coming:</b> ${esc(names(soon, (t) => `${t.title} (season ${comingSeason(t).season}${comingSeason(t).date ? ", " + fmtDate(comingSeason(t).date) : ""})`))}`);
+  el.innerHTML = `<div>${parts.join("<br>")}</div><button data-view="seasons">See them</button>`;
+  el.hidden = false;
 }
 let choosing = false, pickType = "";
 const typeChips = () => [["Movie", "🎬 Movie"], ["Series", "📺 Series"], ["", "🎲 Either"]]
@@ -644,19 +704,22 @@ function toast(msg, undo) {
 }
 
 // ---------------- changes (optimistic, with undo) ----------------
-const snap = (id) => ({ mk: S.marks.get(id) || "", me: S.views.has(id), them: S.pViews.has(id) });
+const snap = (id) => ({ mk: S.marks.get(id) || "", me: S.views.has(id), them: S.pViews.has(id), seen: S.seen.get(id) ?? null, pseen: S.pSeen.get(id) ?? null });
+const airedNow = (id) => { const t = all().find((x) => x.id === id); return t && t.type === "Series" ? (t.aired ?? t.len ?? null) : null; };
 async function apply(id, next, prev) {
   // update screen first, then save; put it back if saving fails
   const set = (s) => {
     s.mk ? S.marks.set(id, s.mk) : S.marks.delete(id);
     s.me ? S.views.add(id) : S.views.delete(id);
     s.them ? S.pViews.add(id) : S.pViews.delete(id);
+    s.me && s.seen != null ? S.seen.set(id, s.seen) : S.seen.delete(id);
+    s.them && s.pseen != null ? S.pSeen.set(id, s.pseen) : S.pSeen.delete(id);
   };
   set(next); render();
   try {
     if (next.mk !== prev.mk) await api.setMark(id, next.mk || null);
-    if (next.me !== prev.me) await api.setView(S.me.id, id, next.me);
-    if (next.them !== prev.them && S.partner) await api.setView(S.partner.id, id, next.them);
+    if (next.me !== prev.me || next.seen !== prev.seen) await api.setView(S.me.id, id, next.me, next.seen);
+    if ((next.them !== prev.them || next.pseen !== prev.pseen) && S.partner) await api.setView(S.partner.id, id, next.them, next.pseen);
   } catch (e) { set(prev); render(); toast("Couldn’t save that: " + e.message); }
 }
 function change(id, patch, msg) {
@@ -676,7 +739,7 @@ document.addEventListener("click", async (e) => {
   }
   if (b.dataset.seen) {
     const id = b.dataset.id, mine = b.dataset.seen === "me", s = snap(id);
-    const patch = mine ? { me: !s.me } : { them: !s.them };
+    const patch = mine ? { me: !s.me, seen: !s.me ? airedNow(id) : null } : { them: !s.them, pseen: !s.them ? airedNow(id) : null };
     const after = Object.assign({}, s, patch);
     const both = after.me && (!S.partner || after.them);
     if (both && (after.mk === "want" || after.mk === "watching")) patch.mk = "";
@@ -685,6 +748,10 @@ document.addEventListener("click", async (e) => {
     const where = mine && on && !both ? ` · it’s under “Seen by one of you” until ${pName()} watches it` : "";
     change(id, patch, both && S.partner ? `You’ve both seen ${name(id)}, moved to Watched` : on ? `${who} watched ${name(id)}${where}` : `Unticked ${mine ? "you" : who} for ${name(id)}`);
     return;
+  }
+  if (b.dataset.season) {
+    const id = b.dataset.id, n = +b.dataset.season;
+    change(id, { me: true, seen: n }, `Marked season ${n} of ${name(id)} as watched`); return;
   }
   if (b.dataset.open) { openRow = openRow === b.dataset.open ? null : b.dataset.open; render(); return; }
   if (b.dataset.svcall) { F.svcOn = []; saveF(); render(); return; }
@@ -776,7 +843,20 @@ let lastLoad = 0;
 async function reload() {
   const d = await api.load();
   Object.assign(S, d); lastLoad = Date.now();
+  backfillSeasons();
   buildRanks(); buildFilters(); render();
+}
+// Series ticked before season tracking: assume you'd seen every season out at that point (once the catalog knows it)
+function backfillSeasons() {
+  const rows = [];
+  const add = (uid, ids, seen) => ids.forEach((id) => {
+    if (seen.has(id)) return;
+    const t = all().find((x) => x.id === id);
+    if (t && t.type === "Series" && t.aired != null) { seen.set(id, t.aired); rows.push({ user_id: uid, title_id: id, seasons: t.aired }); }
+  });
+  add(S.me.id, S.views, S.seen);
+  if (S.partner) add(S.partner.id, S.pViews, S.pSeen);
+  if (rows.length) api.saveSeasons(rows).catch(() => {});
 }
 function gate(html) { $("app").hidden = true; const g = $("gate"); g.innerHTML = html; g.hidden = false; }
 function friendly(msg) {

@@ -36,6 +36,8 @@ create table if not exists public.views (
   created_at timestamptz not null default now(),
   primary key (user_id, title_id)
 );
+-- how many seasons of a series this person had seen when they ticked it (for "new season" alerts)
+alter table public.views add column if not exists seasons int;
 
 -- Create a profile when someone signs in for the first time
 create or replace function public.handle_new_user() returns trigger
