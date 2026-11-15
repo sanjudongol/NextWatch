@@ -687,7 +687,7 @@ function renderServiceChips() {
 }
 const GROUPS = [
   ["discover", "🏠", "Home", ["all", "together"]],
-  ["ours", "★", "Our list", ["bothwant", "want", "watching", "seasons"]],
+  ["ours", "★", "Lists", ["mine", "want", "watching", "seasons", "bothwant"]],
   ["history", "✓", "Watched", ["watched", "onlyme", "onlythem", "skipped"]],
   ["directors", "🎬", "Directors", ["directors"]],
 ];
@@ -730,7 +730,8 @@ function syncControls() {
   $("presets").innerHTML = isYt ? YT_MODES.map(([k, l]) => `<button class="ytmode ${(F.ytMode || "history") === k ? "on" : ""}" data-ytmode="${k}">${l}</button>`).join("")
  : fchip + (!topCat ? "" : PRESETS.map((p, i) => p.only && p.only !== F.cat ? "" : `<button class="chip ${F.preset === i ? "on" : ""}" data-preset="${i}">${p.name}</button>`).join(""));
   const all = () => pool(); // counts cover only this page (videos on YouTube, movies & TV elsewhere)
-  const count = (k) => k === "want" ? all().filter((t) => (S.marks.get(t.id) === "want" || S.pMarks.get(t.id) === "want") && !iSaw(t.id)).length
+  const count = (k) => k === "mine" ? all().filter((t) => S.marks.get(t.id) === "want" && !iSaw(t.id)).length
+    : k === "want" ? !S.partner ? 0 : all().filter((t) => (S.marks.get(t.id) === "want" || S.pMarks.get(t.id) === "want") && !iSaw(t.id)).length
     : k === "watching" ? all().filter((t) => isWatching(t.id)).length
     : k === "seasons" ? seasonNews().length
     : k === "bothwant" ? all().filter((t) => bothWant(t.id)).length
@@ -738,7 +739,7 @@ function syncControls() {
     : k === "onlythem" ? all().filter((t) => onlyThem(t.id)).length
     : k === "watched" ? all().filter((t) => watched(t.id)).length
     : all().filter((t) => S.marks.get(t.id) === "skipped").length;
-  const tabs = [["all", "All matches"], ...(seasonNews().length ? [["seasons", "🆕 New seasons"]] : []), ...(S.partner ? [["together", "👫 Watch together"], ["bothwant", "💞 Want together"]] : []), ["watching", "▶ Watching now"], ["want", "Want to watch"], ["directors", "🎬 Top directors"], ...(S.partner ? [["onlyme", "Only you’ve seen"], ["onlythem", `Only ${esc(pName())} has seen`]] : []), ["watched", "Watched"], ["skipped", "Not interested"]];
+  const tabs = [["all", "All matches"], ...(seasonNews().length ? [["seasons", "🆕 New seasons"]] : []), ...(S.partner ? [["together", "👫 Watch together"]] : []), ["mine", "★ My list"], ["want", "👫 Our list"], ["watching", "▶ Watching now"], ["directors", "🎬 Top directors"], ...(S.partner ? [["onlyme", "Only you’ve seen"], ["onlythem", `Only ${esc(pName())} has seen`]] : []), ["watched", "Watched"], ["skipped", "Not interested"]];
   if (F.view === "one") F.view = "onlyme";
   if (!tabs.some(([k]) => k === F.view)) F.view = "all";
   // phones: the bottom bar picks the group, and only that group's tabs show here
@@ -790,6 +791,8 @@ function filtered(cats = [F.cat]) {
 }
 function filteredAll(cats = [F.cat]) {
   const q = $("q").value.trim();
+  if (F.view === "mine") return all().filter((t) => S.marks.get(t.id) === "want" && !iSaw(t.id) && matchesSearch(t, q));
+  if (F.view === "want" && !S.partner) return [];
   if (F.view === "want") return all().filter((t) => (S.marks.get(t.id) === "want" || S.pMarks.get(t.id) === "want") && !iSaw(t.id) && matchesSearch(t, q));
   // searching looks through everything: every section, score, service and mark (filters come back when the box is cleared)
   if (q && (F.view === "all" || F.view === "together")) return all().filter((t) => matchesSearch(t, q));
@@ -968,7 +971,7 @@ function render() {
   $("dir").hidden = F.sort === "newest"; // already newest → oldest
   // pinned first: in "Watch together", what you both want; elsewhere, series you're in the middle of
   const pri = (t) => F.view === "together" ? wantCount(t.id) : F.view === "seasons" ? (newSeason(t) ? 1 : 0)
-    : F.view === "all" || F.view === "want" ? (newSeason(t) ? 2 : isWatching(t.id) ? 1 : 0) : 0;
+    : F.view === "want" ? (bothWant(t.id) ? 3 : 0) + (newSeason(t) ? 2 : isWatching(t.id) ? 1 : 0) : F.view === "all" || F.view === "mine" ? (newSeason(t) ? 2 : isWatching(t.id) ? 1 : 0) : 0;
   const newest = F.cat === "youtube" && (F.ytSub ? ((YT_SUBS[F.ytMode] || []).find((x) => x[0] === F.ytSub) || [])[2] : ["soccer", "f1"].includes(F.ytMode)); // "latest" tabs and sports: newest first
   const sq = $("q").value.trim().toLowerCase();
   const hit = (t) => { const ti = (t.title || "").toLowerCase(); return ti === sq ? 3 : ti.startsWith(sq) ? 2 : ti.includes(sq) ? 1 : 0; };
@@ -989,6 +992,8 @@ function render() {
     $("status").textContent += ` · only ${inSection} in this section so far. Tap ↻ Sync to pull in more`;
   let empty = "Nothing here yet.";
   if (F.view === "together") empty = "Nothing here that neither of you has seen. Try another section or loosen the filters.";
+  if (F.view === "mine") empty = "Nothing on your list yet. Tap ★ Want on anything you’d like to watch.";
+  if (F.view === "want") empty = S.partner ? `Nothing on your shared list yet. Anything you or ${esc(pName())} tap ★ Want on shows up here, with what you both want first.` : `<b>Our list</b> is what you and your partner both want to watch, in one place.<br><br><button class="btn primary" id="emptylink">👫 Link your partner</button>`;
   if (F.view === "bothwant") empty = `Nothing you both want yet. When you and ${esc(pName())} both tap “Want to watch” on a title, it shows up here.`;
   if (F.view === "seasons") empty = "No new or upcoming seasons for series you’ve watched.";
   if (F.view === "watching") empty = "Nothing in progress. On a series, tap “Watching now” to keep it here until you finish.";
@@ -1400,6 +1405,7 @@ async function onClick(e) {
     const id = b.dataset.id, n = +b.dataset.season;
     change(id, { me: true, seen: n }, `Marked season ${n} of ${name(id)} as watched`); return;
   }
+  if (b.id === "emptylink") { $("partnerChip").click(); return; }
   if (b.dataset.group) {
     const g = GROUPS.find((x) => x[0] === b.dataset.group);
     if (g[0] === "discover" && (groupOf(F.view) === "discover" || page !== "home")) { goHome(); return; }
