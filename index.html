@@ -729,7 +729,10 @@ function change(id, patch, msg) {
 }
 
 // ---------------- events ----------------
-document.addEventListener("click", async (e) => {
+document.addEventListener("click", (e) => onClick(e).catch(showErr));
+function showErr(er) { console.error(er); toast("Something went wrong: " + (er && er.message || er) + ". Try reloading the page."); }
+addEventListener("error", (e) => showErr(e.error || e.message));
+async function onClick(e) {
   const sum = e.target.closest("[data-sum]"); if (sum) { sum.classList.toggle("open"); return; }
   const b = e.target.closest("button"); if (!b) return;
   const name = (id) => (all().find((t) => t.id === id) || {}).title || "title";
@@ -803,14 +806,28 @@ document.addEventListener("click", async (e) => {
     case "signout": await api.signOut(); location.reload(); return;
     case "sync": runSync(); return;
   }
-});
+}
 function confirmUnlink() { const b = $("unlink"); if (b.dataset.sure) return true; b.dataset.sure = "1"; b.textContent = "Tap again to unlink"; return false; }
 CTRL.forEach((k) => $(k).addEventListener("input", () => { F[k] = $(k).value; F.preset = -1; if (SCORE_KEYS.includes(k)) rememberCatScores(); saveF(); render(); }));
 addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); installEvt = e; if (!$("account").hidden) renderAccount(); });
 if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("/sw.js").catch(() => {});
 let qT; $("q").addEventListener("input", () => { clearTimeout(qT); qT = setTimeout(render, 120); });
 $("fp").addEventListener("toggle", () => local.set("wf-panel-open", $("fp").open));
-document.addEventListener("visibilitychange", () => { if (!document.hidden && S.me && Date.now() - lastLoad > 60000) reload(); });
+let siteVersion = null;
+async function checkVersion() {
+  if (DEMO) return;
+  try {
+    const v = (await fetch("/api/config", { cache: "no-store" }).then((r) => r.json())).version;
+    if (siteVersion && v && v !== siteVersion && !syncing) location.reload(); // the site was updated: load the new version
+    siteVersion = siteVersion || v;
+  } catch {}
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) return;
+  checkVersion();
+  if (S.me && Date.now() - lastLoad > 60000) reload();
+});
+setInterval(() => { if (!document.hidden) checkVersion(); }, 10 * 60000);
 
 // ---------------- sync ----------------
 let syncing = false;
@@ -927,7 +944,8 @@ async function start() {
     if (!api) { // create the connection only once per page
       if (DEMO) api = demoApi();
       else {
-        const cfg = await fetch("/api/config").then((r) => r.json()).catch(() => ({ ready: false }));
+        const cfg = await fetch("/api/config", { cache: "no-store" }).then((r) => r.json()).catch(() => ({ ready: false }));
+        siteVersion = cfg.version || null;
         if (!cfg.ready) return gate(`<h1>Almost there</h1><p class="muted">The site is running, but its Supabase settings aren’t in Vercel yet (SUPABASE_URL and SUPABASE_ANON_KEY). Add them, redeploy, and reload this page.</p>`);
         api = await supabaseApi(cfg);
         api.onAuth((_s, ev) => { if (ev === "PASSWORD_RECOVERY") { RECOVERY = true; showNewPassword(); } });
