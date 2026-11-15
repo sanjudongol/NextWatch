@@ -355,7 +355,7 @@ const iSaw = (id) => S.views.has(id);
 const theySaw = (id) => S.pViews.has(id);
 const watched = (id) => iSaw(id) && (!S.partner || theySaw(id));
 const oneSeen = (id) => !!S.partner && iSaw(id) !== theySaw(id);
-const isWatching = (id) => !watched(id) && (S.marks.get(id) === "watching" || S.pMarks.get(id) === "watching");
+const isWatching = (id) => !iSaw(id) && (S.marks.get(id) === "watching" || S.pMarks.get(id) === "watching");
 const wantCount = (id) => (S.marks.get(id) === "want" ? 1 : 0) + (S.pMarks.get(id) === "want" ? 1 : 0);
 function useCatScores() { Object.assign(F, CAT_SCORES[F.cat] || CAT_SCORES.main, (F.byCat || {})[F.cat] || {}); }
 function rememberCatScores() { F.byCat = Object.assign({}, F.byCat, { [F.cat]: { imdb: F.imdb, rt: F.rt, mode: F.mode } }); }
@@ -384,7 +384,7 @@ function syncControls() {
   $("cats").innerHTML = CATS.map(([k, l]) => `<button class="${F.cat === k ? "on" : ""}" data-cat="${k}">${l}</button>`).join("");
   $("presets").hidden = F.cat !== "main";
   $("presets").innerHTML = PRESETS.map((p, i) => `<button class="chip ${F.preset === i ? "on" : ""}" data-preset="${i}">${p.name}</button>`).join("");
-  const count = (k) => k === "want" ? all().filter((t) => (S.marks.get(t.id) === "want" || S.pMarks.get(t.id) === "want") && !watched(t.id)).length
+  const count = (k) => k === "want" ? all().filter((t) => (S.marks.get(t.id) === "want" || S.pMarks.get(t.id) === "want") && !iSaw(t.id)).length
     : k === "watching" ? all().filter((t) => isWatching(t.id)).length
     : k === "one" ? all().filter((t) => oneSeen(t.id)).length
     : k === "watched" ? all().filter((t) => watched(t.id)).length
@@ -428,7 +428,7 @@ function categoryOf(t) {
 }
 function filtered() {
   const q = $("q").value.trim();
-  if (F.view === "want") return all().filter((t) => (S.marks.get(t.id) === "want" || S.pMarks.get(t.id) === "want") && !watched(t.id) && matchesSearch(t, q));
+  if (F.view === "want") return all().filter((t) => (S.marks.get(t.id) === "want" || S.pMarks.get(t.id) === "want") && !iSaw(t.id) && matchesSearch(t, q));
   if (F.view === "watching") return all().filter((t) => isWatching(t.id) && matchesSearch(t, q));
   if (F.view === "one") return all().filter((t) => oneSeen(t.id) && matchesSearch(t, q));
   if (F.view === "watched") return all().filter((t) => watched(t.id) && matchesSearch(t, q));
@@ -436,7 +436,7 @@ function filtered() {
   const imdb = parseFloat(F.imdb) || 0, rt = parseFloat(F.rt) || 0;
   const minYear = +F.recent ? new Date().getFullYear() - +F.recent : 0;
   return all().filter((t) => {
-    if (watched(t.id) || S.marks.get(t.id) === "skipped") return false;
+    if (iSaw(t.id) || S.marks.get(t.id) === "skipped") return false; // once you've seen it, it leaves your list
     if (F.view === "together" && (iSaw(t.id) || theySaw(t.id) || S.pSkip.has(t.id))) return false;
     if (categoryOf(t) !== F.cat) return false;
     const a = imdbOrTmdb(t) >= imdb, b = (t.rt ?? -1) >= rt;
@@ -601,7 +601,7 @@ function renderAccount() {
       <ul>
         <li><b>You both see:</b> each other’s “watched” ticks, “Want to watch” picks (shown as “${esc(pName())} wants this”) and “Watching now” series.</li>
         <li><b>Either of you can tick</b> the other’s “watched” box, handy when you watch on one screen.</li>
-        <li>A title moves to <b>Watched</b> only when <b>both</b> boxes are ticked. If just one of you has seen it, it shows under “Seen by one of you”.</li>
+        <li>As soon as you tick <b>I watched</b>, the title leaves <i>your</i> lists. It stays on ${esc(pName())}’s until they’ve seen it too, and shows under “Seen by one of you” in the meantime. Once you’ve both ticked it, it moves to <b>Watched</b>.</li>
         <li><b>Watch together</b> shows only what neither of you has seen, with titles you both want at the top.</li>
         <li><b>Stays private:</b> your “Not interested” list, your filters and your password. Watch together quietly leaves out titles either of you isn’t interested in, without showing which.</li>
         <li>Unlinking keeps everyone’s ticks; you just stop seeing each other’s.</li>
@@ -670,7 +670,8 @@ document.addEventListener("click", async (e) => {
     if (both && (after.mk === "want" || after.mk === "watching")) patch.mk = "";
     const who = mine ? "You" : pName();
     const on = mine ? after.me : after.them;
-    change(id, patch, both && S.partner ? `You’ve both seen ${name(id)}, moved to Watched` : on ? `${who} watched ${name(id)}` : `Unticked ${mine ? "you" : who} for ${name(id)}`);
+    const where = mine && on && !both ? ` · it’s under “Seen by one of you” until ${pName()} watches it` : "";
+    change(id, patch, both && S.partner ? `You’ve both seen ${name(id)}, moved to Watched` : on ? `${who} watched ${name(id)}${where}` : `Unticked ${mine ? "you" : who} for ${name(id)}`);
     return;
   }
   if (b.dataset.open) { openRow = openRow === b.dataset.open ? null : b.dataset.open; render(); return; }
