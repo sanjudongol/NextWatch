@@ -159,7 +159,7 @@ footer{color:var(--mu);font-size:12px;margin-top:24px}
         <label>Score rule<select id="mode"><option value="any">IMDb or RT</option><option value="all">IMDb and RT</option></select></label>
         <label>Type<select id="type"><option value="">Movies &amp; series</option><option>Movie</option><option>Series</option></select></label>
         <label>Genre<select id="genre"></select></label>
-        <label>Director / creator<select id="director"></select></label>
+        <label>Director / creator<input type="search" id="director" list="dirlist" placeholder="Anyone · type a name" autocomplete="off" enterkeyhint="done"><datalist id="dirlist"></datalist></label>
         <label>Released<select id="recent"><option value="0">Any time</option><option value="1">This year &amp; last</option><option value="2">Last 2 years</option><option value="5">Last 5 years</option><option value="10">Last 10 years</option></select></label>
         <label>Movie length<select id="runtime"><option value="0">Any length</option><option value="90">Under 1½ hours</option><option value="120">Under 2 hours</option><option value="150">Under 2½ hours</option></select></label>
         <label>Series status<select id="status2"><option value="">Any</option><option value="Ongoing">Still airing</option><option value="done">Finished</option></select></label>
@@ -374,7 +374,8 @@ function opts(el, first, items) {
 }
 function buildFilters() {
   opts($("genre"), "All genres", [...new Set(all().flatMap((t) => t.genres || []))].sort());
-  opts($("director"), "Anyone", [...new Set(all().flatMap((t) => t.dirs || []))].sort((a, b) => a.split(" ").pop().localeCompare(b.split(" ").pop())));
+  const dirs = [...new Set(all().flatMap((t) => t.dirs || []))].sort((a, b) => a.split(" ").pop().localeCompare(b.split(" ").pop()));
+  $("dirlist").innerHTML = dirs.map((d) => `<option value="${esc(d)}"></option>`).join("");
   const svcs = [...new Set(all().flatMap((t) => t.services || []))].sort();
   $("chips").innerHTML = svcs.map((s) => `<button class="chip ${F.svcOff.includes(s) ? "" : "on"}" data-svc="${esc(s)}">${esc(s)}</button>`).join("");
 }
@@ -404,7 +405,7 @@ function filterSummary() {
   p.push(`IMDb ${F.imdb}+ ${F.mode === "any" ? "or" : "and"} RT ${F.rt}%+`);
   if (F.type) p.push(F.type === "Movie" ? "Movies" : "Series");
   if (F.genre) p.push(F.genre);
-  if (F.director) p.push(F.director);
+  if (F.director) p.push("by " + F.director.trim());
   if (+F.recent) p.push(+F.recent === 1 ? "This year & last" : `Last ${F.recent} yrs`);
   if (+F.runtime) p.push(`Under ${F.runtime / 60}h`.replace(".5h", "½h"));
   if (F.status2) p.push(F.status2 === "done" ? "Finished" : "Still airing");
@@ -443,7 +444,7 @@ function filtered() {
     if (F.mode === "any" ? !(a || b) : !(a && b)) return false;
     if (F.type && t.type !== F.type) return false;
     if (F.genre && !(t.genres || []).includes(F.genre)) return false;
-    if (F.director && !(t.dirs || []).includes(F.director)) return false;
+    if (F.director && !(t.dirs || []).some((d) => d.toLowerCase().includes(F.director.trim().toLowerCase()))) return false; // partial names work too
     if (minYear && !(t.year >= minYear)) return false;
     if (+F.runtime && t.type === "Movie" && !(t.len && t.len <= +F.runtime)) return false;
     if (F.status2 && t.type === "Series" && (F.status2 === "done" ? t.status === "Ongoing" : t.status !== "Ongoing")) return false;
