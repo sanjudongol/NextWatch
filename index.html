@@ -104,7 +104,9 @@ select,.fgrid input{font:inherit;color:var(--tx);background:var(--bg);border:1px
 .rb.on.mk-skipped{border-color:var(--ac);color:var(--ac)}
 @media (max-width:620px){.rowc{grid-template-columns:64px minmax(0,1fr)}.rbtns{grid-column:1/-1;justify-content:flex-start;max-width:none}}
 .less{align-self:flex-start;background:none;border:0;color:var(--mu);font-size:13px;padding:0}
-.dirs{display:grid;gap:8px}
+body.ondirs :is(.pageswitch,.topbar,.ctlrow,#ytsubs,#fp,#alert,#shelves){display:none!important}
+.dirs{display:grid;gap:8px;grid-template-columns:minmax(0,1fr);min-width:0;max-width:100%}.dirs>*{min-width:0}
+.drow .dn b{overflow-wrap:anywhere}
 .dirs h3{margin:10px 0 2px;font-size:15px}
 .dirs .muted{margin-bottom:4px}
 .drow{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:10px 12px}
@@ -117,7 +119,7 @@ select,.fgrid input{font:inherit;color:var(--tx);background:var(--bg);border:1px
 .acclaimed button{border:1px solid var(--bd);background:var(--card);border-radius:999px;padding:6px 12px;font-size:13px}
 .acclaimed button.have{border-color:var(--ok)}
 .hint{grid-column:1/-1;font-size:12px;color:var(--mu);margin-top:-4px}
-#grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:12px}
+#grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(310px,100%),1fr));gap:12px}
 .card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
 .card.dim{opacity:.6}
 .card.fresh,.rowc.fresh{border:2px solid var(--new);opacity:1;box-shadow:0 0 0 3px color-mix(in srgb,var(--new) 15%,transparent)}
@@ -209,7 +211,7 @@ footer{color:var(--mu);font-size:12px;margin-top:24px}
 .dsheet>article{margin:0;border-radius:16px}
 .dclose{position:absolute;top:8px;right:8px;z-index:2;width:32px;height:32px;border-radius:999px;border:0;background:var(--pill);color:var(--tx);font-size:15px}
 body.noscroll{overflow:hidden}
-@media (max-width:620px){.hero{grid-template-columns:96px minmax(0,1fr);gap:12px;padding:12px}.hero .hcover .cover{width:96px;height:144px;font-size:11px}.hero .ht{font-size:18px}.hsum{-webkit-line-clamp:2;font-size:13px}.hacts{gap:6px;flex-wrap:nowrap}.hacts .btn{padding:7px 10px;font-size:13px}.hacts .lbl{display:none}
+@media (max-width:620px){.hero{grid-template-columns:96px minmax(0,1fr);gap:12px;padding:12px}.hero .hcover .cover{width:96px;height:144px;font-size:11px}.hero .ht{font-size:18px}.hsum{-webkit-line-clamp:2;font-size:13px}.hacts{gap:6px;flex-wrap:wrap}.hacts .btn{padding:7px 10px;font-size:13px}.hacts .lbl{display:none}
   .tile{width:96px}.tile .cover{width:96px;height:144px}.shelfrow{scrollbar-width:none;margin:0 -16px;padding:0 16px 4px}.shelfrow::-webkit-scrollbar{display:none}
   #detail{place-items:end center;padding:0}.dsheet{width:100%;max-height:88vh;border-radius:18px 18px 0 0}.dsheet>article{border-radius:18px 18px 0 0;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}}
 .tipshead{display:flex;justify-content:space-between;align-items:center;gap:8px}.tipshead .btn{padding:5px 12px;font-size:13px}
@@ -1201,7 +1203,8 @@ function render() {
   syncControls();
   const searching = $("q").value.trim() && (F.view === "all" || F.view === "together");
   $("fsum").innerHTML = searching ? `<b>Filters</b>paused while you search · clear the search box to use them again` : `<b>Filters</b>${esc(filterSummary())}`;
-  if (F.view === "directors") { renderDirectors(); renderPick(); renderSub(); renderAlert(); $("findwrap").hidden = true; $("layout").hidden = true; return; }
+  document.body.classList.toggle("ondirs", F.view === "directors");
+  if (F.view === "directors") { renderDirectors(); renderPick(); renderSub(); renderAlert(); $("shelves").hidden = true; $("shelves").innerHTML = ""; $("findwrap").hidden = true; $("layout").hidden = true; return; }
   $("layout").hidden = F.cat === "youtube" && F.view === "all";
   $("shelveson").hidden = !(F.shelves === false && F.view === "all" && F.cat !== "youtube");
   const list = filtered();
