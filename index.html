@@ -58,7 +58,7 @@ select,.fgrid input{font:inherit;color:var(--tx);background:var(--bg);border:1px
 .svc button{font:inherit;font-size:13px;background:var(--pill);border:0;border-radius:6px;padding:3px 9px;font-weight:600}
 .svc button.free{outline:1px solid var(--ok)}
 .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
-.cats{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:12px;background:var(--pill);border-radius:12px;padding:4px}
+.cats{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin-top:12px;background:var(--pill);border-radius:12px;padding:4px}
 .cats button{border:0;background:transparent;border-radius:9px;padding:8px 6px;font-size:14px;font-weight:600;color:var(--mu)}
 .cats button.on{background:var(--card);color:var(--tx);box-shadow:0 1px 3px rgba(0,0,0,.12)}
 @media (max-width:620px){.cats{grid-template-columns:repeat(6,1fr)}.cats button{grid-column:span 2}.cats button:nth-child(-n+2){grid-column:span 3}}
@@ -285,7 +285,7 @@ const PRESETS = [
 ];
 const DEFAULTS = { imdb: "6.5", rt: "70", mode: "any", type: "", genre: "", director: "", recent: "0", runtime: "0", status2: "", sort: "imdb", desc: true, mood: "", preset: -1, view: "all", svcOn: [], cat: "movies", layout: "cards", byCat: {} };
 // each section remembers its own score bar; reality TV tends to score lower on IMDb
-const CAT_SCORES = { movies: { imdb: "6.5", rt: "70", mode: "any" }, series: { imdb: "6.5", rt: "70", mode: "any" }, anime: { imdb: "6.5", rt: "70", mode: "any" }, reality: { imdb: "6.5", rt: "70", mode: "any" }, docs: { imdb: "6.5", rt: "70", mode: "any" } };
+const CAT_SCORES = { movies: { imdb: "6.5", rt: "70", mode: "any" }, series: { imdb: "6.5", rt: "70", mode: "any" }, anime: { imdb: "6.5", rt: "70", mode: "any" }, reality: { imdb: "6.5", rt: "70", mode: "any" }, docs: { imdb: "6.5", rt: "70", mode: "any" }, kids: { imdb: "6.5", rt: "70", mode: "any" } };
 const SCORE_KEYS = ["imdb", "rt", "mode"];
 const MARK_LABEL = { want: "Want to watch", watching: "Watching now", skipped: "Not interested" };
 const CTRL = ["imdb", "rt", "mode", "type", "genre", "director", "recent", "runtime", "status2", "sort"];
@@ -297,6 +297,10 @@ const SYNC_JOBS = [
   { kind: "movie", order: "top", pages: 3, genre: "99", label: "documentaries" },
   { kind: "tv", order: "top", pages: 4, genre: "16", lang: "ja", label: "anime series" },     // Animation + Japanese
   { kind: "movie", order: "top", pages: 2, genre: "16", lang: "ja", label: "anime movies" },
+  { kind: "movie", order: "top", pages: 4, genre: "10751", label: "family movies" },   // TMDB: Family
+  { kind: "movie", order: "top", pages: 3, genre: "16", label: "animated movies" },
+  { kind: "tv", order: "top", pages: 3, genre: "10762", label: "kids’ series" },       // TMDB: Kids
+  { kind: "tv", order: "top", pages: 2, genre: "16", label: "animated series" },
 ];
 
 // ---------------- state ----------------
@@ -507,7 +511,7 @@ function syncControls() {
   CTRL.forEach((k) => { if ($(k).value !== F[k]) $(k).value = F[k]; });
   renderServiceChips();
   $("dir").textContent = F.desc ? "Highest first ↓" : "Lowest first ↑";
-  const SHORT = { movies: "🎬 Movies", series: "📺 Series", anime: "🍥 Anime", reality: "🏆 Reality", docs: "🎥 Docs" };
+  const SHORT = { movies: "🎬 Movies", series: "📺 Series", anime: "🍥 Anime", reality: "🏆 Reality", docs: "🎥 Docs", kids: "🧸 Kids" };
   $("cats").innerHTML = CATS.map(([k, l]) => `<button class="${F.cat === k ? "on" : ""}" data-cat="${k}"><span class="long">${l}</span><span class="short">${SHORT[k]}</span></button>`).join("");
   const topCat = F.cat === "movies" || F.cat === "series";
   $("presets").hidden = !topCat;
@@ -527,13 +531,13 @@ function syncControls() {
   if (!tabs.some(([k]) => k === F.view)) F.view = "all";
   $("tabs").innerHTML = tabs.map(([k, l]) => `<button class="chip ${F.view === k ? "on" : ""}" data-view="${k}" ${k === "directors" ? `title="Directors and creators whose titles on your services score best, plus acclaimed directors to explore"` : ""} ${k === "together" ? `title="Only what neither of you has seen, with what you both want first. Uses the filters and section above."` : ""}>${l}${k === "all" || k === "together" || k === "directors" ? "" : ` (${count(k)})`}</button>`).join("");
   $("layout").textContent = F.layout === "list" ? "▦ Cards" : "☰ Compact list";
-  const sectionName = { movies: "Movies", series: "Series", anime: "Anime", reality: "Reality & competition", docs: "Documentaries" }[F.cat];
+  const sectionName = { movies: "Movies", series: "Series", anime: "Anime", reality: "Reality & competition", docs: "Documentaries", kids: "Kids & family" }[F.cat];
   $("scorehint").textContent = `Score settings are remembered separately for each section (now: ${sectionName}).`;
 }
 const saveF = () => local.set("wf-filters", F);
 function filterSummary() {
   const p = [];
-  p.push({ movies: "Movies", series: "Series", anime: "Anime", reality: "Reality & competition", docs: "Documentaries" }[F.cat]);
+  p.push({ movies: "Movies", series: "Series", anime: "Anime", reality: "Reality & competition", docs: "Documentaries", kids: "Kids & family" }[F.cat]);
   if (F.preset >= 0) p.push(PRESETS[F.preset].name.replace(/^\S+\s/, ""));
   p.push(`IMDb ${F.imdb}+ ${F.mode === "any" ? "or" : "and"} RT ${F.rt}%+`);
   if (F.type) p.push(F.type === "Movie" ? "Movies" : "Series");
@@ -552,12 +556,13 @@ function matchesSearch(t, q) {
   const hay = (t.title + " " + (t.dirs || []).join(" ") + " " + (t.cast || []).join(" ")).toLowerCase();
   return q.toLowerCase().split(/\s+/).every((w) => hay.includes(w));
 }
-const CATS = [["movies", "🎬 Movies"], ["series", "📺 Series"], ["anime", "🍥 Anime"], ["reality", "🏆 Reality & competition"], ["docs", "🎥 Documentaries"]];
+const CATS = [["movies", "🎬 Movies"], ["series", "📺 Series"], ["anime", "🍥 Anime"], ["reality", "🏆 Reality & competition"], ["docs", "🎥 Documentaries"], ["kids", "🧸 Kids & family"]];
 function categoryOf(t) {
   const g = t.genres || [];
   if (g.includes("Reality")) return "reality";
   if (g.includes("Documentary")) return "docs";
   if (g.includes("Animation") && t.lang === "ja") return "anime"; // Japanese animation
+  if (g.includes("Family") || g.includes("Animation")) return "kids"; // family films, kids' shows, other animation
   return t.type === "Movie" ? "movies" : "series";
 }
 function filtered(cats = [F.cat]) {
