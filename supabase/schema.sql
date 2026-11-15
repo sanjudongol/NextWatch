@@ -38,6 +38,7 @@ create table if not exists public.views (
 );
 -- how many seasons of a series this person had seen when they ticked it (for "new season" alerts)
 alter table public.views add column if not exists seasons int;
+alter table public.views add column if not exists rating smallint check (rating in (1,2)); -- 1 liked, 2 loved
 
 -- Create a profile when someone signs in for the first time
 create or replace function public.handle_new_user() returns trigger

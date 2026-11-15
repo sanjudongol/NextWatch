@@ -138,7 +138,7 @@ select,.fgrid input{font:inherit;color:var(--tx);background:var(--bg);border:1px
 .meta{color:var(--mu);font-size:13px;margin-top:3px}
 .badges{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}
 .badge{font-size:11px;background:var(--pill);border-radius:6px;padding:2px 7px;color:var(--mu);white-space:nowrap}
-.b-want{background:var(--want);color:#fff}.b-watched{background:var(--ok);color:#fff}.b-skipped{background:var(--mu);color:var(--card)}
+.b-want{background:var(--want);color:#fff}.b-like{background:color-mix(in srgb,var(--red) 14%,transparent);color:var(--red)}.b-watched{background:var(--ok);color:#fff}.b-skipped{background:var(--mu);color:var(--card)}
 .scores{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:12px;color:var(--mu);border-top:1px solid var(--bd);border-bottom:1px solid var(--bd);padding:8px 0}
 .scores b{display:block;font-size:18px;color:var(--tx)}
 .sum{font-size:14px;margin:0;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer}
@@ -354,6 +354,11 @@ button:active:not(:disabled),a.rb:active,.popbtn:active{opacity:.5}
 .btn{border:0;background:var(--pill);border-radius:12px;min-height:44px;padding:10px 16px;font-weight:600}
 .btn.primary,.primary{background:var(--ac);color:#fff}
 .acts button,.rb,.checks button,.drow button,.acclaimed button{border:0;background:var(--pill);color:var(--tx);border-radius:10px}
+.rate{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:.882rem;color:var(--mu)}
+.rateseg{display:flex;gap:2px;background:var(--pill);border-radius:10px;padding:2px}
+.rateseg button{border:0;background:transparent;color:var(--tx);border-radius:8px;padding:7px 14px;font:inherit;font-weight:500;min-height:36px}
+.rateseg button.on{background:var(--seg);color:var(--red);font-weight:600;box-shadow:0 1px 3px rgb(0 0 0 / .12)}
+.rb.on.mk-like{background:color-mix(in srgb,var(--red) 14%,transparent);color:var(--red)}
 .rb.on,.acts .on,.checks .on{background:color-mix(in srgb,var(--ok) 16%,transparent);color:var(--ok);border:0}
 .rb.on.mk-want,.rb.on.mk-watching,.acts .on.mk-want,.acts .on.mk-watching{background:color-mix(in srgb,var(--want) 16%,transparent);color:var(--want)}
 .rb.on.mk-skipped,.acts .on.mk-skipped{background:var(--pill);color:var(--mu)}
@@ -685,7 +690,7 @@ if (F.cat === "main" || !F.cat) { // "Movies & series" became two sections
   if (F.byCat && F.byCat.main) { F.byCat.movies = F.byCat.series = F.byCat.main; delete F.byCat.main; }
   F.cat = F.type === "Series" ? "series" : "movies"; F.type = "";
 } if (!Array.isArray(F.svcOn)) F.svcOn = []; // old "hide a service" setting is replaced by "only these"
-let S = { ytOn: DEMO, titles: [], me: null, partner: null, marks: new Map(), pMarks: new Map(), views: new Set(), pViews: new Set(), seen: new Map(), pSeen: new Map(), pSkip: new Set(), lastUpdated: null };
+let S = { ytOn: DEMO, titles: [], me: null, partner: null, marks: new Map(), pMarks: new Map(), views: new Set(), pViews: new Set(), seen: new Map(), pSeen: new Map(), rate: new Map(), pRate: new Map(), pSkip: new Set(), lastUpdated: null };
 let openRow = null, installEvt = null;
 let api, pickId = null;
 const tid = (t) => t.id;
@@ -723,7 +728,7 @@ async function supabaseApi(cfg) {
         if (rows.length < 1000) break; from += 1000;
       }
       const marks = must(await sb.from("marks").select("user_id,title_id,status"));
-      const views = must(await sb.from("views").select("user_id,title_id,seasons"));
+      const views = must(await sb.from("views").select("user_id,title_id,seasons,rating"));
       // titles your partner isn't interested in: only used to leave them out of "Watch together"
       const pSkip = partner ? (must(await sb.rpc("partner_skipped")) || []).map((x) => (typeof x === "string" ? x : Object.values(x)[0])) : [];
       return {
@@ -735,14 +740,16 @@ async function supabaseApi(cfg) {
         pViews: new Set(views.filter((v) => partner && v.user_id === partner.id).map((v) => v.title_id)),
         seen: new Map(views.filter((v) => v.user_id === uid && v.seasons != null).map((v) => [v.title_id, v.seasons])),
         pSeen: new Map(views.filter((v) => partner && v.user_id === partner.id && v.seasons != null).map((v) => [v.title_id, v.seasons])),
+        rate: new Map(views.filter((v) => v.user_id === uid && v.rating).map((v) => [v.title_id, v.rating])),
+        pRate: new Map(views.filter((v) => partner && v.user_id === partner.id && v.rating).map((v) => [v.title_id, v.rating])),
       };
     },
     async setMark(titleId, status) {
       if (status) must(await sb.from("marks").upsert({ user_id: S.me.id, title_id: titleId, status }));
       else must(await sb.from("marks").delete().eq("user_id", S.me.id).eq("title_id", titleId));
     },
-    async setView(userId, titleId, on, seasons = null) {
-      if (on) must(await sb.from("views").upsert({ user_id: userId, title_id: titleId, seasons }));
+    async setView(userId, titleId, on, seasons = null, rating) { // rating: 1 liked, 2 loved; undefined leaves it as is
+      if (on) must(await sb.from("views").upsert({ user_id: userId, title_id: titleId, seasons, ...(rating !== undefined ? { rating } : {}) }));
       else must(await sb.from("views").delete().eq("user_id", userId).eq("title_id", titleId));
     },
     async saveSeasons(rows) { if (rows.length) must(await sb.from("views").upsert(rows)); },
@@ -807,7 +814,7 @@ function demoApi() {
   Object.assign(titles.find((t) => t.id === "tv-3"), { aired: 5, next: null });
   Object.assign(titles.find((t) => t.id === "tv-1"), { aired: 2, next: { season: 3, date: "2027-01-16" } });
   Object.assign(titles.find((t) => t.id === "tv-2"), { aired: 5, next: null });
-  const db = { marks: new Map(), views: new Map([["me", new Set(["tv-3", "tv-1"])], ["p", new Set()]]), seen: new Map([["tv-3", 4], ["tv-1", 2]]) };
+  const db = { marks: new Map(), views: new Map([["me", new Set(["tv-3", "tv-1"])], ["p", new Set()]]), seen: new Map([["tv-3", 4], ["tv-1", 2]]), rate: new Map([["tv-3", 2]]) };
   let partner = null;
   return {
     async session() { return signedIn ? { user: { id: "me" } } : null; },
@@ -819,10 +826,10 @@ function demoApi() {
     async signOut() { signedIn = false; local.set("demo-in", false); },
     async load() {
       return { titles, me: { id: "me", name: "You", invite_code: "AB12CD", partner_id: partner && "p" }, partner, lastUpdated: new Date().toISOString(),
-        marks: new Map(db.marks), pMarks: new Map([["tv-3", "want"], ["tv-1", "watching"]].filter(() => partner)), pSkip: new Set(partner ? ["movie-4"] : []), views: new Set(db.views.get("me")), pViews: new Set(partner ? db.views.get("p") : []), seen: new Map(db.seen), pSeen: new Map() };
+        marks: new Map(db.marks), pMarks: new Map([["tv-3", "want"], ["tv-1", "watching"]].filter(() => partner)), pSkip: new Set(partner ? ["movie-4"] : []), views: new Set(db.views.get("me")), pViews: new Set(partner ? db.views.get("p") : []), seen: new Map(db.seen), pSeen: new Map(), rate: new Map(db.rate), pRate: new Map(partner ? [["tv-3", 1]] : []) };
     },
     async setMark(t, s) { s ? db.marks.set(t, s) : db.marks.delete(t); },
-    async setView(u, t, on, n) { const k = u === "me" ? "me" : "p"; on ? db.views.get(k).add(t) : db.views.get(k).delete(t); if (k === "me") on && n != null ? db.seen.set(t, n) : db.seen.delete(t); },
+    async setView(u, t, on, n, r) { const k = u === "me" ? "me" : "p"; on ? db.views.get(k).add(t) : db.views.get(k).delete(t); if (k === "me") { on && n != null ? db.seen.set(t, n) : db.seen.delete(t); if (!on) db.rate.delete(t); else if (r !== undefined) r ? db.rate.set(t, r) : db.rate.delete(t); } },
     async saveSeasons(rows) { rows.forEach((r) => r.user_id === "me" && db.seen.set(r.title_id, r.seasons)); },
     async rename() {},
     async setPassword() {},
@@ -1081,6 +1088,12 @@ function badgeList(t) {
   else if (mk === "want") badges.push(`<span class="badge b-want">Want to watch</span>`);
   else if (pmk === "want") badges.push(`<span class="badge b-want">${esc(pName())} wants this</span>`);
   if (mk === "skipped") badges.push(`<span class="badge b-skipped">Not interested</span>`);
+  const rt = S.rate.get(id), prt = S.pRate.get(id);
+  if (rt && prt === rt) badges.push(`<span class="badge b-like">You both ${rt === 2 ? "loved" : "liked"} it</span>`);
+  else {
+    if (rt) badges.push(`<span class="badge b-like">You ${rt === 2 ? "loved" : "liked"} it</span>`);
+    if (prt) badges.push(`<span class="badge b-like">${esc(pName())} ${prt === 2 ? "loved" : "liked"} it</span>`);
+  }
   return badges;
 }
 function row(t) {
@@ -1100,6 +1113,7 @@ function row(t) {
     ${ns ? btn(`data-season="${ns}"`, false, "", `✓ Seen S${ns}`, `I’ve watched season ${ns}`) : ""}
     ${btn('data-seen="me"', iSaw(id), "", `${iSaw(id) ? "✓ " : ""}${S.partner ? "Me" : "Seen"}`, S.partner ? "I watched" : "Watched")}
     ${S.partner ? btn('data-seen="partner"', theySaw(id), "", `${theySaw(id) ? "✓ " : ""}${esc(pName())}`, `${pName()} watched`) : ""}
+    ${iSaw(id) ? btn('data-rate="cycle"', !!S.rate.get(id), "mk-like", ["Like", "Liked", "Loved"][S.rate.get(id) || 0], "Tap to go Like → Loved → no rating") : ""}
     ${btn('data-mark="want"', mk === "want", "mk-want", "Want", "Want to watch")}
     ${t.type === "Series" ? btn('data-mark="watching"', mk === "watching", "mk-watching", "Watching", "Watching now: keeps it at the top until you finish") : ""}
     ${btn('data-mark="skipped"', mk === "skipped", "mk-skipped", "✕", "Not interested")}
@@ -1152,6 +1166,10 @@ function card(t, collapsible) {
   <div><div class="where">Where to watch</div><div class="svc">${(t.services || []).map((x) => `<button class="${x === "YouTube" ? "free" : ""}" data-svconly="${esc(x)}" title="Show only ${esc(x)} titles">${esc(x)}${x === "YouTube" ? " · free w/ ads" : ""}</button>`).join("")}</div></div>
   ${ns ? `<button class="seasonbtn" data-season="${ns}" data-id="${esc(id)}">✓ I’ve watched season ${ns}</button>` : ""}
   ${checks}
+  <div class="rate"><span>How was it?</span><div class="rateseg" role="group" aria-label="Your rating">
+    <button class="${S.rate.get(id) === 1 ? "on" : ""}" data-rate="1" data-id="${esc(id)}" aria-pressed="${S.rate.get(id) === 1}">Liked it</button>
+    <button class="${S.rate.get(id) === 2 ? "on" : ""}" data-rate="2" data-id="${esc(id)}" aria-pressed="${S.rate.get(id) === 2}">Loved it</button>
+  </div></div>
   <div class="acts ${t.type === "Series" ? "three" : ""}">
     <button class="mk-want ${mk === "want" ? "on" : ""}" data-mark="want" data-id="${esc(id)}">${mk === "want" ? "✓ " : ""}Want to watch</button>
     ${t.type === "Series" ? `<button class="mk-watching ${mk === "watching" ? "on" : ""}" data-mark="watching" data-id="${esc(id)}" title="Keeps it at the top until you finish">${mk === "watching" ? "✓ " : ""}Watching now</button>` : ""}
@@ -1234,7 +1252,8 @@ function shelfRows(list) {
   const add = (title, items, min = 3) => { const it = items.filter((t) => !used.has(t.id)).slice(0, 14); if (it.length >= min) { rows.push([title, it]); it.forEach((t) => used.add(t.id)); } };
   const byQ = [...list].sort((a, b) => q(b) - q(a));
   // because you watched: one of your best-rated watched titles in this section (changes daily)
-  const seen = all().filter((t) => iSaw(t.id) && categoryOf(t) === F.cat && t.kind !== "yt").sort((a, b) => q(b) - q(a)).slice(0, 8);
+  const liked = (t) => (S.rate.get(t.id) || 0) * 10; // titles you loved, then liked, come first
+  const seen = all().filter((t) => iSaw(t.id) && categoryOf(t) === F.cat && t.kind !== "yt").sort((a, b) => liked(b) + q(b) - liked(a) - q(a)).slice(0, S.rate.size ? 4 : 8);
   if (seen.length) {
     const base = seen[daySeed(F.cat + "b") % seen.length], g = new Set(gl(base)), d = new Set(base.dirs || []);
     const sim = (t) => (t.dirs || []).filter((x) => d.has(x)).length * 3 + gl(t).filter((x) => g.has(x)).length;
@@ -1572,7 +1591,7 @@ function toast(msg, undo) {
 }
 
 // ---------------- changes (optimistic, with undo) ----------------
-const snap = (id) => ({ mk: S.marks.get(id) || "", me: S.views.has(id), them: S.pViews.has(id), seen: S.seen.get(id) ?? null, pseen: S.pSeen.get(id) ?? null });
+const snap = (id) => ({ mk: S.marks.get(id) || "", me: S.views.has(id), them: S.pViews.has(id), seen: S.seen.get(id) ?? null, pseen: S.pSeen.get(id) ?? null, rate: S.rate.get(id) || 0 });
 const airedNow = (id) => { const t = all().find((x) => x.id === id); return t && t.type === "Series" ? (t.aired ?? t.len ?? null) : null; };
 async function apply(id, next, prev) {
   // update screen first, then save; put it back if saving fails
@@ -1582,11 +1601,12 @@ async function apply(id, next, prev) {
     s.them ? S.pViews.add(id) : S.pViews.delete(id);
     s.me && s.seen != null ? S.seen.set(id, s.seen) : S.seen.delete(id);
     s.them && s.pseen != null ? S.pSeen.set(id, s.pseen) : S.pSeen.delete(id);
+    s.me && s.rate ? S.rate.set(id, s.rate) : S.rate.delete(id);
   };
   set(next); render();
   try {
     if (next.mk !== prev.mk) await api.setMark(id, next.mk || null);
-    if (next.me !== prev.me || next.seen !== prev.seen) await api.setView(S.me.id, id, next.me, next.seen);
+    if (next.me !== prev.me || next.seen !== prev.seen || next.rate !== prev.rate) await api.setView(S.me.id, id, next.me, next.seen, next.me ? next.rate || null : undefined);
     if ((next.them !== prev.them || next.pseen !== prev.pseen) && S.partner) await api.setView(S.partner.id, id, next.them, next.pseen);
   } catch (e) { set(prev); render(); toast("Couldn’t save that: " + e.message); }
 }
@@ -1605,7 +1625,7 @@ async function onClick(e) {
   if (e.target.id === "detail") { detailId = null; renderDetail(); return; } // tap outside the pop-up
   const b = e.target.closest("button"); if (!b) return;
   if (b.dataset.detail) { detailId = b.dataset.detail; renderDetail(); return; }
-  if (b.closest("#detail") && !b.dataset.mark && !b.dataset.seen && !b.dataset.open) { detailId = null; renderDetail(); if (b.id === "detailclose") return; }
+  if (b.closest("#detail") && !b.dataset.mark && !b.dataset.seen && !b.dataset.rate && !b.dataset.open) { detailId = null; renderDetail(); if (b.id === "detailclose") return; }
   const name = (id) => (all().find((t) => t.id === id) || {}).title || "title";
   if (b.dataset.mark) {
     const id = b.dataset.id, cur = S.marks.get(id) || "", nx = cur === b.dataset.mark ? "" : b.dataset.mark;
@@ -1613,7 +1633,7 @@ async function onClick(e) {
   }
   if (b.dataset.seen) {
     const id = b.dataset.id, mine = b.dataset.seen === "me", s = snap(id);
-    const patch = mine ? { me: !s.me, seen: !s.me ? airedNow(id) : null } : { them: !s.them, pseen: !s.them ? airedNow(id) : null };
+    const patch = mine ? { me: !s.me, seen: !s.me ? airedNow(id) : null, rate: !s.me ? s.rate : 0 } : { them: !s.them, pseen: !s.them ? airedNow(id) : null };
     const after = Object.assign({}, s, patch);
     const both = after.me && (!S.partner || after.them);
     if (both && (after.mk === "want" || after.mk === "watching")) patch.mk = "";
@@ -1622,6 +1642,16 @@ async function onClick(e) {
     const where = mine && on && !both ? ` · waiting for ${pName()}` : "";
     change(id, patch, both && S.partner ? `You’ve both seen ${name(id)}, moved to Watched` : on ? `${who} watched ${name(id)}${where}` : `Unticked ${mine ? "you" : who} for ${name(id)}`);
     return;
+  }
+  if (b.dataset.rate) {
+    const id = b.dataset.id, s = snap(id);
+    const want = b.dataset.rate === "cycle" ? (s.rate + 1) % 3 : +b.dataset.rate;
+    const nx = b.dataset.rate !== "cycle" && s.rate === want ? 0 : want;
+    const patch = { rate: nx };
+    if (nx && !s.me) { patch.me = true; patch.seen = airedNow(id); } // rating it means you've seen it
+    const after = Object.assign({}, s, patch);
+    if (after.me && (!S.partner || after.them) && (after.mk === "want" || after.mk === "watching")) patch.mk = "";
+    change(id, patch, nx === 2 ? `Loved ${name(id)}` : nx === 1 ? `Liked ${name(id)}` : `Cleared your rating for ${name(id)}`); return;
   }
   if (b.dataset.season) {
     const id = b.dataset.id, n = +b.dataset.season;
