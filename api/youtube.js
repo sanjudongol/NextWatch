@@ -46,6 +46,16 @@ export const YT_TOPICS = {
     skills: ["Skills", "best football skills"],
     stories: ["Stories & documentaries", "football documentary"],
   } },
+  f1: { label: "F1", subs: {
+    race: ["Race highlights", "F1 race highlights grand prix", { days: 21, every: 1 }],
+    quali: ["Qualifying", "F1 qualifying highlights", { days: 21, every: 1 }],
+    sprint: ["Sprint", "F1 sprint highlights", { days: 21, every: 1 }],
+    f1news: ["News & analysis", "F1 news analysis", { days: 7, every: 1 }],
+    overtakes: ["Best overtakes", "F1 best overtakes of all time"],
+    classics: ["Classic races", "F1 greatest races of all time"],
+    tech: ["Tech explained", "F1 car technology explained"],
+    f1docs: ["Documentaries", "Formula 1 documentary"],
+  } },
 };
 const secs = (iso) => { const m = /P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/.exec(iso || "") || []; return (+m[1] || 0) * 86400 + (+m[2] || 0) * 3600 + (+m[3] || 0) * 60 + (+m[4] || 0); };
 
