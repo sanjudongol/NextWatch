@@ -136,6 +136,49 @@ footer{color:var(--mu);font-size:12px;margin-top:24px}
 #toast.show{opacity:1;pointer-events:auto;transform:translate(-50%,0)}
 #toast button{background:none;border:0;color:var(--ac);font-weight:700;padding:0}
 @media (max-width:520px){h1{font-size:21px}.btn{padding:8px 11px}}
+.topbar{position:sticky;top:0;z-index:6;background:var(--bg);padding:6px 0 4px;margin:0 -16px;padding-left:16px;padding-right:16px}
+.topbar .search{margin-top:8px}
+.cats .short{display:none}
+.sheethead,.sheetdone{display:none}
+.tabs .chip{flex:none}
+/* ---------- phones: simpler, thumb-friendly layout ---------- */
+@media (max-width:620px){
+  main{padding-top:calc(12px + env(safe-area-inset-top,0px))}
+  header{flex-wrap:nowrap;align-items:flex-start}
+  header>div:first-child{min-width:0}
+  h1{font-size:20px}
+  .sub{font-size:12px}
+  .hbtns{flex-wrap:nowrap;gap:6px}
+  .hbtns .btn{padding:8px 11px;font-size:16px;white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis}
+  .hbtns .lbl,.nophone{display:none}
+  .search{margin-top:6px!important}
+  .cats{display:flex;overflow-x:auto;scrollbar-width:none;gap:4px;margin-top:8px}
+  .cats::-webkit-scrollbar{display:none}
+  .cats button{flex:none;grid-column:auto!important;padding:7px 12px}
+  .cats .long{display:none}.cats .short{display:inline}
+  .presets{padding-top:8px}
+  .tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:0 -16px 10px;padding:0 16px}
+  .tabs::-webkit-scrollbar{display:none}
+  details.panel{margin:8px 0 12px}
+  details.panel>summary{padding:10px 12px}
+  /* filters open as a sheet from the bottom */
+  details.panel[open]>.fgrid{position:fixed;left:0;right:0;bottom:0;z-index:30;max-height:85vh;overflow-y:auto;background:var(--card);border-radius:18px 18px 0 0;
+    padding:14px 16px calc(16px + env(safe-area-inset-bottom,0px));grid-template-columns:1fr 1fr;box-shadow:0 0 0 100vmax rgba(0,0,0,.45)}
+  .sheethead{display:flex;grid-column:1/-1;justify-content:space-between;align-items:center;font-size:17px}
+  .sheethead button{background:var(--pill);border:0;border-radius:999px;width:32px;height:32px;font-size:15px}
+  .sheetdone{display:block;grid-column:1/-1;position:sticky;bottom:0;padding:13px;font-size:16px}
+  details[open] .caret{transform:none}
+  #alert{font-size:13px;padding:8px 10px}
+  .statusbar{margin-bottom:8px}
+  #status{font-size:12px}
+  .card{padding:12px;gap:8px}
+  .sum{-webkit-line-clamp:3}
+  .rowc{padding:8px;gap:8px}
+  .rbtns{gap:6px}
+  .rb{padding:7px 10px;font-size:13px}
+  .rb.mk-watching{display:none} /* in the full card */
+  .acts button,.checks button{padding:9px 6px}
+}
 </style>
 </head>
 <body>
@@ -148,21 +191,24 @@ footer{color:var(--mu);font-size:12px;margin-top:24px}
     <header>
       <div><h1>Watch Finder</h1><div class="sub" id="sub"></div><button class="pill" id="partnerChip" hidden></button></div>
       <div class="hbtns">
-        <button class="btn" id="surprise" title="Can’t decide? Pick a random movie or series from what’s showing now">🎲 Surprise me</button>
-        <button class="btn" id="acctBtn" title="Your name, password, partner link and sign-out">👤 Account</button>
-        <button class="btn primary" id="sync" title="Refresh the catalog now: adds new titles, updates ratings and checks which services carry them. Takes a few minutes; your marks are kept. The catalog also refreshes by itself every night.">↻ Sync</button>
+        <button class="btn" id="surprise" title="Can’t decide? Pick a random movie or series from what’s showing now" aria-label="Surprise me">🎲<span class="lbl"> Surprise me</span></button>
+        <button class="btn" id="acctBtn" title="Your name, password, partner link and sign-out" aria-label="Account">👤<span class="lbl"> Account</span></button>
+        <button class="btn primary" id="sync" title="Refresh the catalog now: adds new titles, updates ratings and checks which services carry them. Takes a few minutes; your marks are kept. The catalog also refreshes by itself every night." aria-label="Sync">↻<span class="lbl"> Sync</span></button>
       </div>
     </header>
 
     <section id="account" class="box" hidden></section>
 
-    <input class="search" id="q" type="search" placeholder="Search titles, directors or actors…" autocomplete="off">
-    <div class="cats" id="cats"></div>
+    <div class="topbar">
+      <input class="search" id="q" type="search" placeholder="Search titles, directors or actors…" autocomplete="off" enterkeyhint="search">
+      <div class="cats" id="cats"></div>
+    </div>
     <div class="presets" id="presets"></div>
 
     <details class="panel box" id="fp">
       <summary><div class="fsum" id="fsum"></div><span class="caret">▾</span></summary>
       <div class="fgrid">
+        <div class="sheethead"><b>Filters</b><button type="button" id="sheetclose" aria-label="Close filters">✕</button></div>
         <label>Min IMDb<input type="number" id="imdb" min="0" max="10" step="0.1"></label>
         <label>Min Rotten Tomatoes %<input type="number" id="rt" min="0" max="100" step="1"></label>
         <label>Score rule<select id="mode"><option value="any">IMDb or RT</option><option value="all">IMDb and RT</option></select></label>
@@ -170,13 +216,14 @@ footer{color:var(--mu);font-size:12px;margin-top:24px}
         <label>Genre<select id="genre"></select></label>
         <label>Director / creator<input type="search" id="director" list="dirlist" placeholder="Anyone · type a name" autocomplete="off" enterkeyhint="done"><datalist id="dirlist"></datalist></label>
         <label>Released<select id="recent"><option value="0">Any time</option><option value="1">This year &amp; last</option><option value="2">Last 2 years</option><option value="5">Last 5 years</option><option value="10">Last 10 years</option><option value="20">Last 20 years</option><option value="30">Last 30 years</option><option value="40">Last 40 years</option><option value="50">Last 50 years</option></select></label>
-        <label>Movie length<select id="runtime"><option value="0">Any length</option><option value="90">Under 1½ hours</option><option value="120">Under 2 hours</option><option value="150">Under 2½ hours</option></select></label>
-        <label>Series status<select id="status2"><option value="">Any</option><option value="Ongoing">Still airing</option><option value="done">Finished</option></select></label>
+        <label id="lenbox">Movie length<select id="runtime"><option value="0">Any length</option><option value="90">Under 1½ hours</option><option value="120">Under 2 hours</option><option value="150">Under 2½ hours</option></select></label>
+        <label id="statusbox">Series status<select id="status2"><option value="">Any</option><option value="Ongoing">Still airing</option><option value="done">Finished</option></select></label>
         <label>Sort by<select id="sort"><option value="imdb">IMDb</option><option value="rt">Rotten Tomatoes</option><option value="popularity">Trending</option><option value="year">Release date</option><option value="len">Runtime / seasons</option></select></label>
         <button class="dirbtn" id="dir" type="button"></button>
         <button class="reset" id="reset" type="button">Reset filters</button>
         <div class="hint" id="scorehint"></div>
         <div class="chips" id="chips"></div>
+        <button class="btn primary sheetdone" id="sheetdone" type="button">Show results</button>
       </div>
     </details>
 
@@ -244,6 +291,7 @@ const SYNC_JOBS = [
 let F = Object.assign({}, DEFAULTS, { byCat: {} }, local.get("wf-filters", {}));
 // one-time switch to the new score bar (IMDb 6.5 / RT 70%) in every section
 if (!local.get("wf-scores-v2", false)) { F.byCat = {}; Object.assign(F, { imdb: "6.5", rt: "70" }); local.set("wf-scores-v2", true); local.set("wf-filters", F); }
+if (!local.get("wf-phone-v1", false)) { if (innerWidth < 620) F.layout = "list"; local.set("wf-phone-v1", true); local.set("wf-filters", F); }
 delete F.svcOff;
 if (F.cat === "main" || !F.cat) { // "Movies & series" became two sections
   if (F.byCat && F.byCat.main) { F.byCat.movies = F.byCat.series = F.byCat.main; delete F.byCat.main; }
@@ -387,7 +435,8 @@ const moodsOf = (t) => [...new Set((t.genres || []).flatMap((g) => MOODS_BY_GENR
 const iSaw = (id) => S.views.has(id);
 const theySaw = (id) => S.pViews.has(id);
 const watched = (id) => iSaw(id) && (!S.partner || theySaw(id));
-const oneSeen = (id) => !!S.partner && iSaw(id) !== theySaw(id);
+const onlyMe = (id) => !!S.partner && iSaw(id) && !theySaw(id);
+const onlyThem = (id) => !!S.partner && theySaw(id) && !iSaw(id);
 // Japanese animation is shown as "Anime" everywhere genres are listed
 const gl = (t) => (t.genres || []).map((g) => (g === "Animation" && t.lang === "ja" ? "Anime" : g));
 // ---- new seasons of series you've seen ----
@@ -409,6 +458,7 @@ const fmtDate = (d) => new Date(d + "T12:00:00").toLocaleDateString(undefined, {
 const seasonNews = () => all().filter((t) => newSeason(t) || comingSeason(t));
 let byId = new Map();
 const isWatching = (id) => (!iSaw(id) || (byId.has(id) && newSeason(byId.get(id)))) && (S.marks.get(id) === "watching" || S.pMarks.get(id) === "watching");
+const bothWant = (id) => S.marks.get(id) === "want" && S.pMarks.get(id) === "want" && !iSaw(id) && !theySaw(id);
 const wantCount = (id) => (S.marks.get(id) === "want" ? 1 : 0) + (S.pMarks.get(id) === "want" ? 1 : 0);
 function useCatScores() { Object.assign(F, CAT_SCORES[F.cat] || CAT_SCORES.movies, (F.byCat || {})[F.cat] || {}); }
 function rememberCatScores() { F.byCat = Object.assign({}, F.byCat, { [F.cat]: { imdb: F.imdb, rt: F.rt, mode: F.mode } }); }
@@ -442,18 +492,23 @@ function syncControls() {
   CTRL.forEach((k) => { if ($(k).value !== F[k]) $(k).value = F[k]; });
   renderServiceChips();
   $("dir").textContent = F.desc ? "Highest first ↓" : "Lowest first ↑";
-  $("cats").innerHTML = CATS.map(([k, l]) => `<button class="${F.cat === k ? "on" : ""}" data-cat="${k}">${l}</button>`).join("");
+  const SHORT = { movies: "🎬 Movies", series: "📺 Series", anime: "🍥 Anime", reality: "🏆 Reality", docs: "🎥 Docs" };
+  $("cats").innerHTML = CATS.map(([k, l]) => `<button class="${F.cat === k ? "on" : ""}" data-cat="${k}"><span class="long">${l}</span><span class="short">${SHORT[k]}</span></button>`).join("");
   const topCat = F.cat === "movies" || F.cat === "series";
   $("presets").hidden = !topCat;
   $("typebox").hidden = topCat; // the section already picks movies or series
+  $("lenbox").hidden = F.cat === "series"; $("statusbox").hidden = F.cat === "movies";
   $("presets").innerHTML = PRESETS.map((p, i) => p.only && p.only !== F.cat ? "" : `<button class="chip ${F.preset === i ? "on" : ""}" data-preset="${i}">${p.name}</button>`).join("");
   const count = (k) => k === "want" ? all().filter((t) => (S.marks.get(t.id) === "want" || S.pMarks.get(t.id) === "want") && !iSaw(t.id)).length
     : k === "watching" ? all().filter((t) => isWatching(t.id)).length
     : k === "seasons" ? seasonNews().length
-    : k === "one" ? all().filter((t) => oneSeen(t.id)).length
+    : k === "bothwant" ? all().filter((t) => bothWant(t.id)).length
+    : k === "onlyme" ? all().filter((t) => onlyMe(t.id)).length
+    : k === "onlythem" ? all().filter((t) => onlyThem(t.id)).length
     : k === "watched" ? all().filter((t) => watched(t.id)).length
     : all().filter((t) => S.marks.get(t.id) === "skipped").length;
-  const tabs = [["all", "All matches"], ...(seasonNews().length ? [["seasons", "🆕 New seasons"]] : []), ...(S.partner ? [["together", "👫 Watch together"]] : []), ["watching", "▶ Watching now"], ["want", "Want to watch"], ...(S.partner ? [["one", "Seen by one of you"]] : []), ["watched", "Watched"], ["skipped", "Not interested"]];
+  const tabs = [["all", "All matches"], ...(seasonNews().length ? [["seasons", "🆕 New seasons"]] : []), ...(S.partner ? [["together", "👫 Watch together"], ["bothwant", "💞 Want together"]] : []), ["watching", "▶ Watching now"], ["want", "Want to watch"], ...(S.partner ? [["onlyme", "Only you’ve seen"], ["onlythem", `Only ${esc(pName())} has seen`]] : []), ["watched", "Watched"], ["skipped", "Not interested"]];
+  if (F.view === "one") F.view = "onlyme";
   if (!tabs.some(([k]) => k === F.view)) F.view = "all";
   $("tabs").innerHTML = tabs.map(([k, l]) => `<button class="chip ${F.view === k ? "on" : ""}" data-view="${k}" ${k === "together" ? `title="Only what neither of you has seen, with what you both want first. Uses the filters and section above."` : ""}>${l}${k === "all" || k === "together" ? "" : ` (${count(k)})`}</button>`).join("");
   $("layout").textContent = F.layout === "list" ? "▦ Cards" : "☰ Compact list";
@@ -496,8 +551,10 @@ function filtered(cats = [F.cat]) {
   // searching looks through everything: every section, score, service and mark (filters come back when the box is cleared)
   if (q && (F.view === "all" || F.view === "together")) return all().filter((t) => matchesSearch(t, q));
   if (F.view === "seasons") return seasonNews().filter((t) => matchesSearch(t, q));
+  if (F.view === "bothwant") return all().filter((t) => bothWant(t.id) && matchesSearch(t, q));
   if (F.view === "watching") return all().filter((t) => isWatching(t.id) && matchesSearch(t, q));
-  if (F.view === "one") return all().filter((t) => oneSeen(t.id) && matchesSearch(t, q));
+  if (F.view === "onlyme") return all().filter((t) => onlyMe(t.id) && matchesSearch(t, q));
+  if (F.view === "onlythem") return all().filter((t) => onlyThem(t.id) && matchesSearch(t, q));
   if (F.view === "watched") return all().filter((t) => watched(t.id) && matchesSearch(t, q));
   if (F.view === "skipped") return all().filter((t) => S.marks.get(t.id) === "skipped" && matchesSearch(t, q));
   const imdb = parseFloat(F.imdb) || 0, rt = parseFloat(F.rt) || 0;
@@ -613,7 +670,8 @@ const rank = (t) => rankMap.get(t.id) || "—";
 
 function renderSub(note) {
   const when = S.lastUpdated ? new Date(S.lastUpdated).toLocaleDateString() : "never";
-  $("sub").textContent = note || `${all().length} titles · last synced ${when} (refreshes nightly) · signed in as ${S.me?.name || "you"}`;
+  if (note) $("sub").textContent = note;
+  else $("sub").innerHTML = `${all().length} titles · synced ${esc(when)}<span class="nophone"> (refreshes nightly) · signed in as ${esc(S.me?.name || "you")}</span>`;
   const chip = $("partnerChip");
   if (S.me && !note) {
     chip.hidden = false;
@@ -625,6 +683,7 @@ function renderSub(note) {
 function render() {
   syncControls();
   const searching = $("q").value.trim() && (F.view === "all" || F.view === "together");
+  setTimeout(() => { $("sheetdone").textContent = `Show ${$("grid").querySelectorAll(".card,.rowc").length} results`; });
   $("fsum").innerHTML = searching ? `<b>Filters</b>paused while you search · clear the search box to use them again` : `<b>Filters</b>${esc(filterSummary())}`;
   const list = filtered();
   const k = F.sort, dir = F.desc ? -1 : 1;
@@ -645,6 +704,7 @@ function render() {
     $("status").textContent += ` · only ${inSection} in this section so far. Tap ↻ Sync to pull in more`;
   let empty = "Nothing here yet.";
   if (F.view === "together") empty = "Nothing here that neither of you has seen. Try another section or loosen the filters.";
+  if (F.view === "bothwant") empty = `Nothing you both want yet. When you and ${esc(pName())} both tap “Want to watch” on a title, it shows up here.`;
   if (F.view === "seasons") empty = "No new or upcoming seasons for series you’ve watched.";
   if (F.view === "watching") empty = "Nothing in progress. On a series, tap “Watching now” to keep it here until you finish.";
   if (F.view === "all") empty = all().length ? "Nothing matches these filters. Try lowering a score, widening the dates, or tapping Reset filters." : "No titles yet. Tap ↻ Sync to pull in the catalog — the first sync takes a minute or two.";
@@ -703,7 +763,7 @@ function renderAccount() {
       <ul>
         <li><b>You both see:</b> each other’s “watched” ticks, “Want to watch” picks (shown as “${esc(pName())} wants this”) and “Watching now” series.</li>
         <li><b>Either of you can tick</b> the other’s “watched” box, handy when you watch on one screen.</li>
-        <li>As soon as you tick <b>I watched</b>, the title leaves <i>your</i> lists. It stays on ${esc(pName())}’s until they’ve seen it too, and shows under “Seen by one of you” in the meantime. Once you’ve both ticked it, it moves to <b>Watched</b>.</li>
+        <li>As soon as you tick <b>I watched</b>, the title leaves <i>your</i> lists. It stays on ${esc(pName())}’s until they’ve seen it too, and shows under “Only you’ve seen” in the meantime (and what only ${esc(pName())} has seen is under “Only ${esc(pName())} has seen”). Once you’ve both ticked it, it moves to <b>Watched</b>.</li>
         <li><b>Watch together</b> shows only what neither of you has seen, with titles you both want at the top.</li>
         <li><b>Stays private:</b> your “Not interested” list, your filters and your password. Watch together quietly leaves out titles either of you isn’t interested in, without showing which.</li>
         <li>Unlinking keeps everyone’s ticks; you just stop seeing each other’s.</li>
@@ -778,7 +838,7 @@ async function onClick(e) {
     if (both && (after.mk === "want" || after.mk === "watching")) patch.mk = "";
     const who = mine ? "You" : pName();
     const on = mine ? after.me : after.them;
-    const where = mine && on && !both ? ` · it’s under “Seen by one of you” until ${pName()} watches it` : "";
+    const where = mine && on && !both ? ` · it’s under “Only you’ve seen” until ${pName()} watches it` : "";
     change(id, patch, both && S.partner ? `You’ve both seen ${name(id)}, moved to Watched` : on ? `${who} watched ${name(id)}${where}` : `Unticked ${mine ? "you" : who} for ${name(id)}`);
     return;
   }
@@ -858,7 +918,15 @@ CTRL.forEach((k) => $(k).addEventListener("input", () => { F[k] = $(k).value; F.
 addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); installEvt = e; if (!$("account").hidden) renderAccount(); });
 if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("/sw.js").catch(() => {});
 let qT; $("q").addEventListener("input", () => { clearTimeout(qT); qT = setTimeout(render, 120); });
-$("fp").addEventListener("toggle", () => local.set("wf-panel-open", $("fp").open));
+const phone = () => innerWidth < 620;
+$("fp").addEventListener("toggle", () => {
+  if (!phone()) local.set("wf-panel-open", $("fp").open);
+  document.body.style.overflow = phone() && $("fp").open ? "hidden" : ""; // no background scrolling under the sheet
+});
+const closeSheet = () => { $("fp").open = false; };
+$("sheetclose").onclick = closeSheet;
+$("sheetdone").onclick = () => { closeSheet(); $("tabs").scrollIntoView({ behavior: "smooth", block: "start" }); };
+document.addEventListener("pointerdown", (e) => { if (phone() && $("fp").open && !e.target.closest(".fgrid") && !e.target.closest("summary")) closeSheet(); });
 let siteVersion = null;
 async function checkVersion() {
   if (DEMO) return;
@@ -885,20 +953,20 @@ async function runSync() {
     for (const job of SYNC_JOBS) {
       let total = job.pages;
       for (let page = 1; page <= total; page++) {
-        btn.textContent = `Syncing ${job.label || (job.kind === "movie" ? "movies" : "series")} ${page}/${total}…`;
+        btn.textContent = innerWidth < 620 ? `↻ ${page}/${total}` : `Syncing ${job.label || (job.kind === "movie" ? "movies" : "series")} ${page}/${total}…`;
         const r = await api.syncStep({ kind: job.kind, order: job.order, page, ...(job.genre ? { genre: job.genre } : {}), ...(job.lang ? { lang: job.lang } : {}) });
         saved += r.saved || 0; if (r.firstError) errs.push(r.firstError);
         total = Math.min(job.pages, r.totalPages || total);
       }
     }
-    btn.textContent = "Refreshing older titles…";
+    btn.textContent = innerWidth < 620 ? "↻ …" : "Refreshing older titles…";
     await api.syncStep({ mode: "stale" });
     await reload();
     toast(`Sync done: ${saved} title${saved === 1 ? "" : "s"} added or refreshed.` + (errs.length ? ` (${errs.length} had problems: ${errs[0]})` : ""));
   } catch (e) {
     toast("Sync stopped: " + e.message);
     await reload().catch(() => {});
-  } finally { syncing = false; btn.disabled = false; btn.textContent = "↻ Sync"; }
+  } finally { syncing = false; btn.disabled = false; btn.innerHTML = `↻<span class="lbl"> Sync</span>`; }
 }
 
 // ---------------- startup ----------------
@@ -1001,7 +1069,7 @@ async function start() {
     if (!session) return showSignIn();
     if (RECOVERY) return showNewPassword();
     $("gate").hidden = true; $("app").hidden = false;
-    $("fp").open = local.get("wf-panel-open", innerWidth >= 760);
+    $("fp").open = innerWidth < 620 ? false : local.get("wf-panel-open", innerWidth >= 760);
     renderSub("Loading…");
     await reload();
   } catch (e) {
