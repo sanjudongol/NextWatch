@@ -20,6 +20,7 @@
 body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 main{max-width:1060px;margin:0 auto;padding:calc(20px + env(safe-area-inset-top,0px)) 16px calc(90px + env(safe-area-inset-bottom,0px))}
 [hidden]{display:none!important}
+.ico{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;vertical-align:-4px;flex:none}
 header{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px 16px}
 h1{margin:0;font-size:24px}
 .brand{display:flex;align-items:center;gap:9px;background:none;border:0;padding:0}
@@ -121,8 +122,8 @@ select,.fgrid input{font:inherit;color:var(--tx);background:var(--bg);border:1px
 .badge.b-new{background:var(--new);color:#fff;font-weight:700}
 .badge.b-soon{background:transparent;color:var(--new);outline:1px solid var(--new);font-weight:650}
 .seasonbtn{border:1px solid var(--new);background:color-mix(in srgb,var(--new) 10%,var(--card));color:var(--tx);border-radius:8px;padding:7px 8px;font-size:13px;font-weight:650}
-#alert{border:2px solid var(--new);background:color-mix(in srgb,var(--new) 9%,var(--card));border-radius:12px;padding:10px 12px;margin-bottom:10px;font-size:14px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
-#alert button{background:var(--new);color:#fff;border:0;border-radius:8px;padding:6px 12px;font-weight:650}
+#alert{border:1px solid var(--bd);background:var(--card);border-radius:12px;padding:10px 12px;margin-bottom:10px;font-size:14px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+#alert button{background:var(--ac);color:#fff;border:0;border-radius:8px;padding:6px 12px;font-weight:650}
 #ytsubs{padding-top:6px}
 #ytsubs .chip{font-size:12.5px;padding:4px 10px}
 #alert .alert-acts{display:flex;gap:6px;align-items:center;margin-left:auto}
@@ -314,7 +315,7 @@ body.noscroll{overflow:hidden}
   #toast{bottom:calc(76px + env(safe-area-inset-bottom,0px))}
   #bnav{display:grid;grid-template-columns:repeat(4,1fr);position:fixed;left:0;right:0;bottom:0;z-index:15;background:var(--card);border-top:1px solid var(--bd);padding:6px 4px calc(6px + env(safe-area-inset-bottom,0px))}
   #bnav button{background:none;border:0;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;font-weight:600;color:var(--mu);padding:4px 0;position:relative}
-  #bnav button .ic{font-size:21px;line-height:1}
+  #bnav button .ic{line-height:0}#bnav .ico{width:25px;height:25px;stroke-width:1.7}#bnav button.on .ico{stroke-width:2.1}
   #bnav button.on{color:var(--ac)}
   #bnav .dot{position:absolute;top:2px;left:calc(50% + 8px);min-width:16px;height:16px;border-radius:8px;background:var(--new);color:#fff;font-size:10px;line-height:16px;padding:0 4px}
 }
@@ -329,13 +330,13 @@ body.noscroll{overflow:hidden}
   <div id="app" hidden>
     <header>
       <div class="brandwrap"><button class="brand" id="homeLogo" title="Home" aria-label="NextWatch home"><img src="/icons/logo.svg" alt="" width="34" height="34"><h1>Next<span>Watch</span></h1></button><div class="sub" id="sub"></div><button class="pill" id="partnerChip" hidden></button></div>
-      <div class="pageswitch" role="tablist" aria-label="Page"><button data-page="watch" role="tab">🎬 Movies &amp; TV</button><button data-page="youtube" role="tab">▶️ YouTube</button></div>
+      <div class="pageswitch" role="tablist" aria-label="Page"><button data-page="watch" role="tab">Movies &amp; TV</button><button data-page="youtube" role="tab">YouTube</button></div>
       <div class="hbtns">
-        <button class="btn nophone" id="homeBtn" title="Back to the start: Movies &amp; TV, all matches, no search" aria-label="Home">🏠<span class="lbl"> Home</span></button>
-        <button class="btn" id="moodBtn" title="Describe what you’re in the mood for and get a hand-picked list" aria-label="What are you in the mood for?">🪄<span class="lbl"> Mood</span></button>
-        <button class="btn" id="surprise" title="Can’t decide? Pick a random movie or series from what’s showing now" aria-label="Surprise me">🎲<span class="lbl"> Surprise me</span></button>
-        <button class="btn" id="acctBtn" title="Your name, password, partner link and sign-out" aria-label="Account">👤<span class="lbl"> Account</span></button>
-        <button class="btn primary" id="sync" title="Refresh the catalog now: adds new titles, updates ratings and checks which services carry them. Takes a few minutes; your marks are kept. The catalog also refreshes by itself every night." aria-label="Sync">↻<span class="lbl"> Sync</span></button>
+        <button class="btn nophone" id="homeBtn" title="Back to the start: Movies &amp; TV, all matches, no search" aria-label="Home"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 10.5 12 3.5l8.5 7V20a1 1 0 0 1-1 1H15v-6H9v6H4.5a1 1 0 0 1-1-1z"/></svg><span class="lbl"> Home</span></button>
+        <button class="btn" id="moodBtn" title="Describe what you’re in the mood for and get a hand-picked list" aria-label="What are you in the mood for?"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l1.7 4.8 4.8 1.7-4.8 1.7L12 16.5l-1.7-4.8L5.5 10l4.8-1.7z M18.5 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z"/></svg><span class="lbl"> Mood</span></button>
+        <button class="btn" id="surprise" title="Can’t decide? Pick a random movie or series from what’s showing now" aria-label="Surprise me"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h3.2c2 0 3.2.9 4.2 2.6l3.2 4.8c1 1.7 2.2 2.6 4.2 2.6H21 M18.5 14.5 21 17l-2.5 2.5 M3 17h3.2c1.5 0 2.5-.5 3.3-1.4 M14.5 8.4c.8-.9 1.8-1.4 3.3-1.4H21 M18.5 4.5 21 7l-2.5 2.5"/></svg><span class="lbl"> Surprise me</span></button>
+        <button class="btn" id="acctBtn" title="Your name, password, partner link and sign-out" aria-label="Account"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 11.5a3.75 3.75 0 1 0 0-7.5 3.75 3.75 0 0 0 0 7.5z M4.5 20.5c.4-3.6 3.6-5.5 7.5-5.5s7.1 1.9 7.5 5.5"/></svg><span class="lbl"> Account</span></button>
+        <button class="btn primary" id="sync" title="Refresh the catalog now: adds new titles, updates ratings and checks which services carry them. Takes a few minutes; your marks are kept. The catalog also refreshes by itself every night." aria-label="Sync"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3 M19.5 4.5v4h-4"/></svg><span class="lbl"> Sync</span></button>
       </div>
     </header>
 
@@ -351,9 +352,9 @@ body.noscroll{overflow:hidden}
     <div class="presets" id="presets"></div>
     <div class="presets subchips" id="ytsubs" hidden></div>
     <div class="scorebar noyt" id="scorebar" title="Only show titles that score at least this well">
-      <label class="sb"><span>⭐ IMDb</span><select id="imdb" aria-label="Minimum IMDb score"><option value="0">Any</option><option value="6">6+</option><option value="6.5">6.5+</option><option value="7">7+</option><option value="7.5">7.5+</option><option value="8">8+</option><option value="8.5">8.5+</option></select><span class="car">▾</span></label>
+      <label class="sb"><span>IMDb</span><select id="imdb" aria-label="Minimum IMDb score"><option value="0">Any</option><option value="6">6+</option><option value="6.5">6.5+</option><option value="7">7+</option><option value="7.5">7.5+</option><option value="8">8+</option><option value="8.5">8.5+</option></select><span class="car">▾</span></label>
       <select id="mode" class="sbmode" aria-label="Score rule"><option value="any">or</option><option value="all">and</option></select>
-      <label class="sb"><span>🍅 RT</span><select id="rt" aria-label="Minimum Rotten Tomatoes score"><option value="0">Any</option><option value="50">50%+</option><option value="60">60%+</option><option value="70">70%+</option><option value="80">80%+</option><option value="85">85%+</option><option value="90">90%+</option><option value="95">95%+</option></select><span class="car">▾</span></label>
+      <label class="sb"><span>RT</span><select id="rt" aria-label="Minimum Rotten Tomatoes score"><option value="0">Any</option><option value="50">50%+</option><option value="60">60%+</option><option value="70">70%+</option><option value="80">80%+</option><option value="85">85%+</option><option value="90">90%+</option><option value="95">95%+</option></select><span class="car">▾</span></label>
     </div>
 
     <details class="panel box" id="fp">
@@ -380,7 +381,7 @@ body.noscroll{overflow:hidden}
     <div class="tabs" id="tabs"></div>
     <section id="shelves" hidden></section>
     <div id="detail" hidden></div>
-    <div class="statusbar"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><div id="status"></div><span id="findwrap" hidden style="display:inline-flex;gap:4px"><button class="chip" id="findmore"></button><button class="chip" id="clearfind" aria-label="Clear" title="Clear and show everything again">✕</button></span></div><div style="display:flex;gap:6px"><button class="chip" id="shelveson" hidden title="Show Tonight’s pick and the rows of picks again">✨ Picks</button><button class="chip" id="layout" title="Switch between detailed cards and a compact list"></button></div></div>
+    <div class="statusbar"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><div id="status"></div><span id="findwrap" hidden style="display:inline-flex;gap:4px"><button class="chip" id="findmore"></button><button class="chip" id="clearfind" aria-label="Clear" title="Clear and show everything again">✕</button></span></div><div style="display:flex;gap:6px"><button class="chip" id="shelveson" hidden title="Show Tonight’s pick and the rows of picks again">Picks</button><button class="chip" id="layout" title="Switch between detailed cards and a compact list"></button></div></div>
     <div id="grid"></div>
 
     <footer>
@@ -414,33 +415,33 @@ const MOODS_BY_GENRE = {
   Horror: ["dark"], War: ["dark", "epic"], Action: ["epic"], Adventure: ["epic"], History: ["epic"], Western: ["epic"], Documentary: ["mind"],
 };
 const PRESETS = [
-  { name: "😂 Light & funny", set: { mood: "light" } },
-  { name: "🥹 Feel-good", set: { mood: "feel" } },
-  { name: "🌀 Mind-bender", set: { mood: "mind" } },
-  { name: "😬 Edge of your seat", set: { mood: "tense" } },
-  { name: "🖤 Dark & gripping", set: { mood: "dark" } },
-  { name: "🏔️ Big & epic", set: { mood: "epic" } },
-  { name: "⏱️ Under 2 hours", set: { runtime: "120" }, only: "movies" },
-  { name: "✅ Finished, ready to binge", set: { status2: "done" }, only: "series" },
-  { name: "🆕 New this year & last", set: { recent: "1", sort: "year" } },
-  { name: "🔥 Trending now", set: { sort: "popularity" } },
+  { name: "Light & funny", set: { mood: "light" } },
+  { name: "Feel-good", set: { mood: "feel" } },
+  { name: "Mind-bender", set: { mood: "mind" } },
+  { name: "Edge of your seat", set: { mood: "tense" } },
+  { name: "Dark & gripping", set: { mood: "dark" } },
+  { name: "Big & epic", set: { mood: "epic" } },
+  { name: "Under 2 hours", set: { runtime: "120" }, only: "movies" },
+  { name: "Finished, ready to binge", set: { status2: "done" }, only: "series" },
+  { name: "New this year & last", set: { recent: "1", sort: "year" } },
+  { name: "Trending now", set: { sort: "popularity" } },
 ];
 const DEFAULTS = { imdb: "6.5", rt: "70", mode: "any", type: "", genre: "", director: "", recent: "0", runtime: "0", status2: "", sort: "imdb", desc: true, mood: "", preset: -1, view: "all", svcOn: [], cat: "movies", layout: "cards", byCat: {} };
 // each section remembers its own score bar; reality TV tends to score lower on IMDb
 const CAT_SCORES = { movies: { imdb: "6.5", rt: "70", mode: "any" }, series: { imdb: "6.5", rt: "70", mode: "any" }, anime: { imdb: "6.5", rt: "70", mode: "any" }, reality: { imdb: "6.5", rt: "70", mode: "any" }, docs: { imdb: "6.5", rt: "70", mode: "any" }, kids: { imdb: "6.5", rt: "70", mode: "any" }, truecrime: { imdb: "6.5", rt: "70", mode: "any" }, youtube: { imdb: "0", rt: "0", mode: "any" } };
 const SCORE_KEYS = ["imdb", "rt", "mode"];
 const KIDS_RE = /cocomelon|nursery rhyme|baby shark|kids songs?|songs for (kids|children)|for kids\b|toddler|peppa pig|blippi|ms ?rachel|pinkfong|little baby bum|super simple songs|chuchu|kids diana|vlad (and|&) niki|like nastya|bluey|paw patrol|learn (colors|numbers|abc)/i; // same as api/youtube.js
-const YT_MODES = [["trending", "🔥 Trending now"], ["alltime", "🏆 Most viewed"], ["history", "📜 History"], ["food", "🍜 Food & travel"], ["soccer", "⚽ Soccer"], ["f1", "🏎️ F1"]];
+const YT_MODES = [["trending", "Trending now"], ["alltime", "Most viewed"], ["history", "History"], ["food", "Food & travel"], ["soccer", "Soccer"], ["f1", "F1"]];
 const YT_SUBS = { // same keys as YT_TOPICS in api/youtube.js
-  history: [["world", "🌍 World"], ["us", "🗽 US history"], ["ancient", "🏛️ Ancient"], ["medieval", "🏰 Medieval"], ["wars", "⚔️ World wars"], ["empires", "👑 Empires"], ["mysteries", "🔍 Mysteries & archaeology"]],
-  food: [["streetfood", "🌮 Street food"], ["cooking", "🍳 Cooking"], ["foodtours", "🍜 Food tours"], ["destinations", "🧳 Destinations"], ["wonders", "🏞️ Amazing places"]],
-  soccer: [["barca", "🔵🔴 Barcelona", 12], ["lfc", "🔴 Liverpool", 12], ["highlights", "📺 Latest highlights", 10], ["pl", "🦁 Premier League", 10], ["ucl", "⭐ Champions League", 16], ["transfers", "🔁 Transfer news", 6], ["fpl", "📋 FPL", 9], ["tactics", "🧠 Tactics & analysis"], ["goals", "🥅 Best goals"], ["legends", "🐐 Legends"], ["worldcup", "🏆 World Cup"], ["skills", "✨ Skills"], ["stories", "🎬 Stories & documentaries"]],
-  f1: [["race", "🏁 Race highlights", 21], ["quali", "⏱️ Qualifying", 21], ["sprint", "⚡ Sprint", 21], ["f1news", "📰 News & analysis", 9], ["overtakes", "💨 Best overtakes"], ["classics", "🏆 Classic races"], ["tech", "🔧 Tech explained"], ["f1docs", "🎬 Documentaries"]],
+  history: [["world", "World"], ["us", "US history"], ["ancient", "Ancient"], ["medieval", "Medieval"], ["wars", "World wars"], ["empires", "Empires"], ["mysteries", "Mysteries & archaeology"]],
+  food: [["streetfood", "Street food"], ["cooking", "Cooking"], ["foodtours", "Food tours"], ["destinations", "Destinations"], ["wonders", "Amazing places"]],
+  soccer: [["barca", "Barcelona", 12], ["lfc", "Liverpool", 12], ["highlights", "Latest highlights", 10], ["pl", "Premier League", 10], ["ucl", "Champions League", 16], ["transfers", "Transfer news", 6], ["fpl", "FPL", 9], ["tactics", "Tactics & analysis"], ["goals", "Best goals"], ["legends", "Legends"], ["worldcup", "World Cup"], ["skills", "Skills"], ["stories", "Stories & documentaries"]],
+  f1: [["race", "Race highlights", 21], ["quali", "Qualifying", 21], ["sprint", "Sprint", 21], ["f1news", "News & analysis", 9], ["overtakes", "Best overtakes"], ["classics", "Classic races"], ["tech", "Tech explained"], ["f1docs", "Documentaries"]],
 };
 const ytMaxAge = (t) => ((YT_SUBS[t.topic] || []).find((x) => x[0] === t.sub) || [])[2]; // e.g. highlights: last 10 days only
 const fmtViews = (n) => n >= 1e9 ? (n / 1e9).toFixed(1).replace(/\.0$/, "") + "B" : n >= 1e6 ? Math.round(n / 1e6) + "M" : n >= 1e3 ? Math.round(n / 1e3) + "K" : String(n || 0);
 const fmtDur = (s) => { if (!s) return ""; const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = String(s % 60).padStart(2, "0"); return h ? `${h}:${String(m).padStart(2, "0")}:${x}` : `${m}:${x}`; };
-const SCORE_PRESETS = [["🏆 Great · 7.5+ / 85%", "7.5", "85"], ["👍 Good · 6.5+ / 70%", "6.5", "70"], ["🎲 Anything", "0", "0"]];
+const SCORE_PRESETS = [["Great · 7.5+ / 85%", "7.5", "85"], ["Good · 6.5+ / 70%", "6.5", "70"], ["Anything", "0", "0"]];
 function activeFilterCount() {
   let n = 0;
   if (F.genre) n++; if (F.director) n++; if (+F.recent) n++; if (+F.runtime) n++; if (F.status2) n++; if (F.svcOn.length) n++;
@@ -685,11 +686,12 @@ function renderServiceChips() {
     `<button class="chip ${on.length ? "" : "on"}" data-svcall="1">All services</button>` +
     svcs.map((s) => `<button class="chip ${on.includes(s) ? "on" : ""}" data-svc="${esc(s)}" aria-pressed="${on.includes(s)}">${esc(s)}</button>`).join("");
 }
+const ICO = {home: `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 10.5 12 3.5l8.5 7V20a1 1 0 0 1-1 1H15v-6H9v6H4.5a1 1 0 0 1-1-1z"/></svg>`,spark: `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l1.7 4.8 4.8 1.7-4.8 1.7L12 16.5l-1.7-4.8L5.5 10l4.8-1.7z M18.5 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z"/></svg>`,shuffle: `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h3.2c2 0 3.2.9 4.2 2.6l3.2 4.8c1 1.7 2.2 2.6 4.2 2.6H21 M18.5 14.5 21 17l-2.5 2.5 M3 17h3.2c1.5 0 2.5-.5 3.3-1.4 M14.5 8.4c.8-.9 1.8-1.4 3.3-1.4H21 M18.5 4.5 21 7l-2.5 2.5"/></svg>`,person: `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 11.5a3.75 3.75 0 1 0 0-7.5 3.75 3.75 0 0 0 0 7.5z M4.5 20.5c.4-3.6 3.6-5.5 7.5-5.5s7.1 1.9 7.5 5.5"/></svg>`,people: `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11a3.25 3.25 0 1 0 0-6.5A3.25 3.25 0 0 0 9 11z M2.5 20c.4-3.3 3-5 6.5-5s6.1 1.7 6.5 5 M15.5 4.7a3.25 3.25 0 0 1 0 6.1 M17.5 15.2c2.2.5 3.7 2 4 4.8"/></svg>`,sync: `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3 M19.5 4.5v4h-4"/></svg>`,star: `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.8l2.5 5.1 5.6.8-4 3.9 1 5.6-5.1-2.7-5.1 2.7 1-5.6-4-3.9 5.6-.8z"/></svg>`,check: `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z M8.2 12.2l2.6 2.6 5-5.3"/></svg>`,film: `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 4.5h15v15h-15z M4.5 9h15 M4.5 15h15 M9 4.5V9 M15 4.5V9 M9 15v4.5 M15 15v4.5"/></svg>`};
 const GROUPS = [
-  ["discover", "🏠", "Home", ["all", "together"]],
-  ["ours", "★", "Lists", ["mine", "want", "watching", "seasons", "bothwant"]],
-  ["history", "✓", "Watched", ["watched", "onlyme", "onlythem", "skipped"]],
-  ["directors", "🎬", "Directors", ["directors"]],
+  ["discover", "home", "Home", ["all", "together"]],
+  ["ours", "star", "Lists", ["mine", "want", "watching", "seasons", "bothwant"]],
+  ["history", "check", "Watched", ["watched", "onlyme", "onlythem", "skipped"]],
+  ["directors", "film", "Directors", ["directors"]],
 ];
 const groupOf = (v) => (GROUPS.find((g) => g[3].includes(v)) || GROUPS[0])[0];
 const phone = () => innerWidth < 620;
@@ -699,7 +701,7 @@ function renderNav(tabs, count) {
   const cur = groupOf(F.view);
   nav.innerHTML = GROUPS.map(([k, ic, l, views]) => {
     const n = k === "ours" ? seasonNews().filter((t) => newSeason(t)).length : 0;
-    return `<button class="${cur === k ? "on" : ""}" data-group="${k}"><span class="ic">${ic}</span>${l}${n ? `<span class="dot">${n}</span>` : ""}</button>`;
+    return `<button class="${cur === k ? "on" : ""}" data-group="${k}"><span class="ic">${ICO[ic]}</span>${l}${n ? `<span class="dot">${n}</span>` : ""}</button>`;
   }).join("");
 }
 function syncControls() {
@@ -707,8 +709,8 @@ function syncControls() {
   CTRL.forEach((k) => { if ($(k).value !== F[k]) $(k).value = F[k]; });
   renderServiceChips();
   $("dir").textContent = F.desc ? "Highest first ↓" : "Lowest first ↑";
-  const SHORT = { movies: "🎬 Movies", series: "📺 Series", anime: "🍥 Anime", reality: "🏆 Reality", docs: "🎥 Docs", truecrime: "🔪 True crime", kids: "🧸 Kids", youtube: "▶️ YouTube" };
-  $("cats").innerHTML = CATS.filter(([k]) => k !== "youtube").map(([k, l]) => `<button class="${F.cat === k ? "on" : ""}" data-cat="${k}" title="${esc(l.replace(/^\S+\s/, ""))}">${SHORT[k]}</button>`).join("");
+  const SHORT = { movies: "Movies", series: "Series", anime: "Anime", reality: "Reality", docs: "Docs", truecrime: "True crime", kids: "Kids", youtube: "YouTube" };
+  $("cats").innerHTML = CATS.filter(([k]) => k !== "youtube").map(([k, l]) => `<button class="${F.cat === k ? "on" : ""}" data-cat="${k}" title="${esc(l)}">${SHORT[k]}</button>`).join("");
   const onCat = $("cats").querySelector(".on"); if (onCat && phone()) { const c = $("cats"), l = onCat.offsetLeft, r = l + onCat.offsetWidth; if (l < c.scrollLeft || r > c.scrollLeft + c.clientWidth) c.scrollLeft = l - 24; }
   const topCat = F.cat === "movies" || F.cat === "series";
 
@@ -723,7 +725,7 @@ function syncControls() {
   const nOn = activeFilterCount();
   $("presets").hidden = false;
   const subs = isYt && YT_SUBS[F.ytMode];
-  const fchip = `<button class="chip fchip ${nOn ? "active" : ""}" id="openfilters">⚙︎ Filters${nOn ? ` · ${nOn}` : ""}</button>`;
+  const fchip = `<button class="chip fchip ${nOn ? "active" : ""}" id="openfilters">︎ Filters${nOn ? ` · ${nOn}` : ""}</button>`;
   $("ytsubs").hidden = !isYt;
   $("ytsubs").innerHTML = !isYt ? "" : fchip + (subs ? [["", "All"], ...subs].map(([k, l]) => `<button class="chip ${(F.ytSub || "") === k ? "on" : ""}" data-ytsub="${k}">${l}</button>`).join("") : "");
   $("presets").classList.toggle("ytmodes", isYt);
@@ -739,7 +741,7 @@ function syncControls() {
     : k === "onlythem" ? all().filter((t) => onlyThem(t.id)).length
     : k === "watched" ? all().filter((t) => watched(t.id)).length
     : all().filter((t) => S.marks.get(t.id) === "skipped").length;
-  const tabs = [["all", "All matches"], ...(seasonNews().length ? [["seasons", "🆕 New seasons"]] : []), ...(S.partner ? [["together", "👫 Watch together"]] : []), ["mine", "★ My list"], ["want", "👫 Our list"], ["watching", "▶ Watching now"], ["directors", "🎬 Top directors"], ...(S.partner ? [["onlyme", "Only you’ve seen"], ["onlythem", `Only ${esc(pName())} has seen`]] : []), ["watched", "Watched"], ["skipped", "Not interested"]];
+  const tabs = [["all", "All matches"], ...(seasonNews().length ? [["seasons", "New seasons"]] : []), ...(S.partner ? [["together", "Watch together"]] : []), ["mine", "My list"], ["want", "Our list"], ["watching", "Watching now"], ["directors", "Top directors"], ...(S.partner ? [["onlyme", "Only you’ve seen"], ["onlythem", `Only ${esc(pName())} has seen`]] : []), ["watched", "Watched"], ["skipped", "Not interested"]];
   if (F.view === "one") F.view = "onlyme";
   if (!tabs.some(([k]) => k === F.view)) F.view = "all";
   // phones: the bottom bar picks the group, and only that group's tabs show here
@@ -747,7 +749,7 @@ function syncControls() {
   const shown = (phone() ? tabs.filter(([k]) => groupOf(k) === groupOf(F.view)) : tabs).filter(([k]) => F.cat !== "youtube" || !notYt.includes(k) || F.view === k);
   renderNav(tabs, count);
   $("tabs").innerHTML = (shown.length < 2 && phone() ? [] : shown).map(([k, l]) => `<button class="chip ${F.view === k ? "on" : ""}" data-view="${k}" ${k === "directors" ? `title="Directors and creators whose titles on your services score best, plus acclaimed directors to explore"` : ""} ${k === "together" ? `title="Only what neither of you has seen, with what you both want first. Uses the filters and section above."` : ""}>${l}${k === "all" || k === "together" || k === "directors" ? "" : ` (${count(k)})`}</button>`).join("");
-  $("layout").textContent = F.layout === "list" ? "▦ Cards" : "☰ Compact list";
+  $("layout").textContent = F.layout === "list" ? "Cards" : "Compact list";
   const sectionName = { movies: "Movies", series: "Series", anime: "Anime", reality: "Reality & competition", docs: "Documentaries", kids: "Kids & family", truecrime: "True crime", youtube: "YouTube" }[F.cat];
   $("scorehint").textContent = `Score settings are remembered separately for each section (now: ${sectionName}).`;
 }
@@ -755,8 +757,8 @@ const saveF = () => local.set("wf-filters", F);
 function filterSummary() {
   const p = [];
   p.push({ movies: "Movies", series: "Series", anime: "Anime", reality: "Reality & competition", docs: "Documentaries", kids: "Kids & family", truecrime: "True crime", youtube: "YouTube" }[F.cat]);
-  if (F.cat === "youtube") { p.push(YT_MODES.find((m) => m[0] === (F.ytMode || "history"))[1].replace(/^\S+\s/, "")); if (F.ytSub && YT_SUBS[F.ytMode]) p.push((YT_SUBS[F.ytMode].find((x) => x[0] === F.ytSub) || ["", ""])[1].replace(/^\S+\s/, "")); if (F.genre) p.push(F.genre); if (+F.recent) p.push(`Last ${F.recent} yrs`); return p.join(" · "); }
-  if (F.preset >= 0) p.push(PRESETS[F.preset].name.replace(/^\S+\s/, ""));
+  if (F.cat === "youtube") { p.push(YT_MODES.find((m) => m[0] === (F.ytMode || "history"))[1]); if (F.ytSub && YT_SUBS[F.ytMode]) p.push((YT_SUBS[F.ytMode].find((x) => x[0] === F.ytSub) || ["", ""])[1]); if (F.genre) p.push(F.genre); if (+F.recent) p.push(`Last ${F.recent} yrs`); return p.join(" · "); }
+  if (F.preset >= 0) p.push(PRESETS[F.preset].name);
   if (F.type) p.push(F.type === "Movie" ? "Movies" : "Series");
   if (F.genre) p.push(F.genre);
   if (F.director) p.push("by " + F.director.trim());
@@ -773,7 +775,7 @@ function matchesSearch(t, q) {
   const hay = (t.title + " " + (t.channel || "") + " " + (t.dirs || []).join(" ") + " " + (t.cast || []).join(" ")).toLowerCase();
   return q.toLowerCase().split(/\s+/).every((w) => hay.includes(w));
 }
-const CATS = [["movies", "🎬 Movies"], ["series", "📺 Series"], ["anime", "🍥 Anime"], ["reality", "🏆 Reality & competition"], ["docs", "🎥 Documentaries"], ["truecrime", "🔪 True crime"], ["kids", "🧸 Kids & family"], ["youtube", "▶️ YouTube"]];
+const CATS = [["movies", "Movies"], ["series", "Series"], ["anime", "Anime"], ["reality", "Reality & competition"], ["docs", "Documentaries"], ["truecrime", "True crime"], ["kids", "Kids & family"], ["youtube", "YouTube"]];
 function categoryOf(t) {
   if (t.kind === "yt") return "youtube";
   const g = t.genres || [];
@@ -852,12 +854,12 @@ function badgeList(t) {
   const id = t.id, mk = S.marks.get(id) || "", pmk = S.pMarks.get(id) || "", w = watched(id);
   const badges = [];
   const ns = newSeason(t), cs = comingSeason(t);
-  if (ns) badges.push(`<span class="badge b-new">🆕 Season ${ns} is out</span>`);
-  else if (cs) badges.push(`<span class="badge b-soon">📅 Season ${cs.season} ${cs.date ? "arrives " + esc(fmtDate(cs.date)) : "announced"}</span>`);
+  if (ns) badges.push(`<span class="badge b-new">Season ${ns} is out</span>`);
+  else if (cs) badges.push(`<span class="badge b-soon">Season ${cs.season} ${cs.date ? "arrives " + esc(fmtDate(cs.date)) : "announced"}</span>`);
   if (w && !ns) badges.push(`<span class="badge b-watched">Watched</span>`);
-  if (!w && mk === "watching" && pmk === "watching") badges.push(`<span class="badge b-want">▶ You’re both watching</span>`);
-  else if (!w && mk === "watching") badges.push(`<span class="badge b-want">▶ Watching now</span>`);
-  else if (!w && pmk === "watching") badges.push(`<span class="badge b-want">▶ ${esc(pName())} is watching</span>`);
+  if (!w && mk === "watching" && pmk === "watching") badges.push(`<span class="badge b-want">You’re both watching</span>`);
+  else if (!w && mk === "watching") badges.push(`<span class="badge b-want">Watching now</span>`);
+  else if (!w && pmk === "watching") badges.push(`<span class="badge b-want">${esc(pName())} is watching</span>`);
   if (mk === "want" && pmk === "want") badges.push(`<span class="badge b-want">You both want this</span>`);
   else if (mk === "want") badges.push(`<span class="badge b-want">Want to watch</span>`);
   else if (pmk === "want") badges.push(`<span class="badge b-want">${esc(pName())} wants this</span>`);
@@ -879,10 +881,10 @@ function row(t) {
   </button>
   <div class="rbtns">
     ${ns ? btn(`data-season="${ns}"`, false, "", `✓ Seen S${ns}`, `I’ve watched season ${ns}`) : ""}
-    ${btn('data-seen="me"', iSaw(id), "", `${iSaw(id) ? "✓" : "○"} ${S.partner ? "Me" : "Seen"}`, S.partner ? "I watched" : "Watched")}
-    ${S.partner ? btn('data-seen="partner"', theySaw(id), "", `${theySaw(id) ? "✓" : "○"} ${esc(pName())}`, `${pName()} watched`) : ""}
-    ${btn('data-mark="want"', mk === "want", "mk-want", "★ Want", "Want to watch")}
-    ${t.type === "Series" ? btn('data-mark="watching"', mk === "watching", "mk-watching", "▶ Watching", "Watching now: keeps it at the top until you finish") : ""}
+    ${btn('data-seen="me"', iSaw(id), "", `${iSaw(id) ? "✓ " : ""}${S.partner ? "Me" : "Seen"}`, S.partner ? "I watched" : "Watched")}
+    ${S.partner ? btn('data-seen="partner"', theySaw(id), "", `${theySaw(id) ? "✓ " : ""}${esc(pName())}`, `${pName()} watched`) : ""}
+    ${btn('data-mark="want"', mk === "want", "mk-want", "Want", "Want to watch")}
+    ${t.type === "Series" ? btn('data-mark="watching"', mk === "watching", "mk-watching", "Watching", "Watching now: keeps it at the top until you finish") : ""}
     ${btn('data-mark="skipped"', mk === "skipped", "mk-skipped", "✕", "Not interested")}
   </div>
 </article>`;
@@ -900,11 +902,11 @@ function vid(t) {
     <div class="meta">${fmtViews(t.views)} views${ytMaxAge(t) && t.released ? " · " + fmtDate(t.released) : t.year ? " · " + t.year : ""} · ${esc(gl(t).join(", "))}</div>
     ${badges.length ? `<div class="badges">${badges.join("")}</div>` : ""}</div>
   <div class="rbtns">
-    ${btn('data-seen="me"', iSaw(id), "", `${iSaw(id) ? "✓" : "○"} ${S.partner ? "Me" : "Seen"}`, S.partner ? "I watched" : "Watched")}
-    ${S.partner ? btn('data-seen="partner"', theySaw(id), "", `${theySaw(id) ? "✓" : "○"} ${esc(pName())}`, `${pName()} watched`) : ""}
-    ${btn('data-mark="want"', mk === "want", "mk-want", "★ Later", "Save for later")}
+    ${btn('data-seen="me"', iSaw(id), "", `${iSaw(id) ? "✓ " : ""}${S.partner ? "Me" : "Seen"}`, S.partner ? "I watched" : "Watched")}
+    ${S.partner ? btn('data-seen="partner"', theySaw(id), "", `${theySaw(id) ? "✓ " : ""}${esc(pName())}`, `${pName()} watched`) : ""}
+    ${btn('data-mark="want"', mk === "want", "mk-want", "Later", "Save for later")}
     ${btn('data-mark="skipped"', mk === "skipped", "mk-skipped", "✕", "Not interested")}
-    <a class="rb ytgo" ${ext} title="Open on YouTube">▶ Watch</a>
+    <a class="rb ytgo" ${ext} title="Open on YouTube">Watch</a>
   </div>
 </article>`;
 }
@@ -935,7 +937,7 @@ function card(t, collapsible) {
   ${checks}
   <div class="acts ${t.type === "Series" ? "three" : ""}">
     <button class="mk-want ${mk === "want" ? "on" : ""}" data-mark="want" data-id="${esc(id)}">${mk === "want" ? "✓ " : ""}Want to watch</button>
-    ${t.type === "Series" ? `<button class="mk-watching ${mk === "watching" ? "on" : ""}" data-mark="watching" data-id="${esc(id)}" title="Keeps it at the top until you finish">${mk === "watching" ? "✓ " : "▶ "}Watching now</button>` : ""}
+    ${t.type === "Series" ? `<button class="mk-watching ${mk === "watching" ? "on" : ""}" data-mark="watching" data-id="${esc(id)}" title="Keeps it at the top until you finish">${mk === "watching" ? "✓ " : ""}Watching now</button>` : ""}
     <button class="mk-skipped ${mk === "skipped" ? "on" : ""}" data-mark="skipped" data-id="${esc(id)}">${mk === "skipped" ? "✓ " : ""}Not interested</button>
   </div>
 </article>`;
@@ -950,11 +952,11 @@ function renderSub(note) {
   if (note) $("sub").textContent = note;
   else $("sub").innerHTML = `${all().length} titles · synced ${esc(when)}<span class="nophone"> (refreshes nightly) · signed in as ${esc(S.me?.name || "you")}</span>`;
   const chip = $("partnerChip");
-  if (S.me && !note) $("acctBtn").innerHTML = `${S.partner ? "👫" : "👤"}<span class="lbl"> Account</span>`;
+  if (S.me && !note) $("acctBtn").innerHTML = `${S.partner ? ICO.people : ICO.person}<span class="lbl"> Account</span>`;
   if (S.me && !note) {
     chip.hidden = false;
     chip.className = "pill" + (S.partner ? " linked" : "");
-    chip.textContent = S.partner ? `👫 Watching with ${pName()}` : innerWidth < 620 ? "👤 Link your partner" : "👤 Just you · Link your partner";
+    chip.textContent = S.partner ? `Watching with ${pName()}` : innerWidth < 620 ? "Link your partner" : "Just you · Link your partner";
     chip.title = S.partner ? "See what you share with your partner" : "Link with your partner to track what you’ve both watched";
   }
 }
@@ -983,22 +985,22 @@ function render() {
   $("status").textContent = `${list.length} ${noun}${q ? ` for “${q}”` : ""}${q && (F.view === "all" || F.view === "together") ? " in everything (filters paused while you search)" : ""}`;
   // offer to look beyond the catalog for a director / actor / title
   const fm = $("findmore"), dq = (F.director || "").trim();
-  if (F.view === "all" && dq.length >= 2) { fm.hidden = false; fm.dataset.role = "director"; fm.dataset.q = dq; fm.textContent = `🔎 Find more by “${dq}”`; fm.title = "Looks up this director’s or creator’s work and adds whatever is included with your services"; }
-  else if (F.view === "all" && q.length >= 3) { fm.hidden = false; fm.dataset.role = "any"; fm.dataset.q = q; fm.textContent = `🔎 Look up “${q}” on your services`; fm.title = "Finds titles, or a person’s films and shows, that aren’t in the list yet"; }
+  if (F.view === "all" && dq.length >= 2) { fm.hidden = false; fm.dataset.role = "director"; fm.dataset.q = dq; fm.textContent = `Find more by “${dq}”`; fm.title = "Looks up this director’s or creator’s work and adds whatever is included with your services"; }
+  else if (F.view === "all" && q.length >= 3) { fm.hidden = false; fm.dataset.role = "any"; fm.dataset.q = q; fm.textContent = `Look up “${q}” on your services`; fm.title = "Finds titles, or a person’s films and shows, that aren’t in the list yet"; }
   else fm.hidden = true;
   $("findwrap").hidden = fm.hidden; fm.hidden = false;
   const inSection = all().filter((t) => categoryOf(t) === F.cat).length;
   if (F.view === "all" && !["movies", "series"].includes(F.cat) && inSection < 15)
-    $("status").textContent += ` · only ${inSection} in this section so far. Tap ↻ Sync to pull in more`;
+    $("status").textContent += ` · only ${inSection} in this section so far. Tap Sync to pull in more`;
   let empty = "Nothing here yet.";
   if (F.view === "together") empty = "Nothing here that neither of you has seen. Try another section or loosen the filters.";
-  if (F.view === "mine") empty = "Nothing on your list yet. Tap ★ Want on anything you’d like to watch.";
-  if (F.view === "want") empty = S.partner ? `Nothing on your shared list yet. Anything you or ${esc(pName())} tap ★ Want on shows up here, with what you both want first.` : `<b>Our list</b> is what you and your partner both want to watch, in one place.<br><br><button class="btn primary" id="emptylink">👫 Link your partner</button>`;
+  if (F.view === "mine") empty = "Nothing on your list yet. Tap Want on anything you’d like to watch.";
+  if (F.view === "want") empty = S.partner ? `Nothing on your shared list yet. Anything you or ${esc(pName())} tap Want on shows up here, with what you both want first.` : `<b>Our list</b> is what you and your partner both want to watch, in one place.<br><br><button class="btn primary" id="emptylink">Link your partner</button>`;
   if (F.view === "bothwant") empty = `Nothing you both want yet. When you and ${esc(pName())} both tap “Want to watch” on a title, it shows up here.`;
   if (F.view === "seasons") empty = "No new or upcoming seasons for series you’ve watched.";
   if (F.view === "watching") empty = "Nothing in progress. On a series, tap “Watching now” to keep it here until you finish.";
-  if (F.view === "all" && F.cat === "youtube") empty = !S.ytOn ? "YouTube isn’t switched on yet: the site needs a YouTube key in Vercel (YOUTUBE_KEY). Once it’s added, tap ↻ Sync." : "No videos here yet. Tap ↻ Sync to load them.";
-  else if (F.view === "all") empty = all().length ? "Nothing matches these filters. Try lowering a score, widening the dates, or tapping Reset filters." : "No titles yet. Tap ↻ Sync to pull in the catalog — the first sync takes a minute or two.";
+  if (F.view === "all" && F.cat === "youtube") empty = !S.ytOn ? "YouTube isn’t switched on yet: the site needs a YouTube key in Vercel (YOUTUBE_KEY). Once it’s added, tap Sync." : "No videos here yet. Tap Sync to load them.";
+  else if (F.view === "all") empty = all().length ? "Nothing matches these filters. Try lowering a score, widening the dates, or tapping Reset filters." : "No titles yet. Tap Sync to pull in the catalog — the first sync takes a minute or two.";
   const compact = F.layout === "list";
   $("grid").className = compact ? "list" : "";
   $("grid").innerHTML = list.length ? list.map((t) => t.kind === "yt" ? vid(t) : compact ? (openRow === t.id ? card(t, true) : row(t)) : card(t)).join("") : `<div class="empty">${empty}</div>`;
@@ -1023,10 +1025,10 @@ function shelfRows(list) {
     add(`Because you watched ${base.title}`, list.filter((t) => sim(t) >= 2).sort((a, b) => sim(b) - sim(a) || q(b) - q(a)));
   }
   const yr = new Date().getFullYear();
-  add("🆕 New and well rated", byQ.filter((t) => t.year >= yr - 1));
+  add("New and well rated", byQ.filter((t) => t.year >= yr - 1));
   const pops = list.map((t) => t.popularity || 0).sort((a, b) => a - b), median = pops[Math.floor(pops.length / 2)] || 0;
-  add("💎 Hidden gems", byQ.filter((t) => imdbOrTmdb(t) >= 7.3 && (t.popularity || 0) <= median));
-  add("🏆 Highest rated", byQ);
+  add("Hidden gems", byQ.filter((t) => imdbOrTmdb(t) >= 7.3 && (t.popularity || 0) <= median));
+  add("Highest rated", byQ);
   return rows;
 }
 function renderShelves(list) {
@@ -1038,19 +1040,19 @@ function renderShelves(list) {
   const wants = list.filter((t) => S.marks.get(t.id) === "want" || S.pMarks.get(t.id) === "want");
   const pool = [...wants.sort((a, b) => q(b) - q(a)), ...[...list].sort((a, b) => q(b) - q(a)).slice(0, 20).filter((t) => !wants.includes(t))];
   const t = pool[(daySeed(F.cat) + heroShift) % Math.min(pool.length, wants.length + 12)];
-  const mk = S.marks.get(t.id) || "", why = bothWant(t.id) ? `💞 You both want this` : mk === "want" ? "★ On your want list" : S.pMarks.get(t.id) === "want" ? `★ ${esc(pName())} wants this` : "One of the best matches here";
+  const mk = S.marks.get(t.id) || "", why = bothWant(t.id) ? `You both want this` : mk === "want" ? "On your want list" : S.pMarks.get(t.id) === "want" ? `${esc(pName())} wants this` : "One of the best matches here";
   const hero = `<div class="hero">
     <button class="hcover" data-detail="${esc(t.id)}" aria-label="More about ${esc(t.title)}">${cover(t)}</button>
-    <div class="hbody"><div class="hkicker">🌙 Tonight’s pick · <span>${why}</span></div>
+    <div class="hbody"><div class="hkicker">Tonight’s pick · <span>${why}</span></div>
       <button class="ht" data-detail="${esc(t.id)}">${esc(t.title)}</button>
       <div class="meta">${[t.year, lenText(t), gl(t).slice(0, 3).join(", ")].filter(Boolean).map(esc).join(" · ")}</div>
       <div class="meta"><b>${esc(scoreTxt(t))}</b>${(t.services || []).length ? " · " + esc(t.services.join(", ")) : ""}</div>
       ${t.summary ? `<p class="hsum">${esc(t.summary)}</p>` : ""}
-      <div class="hacts"><button class="btn primary" data-seen="me" data-id="${esc(t.id)}">✓ Seen it</button><button class="btn ${mk === "want" ? "on" : ""}" data-mark="want" data-id="${esc(t.id)}">★ ${mk === "want" ? "Wanted" : "Want"}</button><button class="btn" id="heronext" title="Pick another">↻<span class="lbl"> Another</span></button></div>
+      <div class="hacts"><button class="btn primary" data-seen="me" data-id="${esc(t.id)}">Seen it</button><button class="btn ${mk === "want" ? "on" : ""}" data-mark="want" data-id="${esc(t.id)}">${mk === "want" ? "Wanted" : "Want"}</button><button class="btn" id="heronext" title="Pick another">Another</button></div>
     </div></div>`;
   const rows = shelfRows(list.filter((x) => x.id !== t.id));
-  el.innerHTML = `<div class="shelfhead"><b>✨ For you</b><button class="chip" id="shelvesoff" title="Hide these picks (bring them back from the list below)">Hide</button></div>${hero}` +
-    (rows.length ? `<details class="morerows" id="morerows"${rowsOpen ? " open" : ""}><summary>More picks for you <span class="mu">· ${rows.map(([title]) => esc(title.replace(/^\S+ (?=[A-Z])/u, ""))).join(" · ")}</span></summary>` +
+  el.innerHTML = `<div class="shelfhead"><b>For you</b><button class="chip" id="shelvesoff" title="Hide these picks (bring them back from the list below)">Hide</button></div>${hero}` +
+    (rows.length ? `<details class="morerows" id="morerows"${rowsOpen ? " open" : ""}><summary>More picks for you <span class="mu">· ${rows.map(([title]) => esc(title)).join(" · ")}</span></summary>` +
     rows.map(([title, items]) => `<div class="shelf"><div class="shelft">${esc(title)}</div><div class="shelfrow">${items.map(tile).join("")}</div></div>`).join("") + `</details>` : "") +
     `<div class="shelfend">All matches</div>`;
   el.hidden = false;
@@ -1162,7 +1164,7 @@ const MOOD_EXAMPLES = ["Something funny and short", "A tense thriller, nothing t
 function renderMood() {
   const el = $("moodbox");
   if (el.hidden) return;
-  const head = `<div class="pagehead"><button class="btn" id="moodclose" aria-label="Back">←</button><h2>🪄 What are you in the mood for?</h2></div><div class="muted">Looks through everything you haven’t seen, whatever filters you have on.</div>${minChips()}
+  const head = `<div class="pagehead"><button class="btn" id="moodclose" aria-label="Back"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 5.5 8 12l6.5 6.5"/></svg></button><h2>What are you in the mood for?</h2></div><div class="muted">Looks through everything you haven’t seen, whatever filters you have on.</div>${minChips()}
     <form id="moodform"><textarea id="moodtext" placeholder="Describe it in your own words, e.g. “something light and funny, under 2 hours, no horror”">${esc(moodText)}</textarea>
     <div class="row" style="margin-top:8px;justify-content:space-between"><div class="presets" style="padding:0;flex:1;min-width:0">${MOOD_EXAMPLES.map((e) => `<button type="button" class="chip" data-moodex="${esc(e)}">${esc(e)}</button>`).join("")}</div>
     <button class="btn primary">Find picks</button></div></form>`;
@@ -1172,7 +1174,7 @@ function renderMood() {
   el.innerHTML = head + `<div class="understood">${understood || `<span>Best-rated overall</span>`}</div>
     ${picks.length ? `<div class="muted">${picks.length} picks you haven’t seen, best match first. Change the words above to steer it.</div>
     <div class="moodgrid">${picks.map(({ t, why }) => `<div>${why.length ? `<div class="why">Why: ${esc(why.slice(0, 4).join(", "))}</div>` : ""}${t.kind === "yt" ? vid(t) : F.layout === "list" ? row(t) : card(t)}</div>`).join("")}</div>`
-    : `<div class="empty" style="padding:20px 0">Nothing fits all of that. Try fewer conditions, or tap ↻ Sync to bring in more titles.</div>`}`;
+    : `<div class="empty" style="padding:20px 0">Nothing fits all of that. Try fewer conditions, or tap Sync to bring in more titles.</div>`}`;
 }
 function runMood(text) {
   moodText = text.trim();
@@ -1213,10 +1215,10 @@ function renderDirectors() {
     ${rows.length ? rows.map((r, i) => `<div class="drow"><div class="rk">${i + 1}</div><div class="dn"><b>${esc(r.name)}</b>
       <span>${r.ts.length} titles · avg IMDb ${r.im.toFixed(1)}${r.rt != null ? ` · RT ${Math.round(r.rt)}%` : ""}${r.unseen < r.ts.length ? ` · ${r.unseen} you haven’t seen` : ""}</span>
       <span>Best: ${esc(r.best.title)}${r.best.year ? " (" + r.best.year + ")" : ""}</span></div>
-      <button data-seedir="${esc(r.name)}">See titles</button></div>`).join("") : `<div class="empty">Not enough titles yet. Tap ↻ Sync to fill the catalog.</div>`}
+      <button data-seedir="${esc(r.name)}">See titles</button></div>`).join("") : `<div class="empty">Not enough titles yet. Tap Sync to fill the catalog.</div>`}
     <h3>Acclaimed directors to explore</h3>
     <div class="muted">Green ones already have titles here. Tap any name to see their work; for the others, NextWatch looks up their films and adds the ones included with your services.</div>
-    <div class="acclaimed">${ACCLAIMED.map((n) => `<button class="${have.has(n) ? "have" : ""}" data-${have.has(n) ? "seedir" : "finddir"}="${esc(n)}">${have.has(n) ? "✓ " : "🔎 "}${esc(n)}</button>`).join("")}</div>
+    <div class="acclaimed">${ACCLAIMED.map((n) => `<button class="${have.has(n) ? "have" : ""}" data-${have.has(n) ? "seedir" : "finddir"}="${esc(n)}">${have.has(n) ? "✓ " : ""}${esc(n)}</button>`).join("")}</div>
   </div>`;
 }
 function showDirector(name) {
@@ -1232,10 +1234,10 @@ function showDirector(name) {
 function renderTips() {
   const box = $("tipsbox");
   if (local.get("wf-tips-done", false) || !S.me) { box.innerHTML = ""; return; }
-  box.innerHTML = `<div class="tips"><div class="tipshead"><b>👋 Quick tips</b><button class="btn" id="tipsok">Got it</button></div><ol>
-    <li><b>Pick a section</b> at the top, or search. Videos live on their own <b>▶️ YouTube</b> page: History, Food & travel, Soccer and F1. Tap the logo or 🏠 to get back home.</li>
-    <li><b>Mark titles:</b> tap ○ Seen, ★ Want or ✕ Not interested.${"ontouchstart" in window ? " On your phone you can also <b>swipe right</b> for Seen and <b>swipe left</b> for Not interested." : ""}</li>
-    <li><b>↻ Sync</b> refreshes the catalog. It also updates by itself every night.</li>
+  box.innerHTML = `<div class="tips"><div class="tipshead"><b>Quick tips</b><button class="btn" id="tipsok">Got it</button></div><ol>
+    <li><b>Pick a section</b> at the top, or search. Videos live on their own <b>YouTube</b> page: History, Food & travel, Soccer and F1. Tap the logo or Home to get back.</li>
+    <li><b>Mark titles:</b> tap Seen, Want or Not interested.${"ontouchstart" in window ? " On your phone you can also <b>swipe right</b> for Seen and <b>swipe left</b> for Not interested." : ""}</li>
+    <li><b>Sync</b> refreshes the catalog. It also updates by itself every night.</li>
   </ol></div>`;
 }
 function renderAlert() {
@@ -1246,24 +1248,24 @@ function renderAlert() {
   if (!out.length && !soon.length || F.view === "seasons" || F.cat === "youtube" || local.get("wf-alert-off", "") === sig) { el.hidden = true; return; }
   const names = (list, f) => list.slice(0, 3).map(f).join(", ") + (list.length > 3 ? ` and ${list.length - 3} more` : "");
   const parts = [];
-  if (out.length) parts.push(`<b>🆕 New season out:</b> ${esc(names(out, (t) => `${t.title} (season ${newSeason(t)})`))}`);
-  if (soon.length) parts.push(`<b>📅 Coming:</b> ${esc(names(soon, (t) => `${t.title} (season ${comingSeason(t).season}${comingSeason(t).date ? ", " + fmtDate(comingSeason(t).date) : ""})`))}`);
-  const slim = [out.length ? `🆕 ${out.length} new season${out.length > 1 ? "s" : ""}` : "", soon.length ? `📅 ${soon.length} soon` : ""].filter(Boolean).join(" · ");
+  if (out.length) parts.push(`<b>New season out:</b> ${esc(names(out, (t) => `${t.title} (season ${newSeason(t)})`))}`);
+  if (soon.length) parts.push(`<b>Coming:</b> ${esc(names(soon, (t) => `${t.title} (season ${comingSeason(t).season}${comingSeason(t).date ? ", " + fmtDate(comingSeason(t).date) : ""})`))}`);
+  const slim = [out.length ? `${out.length} new season${out.length > 1 ? "s" : ""}` : "", soon.length ? `${soon.length} soon` : ""].filter(Boolean).join(" · ");
   el.innerHTML = `<div><span class="alert-full">${parts.join("<br>")}</span><span class="alert-slim">${slim}</span></div><div class="alert-acts"><button data-view="seasons">See them</button><button id="alertclose" class="alert-x" title="Dismiss" aria-label="Dismiss">✕</button></div>`;
   el.hidden = false;
 }
 let choosing = false, pickType = "";
-const typeChips = () => [["Movie", "🎬 Movie"], ["Series", "📺 Series"], ["", "🎲 Either"]]
+const typeChips = () => [["Movie", "Movie"], ["Series", "Series"], ["", "Either"]]
   .map(([v, l]) => `<button class="chip ${pickType === v && pickId ? "on" : ""}" data-pick="${v}">${l}</button>`).join("");
 function renderPick() {
   const el = $("pick"), t = pickId && all().find((x) => x.id === pickId);
   if (choosing && !t) {
-    el.innerHTML = `<div class="pagehead"><button class="btn" id="closepick" aria-label="Back">←</button><h2>🎲 Surprise me with…</h2></div><div class="muted">Picks from everything you haven’t seen, whatever filters you have on.</div>${minChips()}
-      <div class="choose"><button class="btn primary" data-pick="Movie">🎬 A movie</button><button class="btn primary" data-pick="Series">📺 A series</button><button class="btn" data-pick="">🎲 Either</button></div>`;
+    el.innerHTML = `<div class="pagehead"><button class="btn" id="closepick" aria-label="Back"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 5.5 8 12l6.5 6.5"/></svg></button><h2>Surprise me with…</h2></div><div class="muted">Picks from everything you haven’t seen, whatever filters you have on.</div>${minChips()}
+      <div class="choose"><button class="btn primary" data-pick="Movie">A movie</button><button class="btn primary" data-pick="Series">A series</button><button class="btn" data-pick="">Either</button></div>`;
     el.hidden = page !== "pick"; return;
   }
   if (!t) { el.innerHTML = ""; if (page === "pick") showPage("home"); return; }
-  el.innerHTML = `<div class="pagehead"><button class="btn" id="closepick" aria-label="Back">←</button><h2>🎲 Surprise pick</h2></div>${minChips()}<div class="pickhead">Tonight’s ${t.type === "Movie" ? "movie" : "series"}<div>${typeChips()}<button class="chip" id="sharepick">📤 Share</button><button class="chip" id="again">Pick another</button></div></div>${t.kind === "yt" ? vid(t) : card(t)}`;
+  el.innerHTML = `<div class="pagehead"><button class="btn" id="closepick" aria-label="Back"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 5.5 8 12l6.5 6.5"/></svg></button><h2>Surprise pick</h2></div>${minChips()}<div class="pickhead">Tonight’s ${t.type === "Movie" ? "movie" : "series"}<div>${typeChips()}<button class="chip" id="sharepick">Share</button><button class="chip" id="again">Pick another</button></div></div>${t.kind === "yt" ? vid(t) : card(t)}`;
   el.hidden = page !== "pick";
 }
 // Surprise me ignores the filters and search: any movie or series you haven't seen, above one simple score bar
@@ -1314,11 +1316,11 @@ function goHome() { // Movies & TV, all matches, nothing searched
 function renderAccount() {
   const el = $("account");
   el.innerHTML = `
-  <div class="pagehead"><button class="btn" id="acctback" aria-label="Back">←</button><h2>Your account</h2></div>
+  <div class="pagehead"><button class="btn" id="acctback" aria-label="Back"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 5.5 8 12l6.5 6.5"/></svg></button><h2>Your account</h2></div>
   ${S.email ? `<div class="muted">Signed in as ${esc(S.email)}</div>` : ""}
   <label>Your name (what your partner sees)<div class="row"><input type="text" id="myname" maxlength="30" value="${esc(S.me.name)}"><button class="btn" id="savename">Save</button></div></label>
   ${S.partner ? `
-    <div class="shared"><strong>👫 You’re linked with ${esc(pName())}.</strong>
+    <div class="shared"><strong>You’re linked with ${esc(pName())}.</strong>
       <details style="border:0;padding:4px 0 0"><summary>What you share</summary><ul>
         <li><b>You both see:</b> each other’s “watched” ticks, “Want to watch” picks (shown as “${esc(pName())} wants this”) and “Watching now” series.</li>
         <li><b>Either of you can tick</b> the other’s “watched” box, handy when you watch on one screen.</li>
@@ -1334,7 +1336,7 @@ function renderAccount() {
     <div class="row"><input type="text" id="pcode" maxlength="6" placeholder="Partner’s code" style="text-transform:uppercase;width:150px"><button class="btn primary" id="linkbtn">Link</button></div>
     <div class="err" id="linkerr"></div>`}
   <label>Password (so you can sign in without an email link)<div class="row"><input type="password" id="newpw" minlength="6" placeholder="New password (6+ characters)" autocomplete="new-password"><button class="btn" id="savepw">Set password</button></div></label>
-  ${installEvt ? `<div class="row"><button class="btn" id="install">📱 Install the app</button></div>` : ""}
+  ${installEvt ? `<div class="row"><button class="btn" id="install">Install the app</button></div>` : ""}
   <div class="row"><button class="btn" id="signout">Sign out</button></div>
   <div class="muted" style="font-size:13px"><a href="/about.html">About NextWatch</a> · how it works and how to add it to your home screen</div>`;
 }
@@ -1494,7 +1496,7 @@ async function onClick(e) {
     case "openfilters": $("fp").open = true; return;
     case "alertclose": local.set("wf-alert-off", $("alert").dataset.sig || ""); renderAlert(); return;
     case "heronext": heroShift++; render(); return;
-    case "shelvesoff": F.shelves = false; saveF(); render(); toast("Picks hidden. Tap “✨ Picks” next to the match count to bring them back."); return;
+    case "shelvesoff": F.shelves = false; saveF(); render(); toast("Picks hidden. Tap “Picks” next to the match count to bring them back."); return;
     case "shelveson": F.shelves = true; saveF(); render(); scrollTo({ top: 0, behavior: "smooth" }); return;
     case "tipsok": local.set("wf-tips-done", true); renderTips(); return;
     case "sharepick": {
@@ -1590,21 +1592,21 @@ async function runSync() {
     for (const job of SYNC_JOBS) {
       let total = job.pages;
       for (let page = 1; page <= total; page++) {
-        btn.textContent = innerWidth < 620 ? `↻ ${page}/${total}` : `Syncing ${job.label || (job.kind === "movie" ? "movies" : "series")} ${page}/${total}…`;
+        btn.textContent = innerWidth < 620 ? `${page}/${total}` : `Syncing ${job.label || (job.kind === "movie" ? "movies" : "series")} ${page}/${total}…`;
         const r = await api.syncStep({ kind: job.kind, order: job.order, page, ...(job.genre ? { genre: job.genre } : {}), ...(job.lang ? { lang: job.lang } : {}) });
         saved += r.saved || 0; if (r.firstError) errs.push(r.firstError);
         total = Math.min(job.pages, r.totalPages || total);
       }
     }
-    btn.textContent = innerWidth < 620 ? "↻ …" : "Refreshing older titles…";
+    btn.textContent = innerWidth < 620 ? "…" : "Refreshing older titles…";
     await api.syncStep({ mode: "stale" });
-    if (S.ytOn) { btn.textContent = innerWidth < 620 ? "↻ ▶️" : "Refreshing YouTube…"; try { const y = await api.youtubeStep(); saved += (y.trending || 0) + (y.alltime || 0) + (y.history || 0); } catch (e) { errs.push(e.message); } }
+    if (S.ytOn) { btn.textContent = innerWidth < 620 ? "…" : "Refreshing YouTube…"; try { const y = await api.youtubeStep(); saved += (y.trending || 0) + (y.alltime || 0) + (y.history || 0); } catch (e) { errs.push(e.message); } }
     await reload();
     toast(`Sync done: ${saved} title${saved === 1 ? "" : "s"} added or refreshed.` + (errs.length ? ` (${errs.length} had problems: ${errs[0]})` : ""));
   } catch (e) {
     toast("Sync stopped: " + e.message);
     await reload().catch(() => {});
-  } finally { syncing = false; btn.disabled = false; btn.innerHTML = `↻<span class="lbl"> Sync</span>`; }
+  } finally { syncing = false; btn.disabled = false; btn.innerHTML = `${ICO.sync}<span class="lbl"> Sync</span>`; }
 }
 
 // ---------------- startup ----------------
