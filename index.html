@@ -191,7 +191,8 @@ footer{color:var(--mu);font-size:12px;margin-top:24px}
 .hero .meta{font-size:13.5px}
 .hsum{font-size:14px;color:var(--mu);margin:8px 0 10px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .hacts{display:flex;gap:8px;flex-wrap:wrap}.hacts .btn.on{background:var(--want);color:#fff;border-color:var(--want)}
-.shelf{margin-bottom:12px}.shelft{font-weight:700;font-size:14.5px;margin:0 0 6px}
+.shelf{margin-bottom:12px}.morerows{margin:4px 0 6px}.morerows>summary{cursor:pointer;font-weight:700;padding:8px 0;list-style-position:inside;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.morerows>summary .mu{font-weight:400;color:var(--mu);font-size:.9em}
+.shelft{font-weight:700;font-size:14.5px;margin:0 0 6px}
 .shelfrow{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
 .tile{flex:none;width:118px;border:0;background:none;padding:0;text-align:left;cursor:pointer;color:var(--tx)}
 .tile .cover{width:118px;height:177px;border-radius:9px;font-size:11px}
@@ -998,7 +999,8 @@ function render() {
   renderPick(); renderSub(); renderAlert(); renderTips(); if (moodRes) { moodRes.picks = moodPicks(moodRes.want); renderMood(); }
 }
 // ---------------- "for you": tonight's pick + short rows at the top of a section ----------------
-let heroShift = 0, detailId = null;
+let heroShift = 0, detailId = null, rowsOpen = false;
+document.addEventListener("toggle", (e) => { if (e.target.id === "morerows") rowsOpen = e.target.open; }, true);
 const daySeed = (k) => { let h = 0; for (const c of new Date().toDateString() + k) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; };
 const scoreTxt = (t) => [t.imdb != null ? `IMDb ${t.imdb.toFixed(1)}` : t.tmdb != null ? `TMDB ${t.tmdb.toFixed(1)}` : "", t.rt != null ? `RT ${t.rt}%` : ""].filter(Boolean).join(" · ");
 const tile = (t) => `<button class="tile" data-detail="${esc(t.id)}" title="${esc(t.title)}">${cover(t)}<span class="tt">${esc(t.title)}</span><span class="ts">${esc(scoreTxt(t) || String(t.year || ""))}</span></button>`;
@@ -1041,7 +1043,8 @@ function renderShelves(list) {
     </div></div>`;
   const rows = shelfRows(list.filter((x) => x.id !== t.id));
   el.innerHTML = `<div class="shelfhead"><b>✨ For you</b><button class="chip" id="shelvesoff" title="Hide these picks (bring them back from the list below)">Hide</button></div>${hero}` +
-    rows.map(([title, items]) => `<div class="shelf"><div class="shelft">${esc(title)}</div><div class="shelfrow">${items.map(tile).join("")}</div></div>`).join("") +
+    (rows.length ? `<details class="morerows" id="morerows"${rowsOpen ? " open" : ""}><summary>More picks for you <span class="mu">· ${rows.map(([title]) => esc(title.replace(/^\S+ (?=[A-Z])/u, ""))).join(" · ")}</span></summary>` +
+    rows.map(([title, items]) => `<div class="shelf"><div class="shelft">${esc(title)}</div><div class="shelfrow">${items.map(tile).join("")}</div></div>`).join("") + `</details>` : "") +
     `<div class="shelfend">All matches</div>`;
   el.hidden = false;
 }
