@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>About NextWatch</title>
+<meta name="description" content="NextWatch finds great movies and shows already included with your streaming services, and keeps track of what you and your partner have watched.">
+<link rel="icon" href="/icons/logo.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="theme-color" content="#d6336c">
+<style>
+:root{--bg:#f6f5f2;--card:#fff;--tx:#1d1d1f;--mu:#6b6b70;--bd:#e3e1dc;--ac:#d6336c;--g1:#ff4f8b;--g2:#7b5cff;color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141417;--card:#1e1e23;--tx:#f0f0f2;--mu:#9a9aa3;--bd:#2d2d34;--ac:#ff6b9a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141417;--card:#1e1e23;--tx:#f0f0f2;--mu:#9a9aa3;--bd:#2d2d34;--ac:#ff6b9a;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:880px;margin:0 auto;padding:calc(24px + env(safe-area-inset-top,0px)) 16px 64px}
+nav{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit;font-weight:800;font-size:22px;letter-spacing:-.02em}
+.brand img{border-radius:9px;box-shadow:0 2px 8px rgb(123 92 255 / .25)}
+.grad{background:linear-gradient(90deg,var(--g1),var(--g2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.cta{display:inline-block;background:linear-gradient(90deg,var(--g1),var(--g2));color:#fff;text-decoration:none;font-weight:700;padding:11px 20px;border-radius:12px;white-space:nowrap}
+.cta.ghost{background:var(--card);color:var(--tx);border:1px solid var(--bd)}
+.hero{text-align:center;padding:56px 0 40px}
+.hero h1{font-size:clamp(32px,6vw,52px);line-height:1.08;margin:0 0 16px;letter-spacing:-.03em}
+.hero p{font-size:clamp(17px,2.4vw,20px);color:var(--mu);max-width:620px;margin:0 auto 26px}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:8px 0 48px}
+.step{background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:18px}
+.step .n{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:800;color:#fff;background:linear-gradient(135deg,var(--g1),var(--g2));margin-bottom:10px}
+.step h3,.feat h3{margin:0 0 4px;font-size:17px}
+.step p,.feat p{margin:0;color:var(--mu);font-size:15px}
+h2{font-size:26px;letter-spacing:-.02em;margin:0 0 16px}
+.feats{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:48px}
+.feat{background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:18px;display:grid;grid-template-columns:40px 1fr;gap:12px}
+.feat .ic{font-size:26px;line-height:1}
+.install{background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:20px;margin-bottom:40px}
+.install p{margin:6px 0;color:var(--mu)}
+.install b{color:var(--tx)}
+.end{text-align:center}
+footer{margin-top:40px;color:var(--mu);font-size:13px;text-align:center}
+@media (max-width:700px){.steps,.feats{grid-template-columns:1fr}.hero{padding:36px 0 28px}nav .cta{padding:9px 14px;font-size:14px}}
+</style>
+</head>
+<body>
+<main>
+  <nav>
+    <a class="brand" href="/"><img src="/icons/logo.svg" alt="" width="36" height="36"><span>Next<span class="grad">Watch</span></span></a>
+    <a class="cta" href="/">Open the app</a>
+  </nav>
+
+  <section class="hero">
+    <h1>Stop scrolling.<br><span class="grad">Start watching.</span></h1>
+    <p>NextWatch shows the well-rated movies and shows already included with your streaming services, so you can stop flipping between apps and pick something in a minute.</p>
+    <a class="cta" href="/">Find something to watch</a>
+  </section>
+
+  <section>
+    <h2>How it works</h2>
+    <div class="steps">
+      <div class="step"><div class="n">1</div><h3>Tell it your services</h3><p>Netflix, Max, Prime and the rest. It only lists titles included with your subscriptions, never ones to rent or buy.</p></div>
+      <div class="step"><div class="n">2</div><h3>It filters out the duds</h3><p>Every title is checked against IMDb and Rotten Tomatoes, so you only see what scores well.</p></div>
+      <div class="step"><div class="n">3</div><h3>Pick and mark</h3><p>Mark titles Seen, Want or Not interested. Your lists keep up as you watch.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>What's inside</h2>
+    <div class="feats">
+      <div class="feat"><div class="ic">🌙</div><div><h3>Tonight's pick</h3><p>One suggestion a day, chosen from your want list first, plus rows like “Because you watched…”, new releases and hidden gems.</p></div></div>
+      <div class="feat"><div class="ic">👫</div><div><h3>Watch with your partner</h3><p>Link accounts to see what you both want, what one of you has already seen, and a Watch together list of things neither of you has seen.</p></div></div>
+      <div class="feat"><div class="ic">🎬</div><div><h3>Sections and moods</h3><p>Movies, series, anime, docs, true crime, reality and kids. Filter by mood, length, genre, director or year.</p></div></div>
+      <div class="feat"><div class="ic">🆕</div><div><h3>New seasons</h3><p>When a show you've watched gets a new season, it comes back to your list, along with what's coming soon.</p></div></div>
+      <div class="feat"><div class="ic">▶️</div><div><h3>A YouTube page</h3><p>Trending and most-viewed videos, plus History, Food &amp; travel, Soccer and F1, with the latest match and race highlights.</p></div></div>
+      <div class="feat"><div class="ic">↻</div><div><h3>Always current</h3><p>The catalog, scores and services refresh every night, or right away when you tap Sync.</p></div></div>
+    </div>
+  </section>
+
+  <section class="install">
+    <h2>📱 Put it on your home screen</h2>
+    <p><b>iPhone or iPad:</b> open NextWatch in Safari, tap the Share button, then “Add to Home Screen”.</p>
+    <p><b>Android:</b> in Chrome, tap ⋮, then “Install app” (or “Add to Home screen”).</p>
+    <p>The first time you open it from your home screen, sign in with your email and password.</p>
+  </section>
+
+  <section class="end">
+    <a class="cta" href="/">Open NextWatch</a>
+  </section>
+
+  <footer>Ratings from IMDb and Rotten Tomatoes via OMDb · Streaming data by JustWatch · Uses the TMDB API but isn't endorsed or certified by TMDB · Video data from the YouTube Data API</footer>
+</main>
+</body>
+</html>

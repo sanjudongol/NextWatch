@@ -3,15 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Watch Finder</title>
+<title>NextWatch</title>
 <meta name="description" content="Find well-rated movies and series included with your streaming subscriptions.">
-<link rel="icon" href="/icons/favicon-64.png" type="image/png">
+<link rel="icon" href="/icons/logo.svg" type="image/svg+xml"><link rel="alternate icon" href="/icons/favicon-64.png" type="image/png">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 <meta name="theme-color" content="#d6336c">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Watch Finder">
+<meta name="apple-mobile-web-app-title" content="NextWatch">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <style>
 :root{--new:#c77700;--bg:#f6f5f2;--card:#fff;--tx:#1d1d1f;--mu:#6b6b70;--bd:#e3e1dc;--ac:#d6336c;--ok:#2f9e63;--want:#3b6fd8;--pill:#efece6;color-scheme:light}
@@ -20,15 +20,28 @@
 body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 main{max-width:1060px;margin:0 auto;padding:calc(20px + env(safe-area-inset-top,0px)) 16px calc(90px + env(safe-area-inset-bottom,0px))}
 [hidden]{display:none!important}
-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+header{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px 16px}
 h1{margin:0;font-size:24px}
+.brand{display:flex;align-items:center;gap:9px;background:none;border:0;padding:0}
+.brand img,.brandline img{border-radius:9px;display:block;box-shadow:0 2px 8px rgb(123 92 255 / .25)}
+.brand h1,.brandline{letter-spacing:-.02em;font-weight:800}
+.brand h1 span,.brandline span{background:linear-gradient(90deg,#ff4f8b,#7b5cff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.brandline{display:inline-flex;align-items:center;gap:10px;justify-content:center}
+.pageswitch{grid-column:1/-1;justify-self:start;display:flex;background:var(--pill);border-radius:12px;padding:3px;gap:2px}
+.pageswitch button{border:0;background:none;padding:7px 14px;border-radius:9px;font-weight:600;font-size:14px;color:var(--mu);white-space:nowrap}
+.pageswitch button.on{background:var(--card);color:var(--tx);box-shadow:0 1px 3px rgb(0 0 0 / .12)}
+.pagehead{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.pagehead h2{margin:0}
+#account details{border:1px solid var(--bd);border-radius:10px;padding:8px 12px}
+#account details summary{cursor:pointer;font-weight:600}
+footer a,#account a{color:var(--ac)}
 .sub{color:var(--mu);font-size:13px;margin-top:2px}
 .pill{margin-top:6px;border:1px solid var(--bd);background:var(--card);border-radius:999px;padding:4px 11px;font-size:13px;font-weight:600}
 .pill.linked{border-color:var(--ok);color:var(--ok)}
 .shared{background:color-mix(in srgb,var(--ok) 10%,var(--card));border:1px solid color-mix(in srgb,var(--ok) 40%,var(--bd));border-radius:10px;padding:10px 12px;font-size:13px}
 .shared ul{margin:6px 0 0;padding-left:18px}
 button{font:inherit;cursor:pointer;color:inherit}
-.hbtns{display:flex;gap:8px;flex-wrap:wrap}
+.hbtns{display:flex;gap:8px;flex-wrap:wrap;grid-column:2;grid-row:1;justify-content:flex-end}
 .btn{border:1px solid var(--bd);background:var(--card);border-radius:10px;padding:9px 14px;font-weight:600}
 .primary{background:var(--ac);color:#fff;border-color:var(--ac)}
 .btn:disabled{opacity:.6;cursor:wait}
@@ -237,13 +250,16 @@ body.noscroll{overflow:hidden}
 /* ---------- phones: simpler, thumb-friendly layout ---------- */
 @media (max-width:620px){
   main{padding-top:calc(12px + env(safe-area-inset-top,0px))}
-  header{flex-wrap:nowrap;align-items:flex-start}
+  header{gap:10px 8px}
   header>div:first-child{min-width:0}
   h1{font-size:20px}
   .sub{font-size:12px}
   .hbtns{flex-wrap:nowrap;gap:6px}
   .hbtns .btn{padding:8px 11px;font-size:16px;white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis}
   .hbtns .lbl,.nophone{display:none}
+  .pageswitch{justify-self:stretch}.pageswitch button{flex:1;padding:8px 6px}
+  .brand img{width:30px;height:30px}
+  .brandwrap .sub{display:none}
   .search{margin-top:6px!important}
   .cats{display:flex;overflow-x:auto;scrollbar-width:none;gap:4px;margin-top:8px}
   .cats::-webkit-scrollbar{display:none}
@@ -307,8 +323,10 @@ body.noscroll{overflow:hidden}
   <!-- The app -->
   <div id="app" hidden>
     <header>
-      <div><h1>Watch Finder</h1><div class="sub" id="sub"></div><button class="pill" id="partnerChip" hidden></button></div>
+      <div class="brandwrap"><button class="brand" id="homeLogo" title="Home" aria-label="NextWatch home"><img src="/icons/logo.svg" alt="" width="34" height="34"><h1>Next<span>Watch</span></h1></button><div class="sub" id="sub"></div><button class="pill" id="partnerChip" hidden></button></div>
+      <div class="pageswitch" role="tablist" aria-label="Page"><button data-page="watch" role="tab">🎬 Movies &amp; TV</button><button data-page="youtube" role="tab">▶️ YouTube</button></div>
       <div class="hbtns">
+        <button class="btn nophone" id="homeBtn" title="Back to the start: Movies &amp; TV, all matches, no search" aria-label="Home">🏠<span class="lbl"> Home</span></button>
         <button class="btn" id="moodBtn" title="Describe what you’re in the mood for and get a hand-picked list" aria-label="What are you in the mood for?">🪄<span class="lbl"> Mood</span></button>
         <button class="btn" id="surprise" title="Can’t decide? Pick a random movie or series from what’s showing now" aria-label="Surprise me">🎲<span class="lbl"> Surprise me</span></button>
         <button class="btn" id="acctBtn" title="Your name, password, partner link and sign-out" aria-label="Account">👤<span class="lbl"> Account</span></button>
@@ -318,6 +336,7 @@ body.noscroll{overflow:hidden}
 
     <section id="account" class="box" hidden></section>
 
+    <div id="home">
     <div class="topbar">
       <input class="search" id="q" type="search" placeholder="Search titles, directors or actors…" autocomplete="off" enterkeyhint="search">
       <div class="cats" id="cats"></div>
@@ -362,8 +381,10 @@ body.noscroll{overflow:hidden}
       Ratings from IMDb and Rotten Tomatoes via OMDb. When a title has no IMDb rating yet, its TMDB score is shown instead and marked “TMDB”.
       Only offers included with a subscription or free with ads are listed — never rent or buy.<br>
       Video data from the YouTube Data API.
-      Streaming availability data by JustWatch. This product uses the TMDB API but is not endorsed or certified by TMDB.
+      Streaming availability data by JustWatch. This product uses the TMDB API but is not endorsed or certified by TMDB.<br>
+      <a href="/about.html">What is NextWatch?</a>
     </footer>
+    </div>
   </div>
   <nav id="bnav" hidden aria-label="Lists"></nav>
   <div id="toast" role="status"></div>
@@ -658,7 +679,7 @@ function renderServiceChips() {
     svcs.map((s) => `<button class="chip ${on.includes(s) ? "on" : ""}" data-svc="${esc(s)}" aria-pressed="${on.includes(s)}">${esc(s)}</button>`).join("");
 }
 const GROUPS = [
-  ["discover", "🔍", "Discover", ["all", "together"]],
+  ["discover", "🏠", "Home", ["all", "together"]],
   ["ours", "★", "Our list", ["bothwant", "want", "watching", "seasons"]],
   ["history", "✓", "Watched", ["watched", "onlyme", "onlythem", "skipped"]],
   ["directors", "🎬", "Directors", ["directors"]],
@@ -679,13 +700,16 @@ function syncControls() {
   renderServiceChips();
   $("dir").textContent = F.desc ? "Highest first ↓" : "Lowest first ↑";
   const SHORT = { movies: "🎬 Movies", series: "📺 Series", anime: "🍥 Anime", reality: "🏆 Reality", docs: "🎥 Docs", truecrime: "🔪 True crime", kids: "🧸 Kids", youtube: "▶️ YouTube" };
-  $("cats").innerHTML = CATS.map(([k, l]) => `<button class="${F.cat === k ? "on" : ""}" data-cat="${k}" title="${esc(l.replace(/^\S+\s/, ""))}">${SHORT[k]}</button>`).join("");
+  $("cats").innerHTML = CATS.filter(([k]) => k !== "youtube").map(([k, l]) => `<button class="${F.cat === k ? "on" : ""}" data-cat="${k}" title="${esc(l.replace(/^\S+\s/, ""))}">${SHORT[k]}</button>`).join("");
   const onCat = $("cats").querySelector(".on"); if (onCat && phone()) { const c = $("cats"), l = onCat.offsetLeft, r = l + onCat.offsetWidth; if (l < c.scrollLeft || r > c.scrollLeft + c.clientWidth) c.scrollLeft = l - 24; }
   const topCat = F.cat === "movies" || F.cat === "series";
 
   $("typebox").hidden = topCat; // the section already picks movies or series
   $("lenbox").hidden = F.cat === "series"; $("statusbox").hidden = F.cat === "movies";
   const isYt = F.cat === "youtube";
+  $("cats").hidden = isYt; // YouTube is its own page
+  document.querySelectorAll(".pageswitch button").forEach((b) => b.classList.toggle("on", (b.dataset.page === "youtube") === isYt));
+  $("q").placeholder = isYt ? "Search videos or channels…" : "Search titles, directors or actors…";
   document.querySelectorAll(".noyt").forEach((el) => (el.hidden = isYt));
   if (isYt) { $("typebox").hidden = $("lenbox").hidden = $("statusbox").hidden = true; }
   const nOn = activeFilterCount();
@@ -699,6 +723,7 @@ function syncControls() {
  : fchip + (!topCat ? "" : PRESETS.map((p, i) => p.only && p.only !== F.cat ? "" : `<button class="chip ${F.preset === i ? "on" : ""}" data-preset="${i}">${p.name}</button>`).join(""));
   const sp = SCORE_PRESETS.find(([, im, rt]) => F.imdb === im && F.rt === rt);
   $("scorechips").innerHTML = `<span class="muted">Scores:</span>` + SCORE_PRESETS.map(([l, im, rt]) => `<button type="button" class="chip ${sp && sp[1] === im ? "on" : ""}" data-score="${im}|${rt}">${l}</button>`).join("");
+  const all = () => pool(); // counts cover only this page (videos on YouTube, movies & TV elsewhere)
   const count = (k) => k === "want" ? all().filter((t) => (S.marks.get(t.id) === "want" || S.pMarks.get(t.id) === "want") && !iSaw(t.id)).length
     : k === "watching" ? all().filter((t) => isWatching(t.id)).length
     : k === "seasons" ? seasonNews().length
@@ -753,7 +778,12 @@ function categoryOf(t) {
   if (g.includes("Family") || g.includes("Animation")) return "kids"; // family films, kids' shows, other animation
   return t.type === "Movie" ? "movies" : "series";
 }
+const pool = () => S.titles.filter((t) => (t.kind === "yt") === (F.cat === "youtube"));
 function filtered(cats = [F.cat]) {
+  const yt = cats.length === 1 && cats[0] === "youtube";
+  return filteredAll(cats).filter((t) => (t.kind === "yt") === yt);
+}
+function filteredAll(cats = [F.cat]) {
   const q = $("q").value.trim();
   if (F.view === "want") return all().filter((t) => (S.marks.get(t.id) === "want" || S.pMarks.get(t.id) === "want") && !iSaw(t.id) && matchesSearch(t, q));
   // searching looks through everything: every section, score, service and mark (filters come back when the box is cleared)
@@ -932,8 +962,11 @@ function render() {
   // pinned first: in "Watch together", what you both want; elsewhere, series you're in the middle of
   const pri = (t) => F.view === "together" ? wantCount(t.id) : F.view === "seasons" ? (newSeason(t) ? 1 : 0)
     : F.view === "all" || F.view === "want" ? (newSeason(t) ? 2 : isWatching(t.id) ? 1 : 0) : 0;
-  const newest = F.cat === "youtube" && F.ytSub && ((YT_SUBS[F.ytMode] || []).find((x) => x[0] === F.ytSub) || [])[2]; // "latest" tabs: newest first
-  if (newest) list.sort((x, y) => (y.released || "").localeCompare(x.released || "") || (y.views || 0) - (x.views || 0));
+  const newest = F.cat === "youtube" && (F.ytSub ? ((YT_SUBS[F.ytMode] || []).find((x) => x[0] === F.ytSub) || [])[2] : ["soccer", "f1"].includes(F.ytMode)); // "latest" tabs and sports: newest first
+  const sq = $("q").value.trim().toLowerCase();
+  const hit = (t) => { const ti = (t.title || "").toLowerCase(); return ti === sq ? 3 : ti.startsWith(sq) ? 2 : ti.includes(sq) ? 1 : 0; };
+  if (sq) list.sort((x, y) => hit(y) - hit(x) || imdbOrTmdb(y) - imdbOrTmdb(x) || (y.views || 0) - (x.views || 0));
+  else if (newest) list.sort((x, y) => (y.released || "").localeCompare(x.released || "") || (y.views || 0) - (x.views || 0));
   else list.sort((x, y) => pri(y) - pri(x) || dir * (sortVal(x, k) - sortVal(y, k)) || imdbOrTmdb(y) - imdbOrTmdb(x));
   const q = $("q").value.trim();
   const noun = F.view === "all" || F.view === "together" ? (list.length === 1 ? "match" : "matches") : (list.length === 1 ? "title" : "titles");
@@ -1166,7 +1199,7 @@ function renderDirectors() {
       <span>Best: ${esc(r.best.title)}${r.best.year ? " (" + r.best.year + ")" : ""}</span></div>
       <button data-seedir="${esc(r.name)}">See titles</button></div>`).join("") : `<div class="empty">Not enough titles yet. Tap ↻ Sync to fill the catalog.</div>`}
     <h3>Acclaimed directors to explore</h3>
-    <div class="muted">Green ones already have titles here. Tap any name to see their work; for the others, Watch Finder looks up their films and adds the ones included with your services.</div>
+    <div class="muted">Green ones already have titles here. Tap any name to see their work; for the others, NextWatch looks up their films and adds the ones included with your services.</div>
     <div class="acclaimed">${ACCLAIMED.map((n) => `<button class="${have.has(n) ? "have" : ""}" data-${have.has(n) ? "seedir" : "finddir"}="${esc(n)}">${have.has(n) ? "✓ " : "🔎 "}${esc(n)}</button>`).join("")}</div>
   </div>`;
 }
@@ -1184,7 +1217,7 @@ function renderTips() {
   const box = $("tipsbox");
   if (local.get("wf-tips-done", false) || !S.me) { box.innerHTML = ""; return; }
   box.innerHTML = `<div class="tips"><div class="tipshead"><b>👋 Quick tips</b><button class="btn" id="tipsok">Got it</button></div><ol>
-    <li><b>Pick a section</b> at the top, or search for anything. <b>▶️ YouTube</b> has History, Food & travel, Soccer and F1 inside.</li>
+    <li><b>Pick a section</b> at the top, or search. Videos live on their own <b>▶️ YouTube</b> page: History, Food & travel, Soccer and F1. Tap the logo or 🏠 to get back home.</li>
     <li><b>Mark titles:</b> tap ○ Seen, ★ Want or ✕ Not interested.${"ontouchstart" in window ? " On your phone you can also <b>swipe right</b> for Seen and <b>swipe left</b> for Not interested." : ""}</li>
     <li><b>↻ Sync</b> refreshes the catalog. It also updates by itself every night.</li>
   </ol></div>`;
@@ -1232,21 +1265,45 @@ function surprise() {
 }
 
 // ---------------- account panel ----------------
+// ---------------- pages: home (Movies & TV or YouTube) and account ----------------
+let page = "home";
+function showPage(p) {
+  page = p;
+  $("account").hidden = p !== "account"; $("home").hidden = p !== "home";
+  document.querySelectorAll(".pageswitch button").forEach((b) => b.classList.toggle("on", p === "home" && (b.dataset.page === "youtube") === (F.cat === "youtube")));
+  if (p === "account") renderAccount();
+  scrollTo({ top: 0 });
+}
+function setCat(k) {
+  rememberCatScores(); const wasYt = F.cat === "youtube";
+  if (!wasYt) F.lastCat = F.cat;
+  F.cat = k; useCatScores();
+  if (wasYt !== (F.cat === "youtube")) { F.genre = ""; $("q").value = ""; buildFilters(); }
+  if (F.view !== "together") F.view = "all";
+  if (!["movies", "series"].includes(F.cat)) { F.mood = ""; F.preset = -1; }
+  if (F.preset >= 0 && PRESETS[F.preset].only && PRESETS[F.preset].only !== F.cat) { Object.keys(PRESETS[F.preset].set).forEach((x) => (F[x] = DEFAULTS[x])); F.preset = -1; }
+  saveF(); render();
+}
+function goHome() { // Movies & TV, all matches, nothing searched
+  showPage("home"); $("q").value = ""; $("moodbox").hidden = true;
+  if (F.cat === "youtube") setCat(F.lastCat || "movies"); else { F.view = "all"; saveF(); render(); }
+}
 function renderAccount() {
   const el = $("account");
   el.innerHTML = `
-  <h2>Your account</h2>
+  <div class="pagehead"><button class="btn" id="acctback" aria-label="Back">←</button><h2>Your account</h2></div>
+  ${S.email ? `<div class="muted">Signed in as ${esc(S.email)}</div>` : ""}
   <label>Your name (what your partner sees)<div class="row"><input type="text" id="myname" maxlength="30" value="${esc(S.me.name)}"><button class="btn" id="savename">Save</button></div></label>
   ${S.partner ? `
-    <div class="shared"><strong>👫 You’re linked with ${esc(pName())}.</strong> Here’s exactly what that means:
-      <ul>
+    <div class="shared"><strong>👫 You’re linked with ${esc(pName())}.</strong>
+      <details style="border:0;padding:4px 0 0"><summary>What you share</summary><ul>
         <li><b>You both see:</b> each other’s “watched” ticks, “Want to watch” picks (shown as “${esc(pName())} wants this”) and “Watching now” series.</li>
         <li><b>Either of you can tick</b> the other’s “watched” box, handy when you watch on one screen.</li>
         <li>As soon as you tick <b>I watched</b>, the title leaves <i>your</i> lists. It stays on ${esc(pName())}’s until they’ve seen it too, and shows under “Only you’ve seen” in the meantime (and what only ${esc(pName())} has seen is under “Only ${esc(pName())} has seen”). Once you’ve both ticked it, it moves to <b>Watched</b>.</li>
         <li><b>Watch together</b> shows only what neither of you has seen, with titles you both want at the top.</li>
         <li><b>Stays private:</b> your “Not interested” list, your filters and your password. Watch together quietly leaves out titles either of you isn’t interested in, without showing which.</li>
         <li>Unlinking keeps everyone’s ticks; you just stop seeing each other’s.</li>
-      </ul></div>
+      </ul></details></div>
     <div class="row"><button class="btn" id="unlink">Unlink partner</button></div>`
   : `
     <div><strong>Link with your partner</strong><div class="muted">Send them your code, or type theirs below. Once linked, you’ll each see the other’s “watched” ticks and “Want to watch” picks, and a title counts as Watched when you’ve both seen it. Your “Not interested” list stays private. Friends who aren’t a couple don’t need to link; they just sign up.</div></div>
@@ -1254,12 +1311,9 @@ function renderAccount() {
     <div class="row"><input type="text" id="pcode" maxlength="6" placeholder="Partner’s code" style="text-transform:uppercase;width:150px"><button class="btn primary" id="linkbtn">Link</button></div>
     <div class="err" id="linkerr"></div>`}
   <label>Password (so you can sign in without an email link)<div class="row"><input type="password" id="newpw" minlength="6" placeholder="New password (6+ characters)" autocomplete="new-password"><button class="btn" id="savepw">Set password</button></div></label>
-  <div><strong>📱 Put it on your home screen</strong><div class="muted">
-    <b>iPhone / iPad:</b> open this site in Safari, tap the Share button, then “Add to Home Screen”.
-    <b>Android:</b> in Chrome, tap ⋮ then “Install app” (or “Add to Home screen”).
-    The first time you open the home-screen app, sign in with your email and password.</div>
-    ${installEvt ? `<div class="row" style="margin-top:8px"><button class="btn primary" id="install">Install app</button></div>` : ""}</div>
-  <div class="row"><button class="btn" id="signout">Sign out</button></div>`;
+  ${installEvt ? `<div class="row"><button class="btn" id="install">📱 Install the app</button></div>` : ""}
+  <div class="row"><button class="btn" id="signout">Sign out</button></div>
+  <div class="muted" style="font-size:13px"><a href="/about.html">About NextWatch</a> · how it works and how to add it to your home screen</div>`;
 }
 
 // ---------------- toast ----------------
@@ -1330,6 +1384,8 @@ async function onClick(e) {
   }
   if (b.dataset.group) {
     const g = GROUPS.find((x) => x[0] === b.dataset.group);
+    if (g[0] === "discover" && (groupOf(F.view) === "discover" || page !== "home")) { goHome(); return; }
+    if (page !== "home") showPage("home");
     F.lastIn = Object.assign({}, F.lastIn, { [groupOf(F.view)]: F.view });
     const last = (F.lastIn || {})[g[0]];
     F.view = last && g[3].includes(last) ? last : g[3][0];
@@ -1337,7 +1393,7 @@ async function onClick(e) {
   }
   if (b.dataset.moodex) { runMood(b.dataset.moodex); return; }
   if (b.dataset.ytsub != null) { F.ytSub = b.dataset.ytsub; F.ytSubs = { ...(F.ytSubs || {}), [F.ytMode]: F.ytSub }; saveF(); render(); return; }
-  if (b.dataset.ytmode) { F.ytMode = b.dataset.ytmode; F.ytSub = (F.ytSubs || {})[F.ytMode] || ""; F.view = F.view === "together" ? "together" : "all"; saveF(); render(); return; }
+  if (b.dataset.ytmode) { F.ytMode = b.dataset.ytmode; F.ytSub = F.ytMode in (F.ytSubs || {}) ? F.ytSubs[F.ytMode] : (F.ytMode === "f1" ? "race" : ""); F.view = F.view === "together" ? "together" : "all"; saveF(); render(); return; }
   if (b.dataset.score) {
     const [im, rt] = b.dataset.score.split("|");
     Object.assign(F, { imdb: im, rt, preset: F.preset }); rememberCatScores(); saveF(); render(); return;
@@ -1363,8 +1419,8 @@ async function onClick(e) {
     if (!wasOn) { Object.assign(F, PRESETS[i].set); F.preset = i; }
     saveF(); render(); return;
   }
-  if (b.dataset.cat) { rememberCatScores(); const wasYt = F.cat === "youtube"; F.cat = b.dataset.cat; useCatScores(); if (wasYt !== (F.cat === "youtube")) { F.genre = ""; buildFilters(); } if (F.view !== "together") F.view = "all"; if (!["movies", "series"].includes(F.cat)) { F.mood = ""; F.preset = -1; }
-    if (F.preset >= 0 && PRESETS[F.preset].only && PRESETS[F.preset].only !== F.cat) { Object.keys(PRESETS[F.preset].set).forEach((k) => (F[k] = DEFAULTS[k])); F.preset = -1; } saveF(); render(); return; }
+  if (b.dataset.page) { const yt = b.dataset.page === "youtube"; showPage("home"); if (yt !== (F.cat === "youtube")) setCat(yt ? "youtube" : (F.lastCat || "movies")); else render(); scrollTo({ top: 0 }); return; }
+  if (b.dataset.cat) { setCat(b.dataset.cat); return; }
   if (b.dataset.pick != null) { pickType = b.dataset.pick; surprise(); return; }
   if (b.dataset.view) { F.view = b.dataset.view; saveF(); render(); return; }
   if (b.dataset.dirpick) { Object.assign(F, { director: b.dataset.dirpick, view: "all" }); saveF(); render(); scrollTo({ top: 0, behavior: "smooth" }); toast(`Showing titles by ${b.dataset.dirpick}`); return; }
@@ -1380,8 +1436,9 @@ async function onClick(e) {
     case "surprise": pickId = null; choosing = true; renderPick(); $("pick").scrollIntoView({ behavior: "smooth", block: "start" }); return;
     case "again": surprise(); return;
     case "closepick": pickId = null; choosing = false; renderPick(); return;
-    case "acctBtn": $("account").hidden = !$("account").hidden; if (!$("account").hidden) renderAccount(); return;
-    case "partnerChip": $("account").hidden = false; renderAccount(); $("account").scrollIntoView({ behavior: "smooth", block: "start" }); return;
+    case "acctBtn": case "partnerChip": showPage(page === "account" ? "home" : "account"); return;
+    case "acctback": showPage("home"); return;
+    case "homeBtn": case "homeLogo": goHome(); return;
     case "copycode": try { await navigator.clipboard.writeText(S.me.invite_code); toast("Code copied"); } catch { toast("Your code is " + S.me.invite_code); } return;
     case "savename": {
       const v = $("myname").value.trim().slice(0, 30); if (!v) return;
@@ -1561,7 +1618,7 @@ function showSignIn(state) {
     gate(`<h1>Check your email</h1><p class="muted">We sent you a link. Open it on this device to finish signing in. It can take a minute to arrive — check spam too.</p><button class="btn" id="back">Back</button>`);
     $("back").onclick = () => showSignIn(); return;
   }
-  gate(`<h1>🎬 Watch Finder</h1><p class="muted">Great movies and shows already included with your streaming services.</p>
+  gate(`<h1 class="brandline"><img src="/icons/logo.svg" alt="" width="34" height="34"> Next<span>Watch</span></h1><p class="muted">Great movies and shows already included with your streaming services. <a href="/about.html" style="color:var(--ac)">How it works</a></p>
     <form id="signin" style="display:grid;gap:10px">
       <input type="email" id="email" required placeholder="you@example.com" autocomplete="email">
       <input type="password" id="pw" minlength="6" placeholder="Password (6+ characters)" autocomplete="current-password">
@@ -1623,6 +1680,7 @@ async function start() {
     }
     const session = await api.session();
     if (!session) return showSignIn();
+    S.email = (session.user && session.user.email) || "";
     if (RECOVERY) return showNewPassword();
     $("gate").hidden = true; $("app").hidden = false;
     $("fp").open = innerWidth < 620 ? false : local.get("wf-panel-open", false);

@@ -1,6 +1,6 @@
 {
-  "name": "Watch Finder",
-  "short_name": "Watch Finder",
+  "name": "NextWatch",
+  "short_name": "NextWatch",
   "description": "Well-rated movies and series included with your streaming subscriptions.",
   "start_url": "/",
   "scope": "/",

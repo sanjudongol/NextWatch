@@ -31,26 +31,28 @@ export const YT_TOPICS = {
     wonders: ["Amazing places", "most beautiful places in the world travel"],
   } },
   // a third item { days, every } = only videos from the last N days, refreshed every M days (default: all-time, weekly)
-  soccer: { label: "Soccer", subs: {
-    barca: ["Barcelona", "FC Barcelona", { days: 10, every: 1 }],
-    lfc: ["Liverpool", "Liverpool FC", { days: 10, every: 1 }],
-    highlights: ["Latest highlights", "football highlights", { days: 7, every: 1 }],
-    pl: ["Premier League", "premier league highlights", { days: 7, every: 1 }],
-    ucl: ["Champions League", "champions league highlights", { days: 14, every: 1 }],
-    transfers: ["Transfer news", "football transfer news", { days: 4, every: 1 }],
-    fpl: ["FPL", "FPL gameweek tips team selection", { days: 7, every: 1 }],
+  // soccer searches run in the UK region so "football" means soccer, never the NFL
+  soccer: { label: "Soccer", region: "GB", not: /\bnfl\b|touchdown|quarterback|super bowl|college football|\bcfb\b|\bncaa\b/i, subs: {
+    barca: ["Barcelona", "FC Barcelona", { days: 10, every: 1, must: /barcelona|bar[cç]a/i }],
+    lfc: ["Liverpool", "Liverpool FC", { days: 10, every: 1, must: /liverpool|\blfc\b|anfield/i }],
+    highlights: ["Latest highlights", "soccer match highlights goals", { days: 7, every: 1 }],
+    pl: ["Premier League", "premier league highlights", { days: 7, every: 1, must: /premier league|\bepl\b|\bpl\b|highlights/i }],
+    ucl: ["Champions League", "champions league highlights", { days: 14, every: 1, must: /champions league|\bucl\b/i }],
+    transfers: ["Transfer news", "football transfer news", { days: 4, every: 1, must: /transfer|sign|deal|bid|here we go|rumou?r/i }],
+    fpl: ["FPL", "FPL gameweek tips team selection", { days: 7, every: 1, must: /\bfpl\b|fantasy premier|gameweek|\bgw\s?\d/i }],
     tactics: ["Tactics & analysis", "football tactics explained"],
     goals: ["Best goals", "best football goals of all time"],
     legends: ["Legends", "messi ronaldo best moments"],
-    worldcup: ["World Cup", "world cup best moments"],
+    worldcup: ["World Cup", "fifa world cup best moments"],
     skills: ["Skills", "best football skills"],
     stories: ["Stories & documentaries", "football documentary"],
   } },
-  f1: { label: "F1", subs: {
-    race: ["Race highlights", "F1 race highlights grand prix", { days: 21, every: 1 }],
-    quali: ["Qualifying", "F1 qualifying highlights", { days: 21, every: 1 }],
-    sprint: ["Sprint", "F1 sprint highlights", { days: 21, every: 1 }],
-    f1news: ["News & analysis", "F1 news analysis", { days: 7, every: 1 }],
+  // F1: each video goes to the first tab whose title rule it matches, so official "Race Highlights" land under Race
+  f1: { label: "F1", not: /motogp|moto ?gp|indycar|nascar|f1 ?2[0-9] game|\bf1 ?2[0-9]\b|career mode|league|esports|sim ?racing|fantasy/i, subs: {
+    race: ["Race highlights", "F1 race highlights grand prix", { days: 21, every: 1, minViews: 20000, must: /race highlights|extended highlights|grand prix highlights|race recap|driver.?s react after the race/i, mustNot: /sprint|qualifying|fp[123]|practice/i }],
+    quali: ["Qualifying", "F1 qualifying highlights", { days: 21, every: 1, minViews: 20000, must: /qualifying|pole lap|quali\b/i, mustNot: /sprint qualifying|sprint shootout/i }],
+    sprint: ["Sprint", "F1 sprint highlights", { days: 21, every: 1, minViews: 20000, must: /sprint/i }],
+    f1news: ["News & analysis", "F1 news analysis", { days: 7, every: 1, minViews: 20000 }],
     overtakes: ["Best overtakes", "F1 best overtakes of all time"],
     classics: ["Classic races", "F1 greatest races of all time"],
     tech: ["Tech explained", "F1 car technology explained"],
@@ -124,25 +126,45 @@ export async function refreshYouTube({ allTime = "auto" } = {}) {
       await save(list); out.alltime += list.length;
     } catch (e) { out.errors.push(e.message); if (/quota/i.test(e.message)) break; }
   }
-  // 3) learning sections (history, food & travel): each sub-topic refreshed weekly, searches run side by side
+  // 3) topic sections (history, food & travel, soccer, F1): searches run side by side, then each video is filed under one tab
   const ago = (d) => new Date(Date.now() - d * 864e5).toISOString();
   const jobs = [];
-  for (const [topic, def] of Object.entries(YT_TOPICS)) for (const [sub, [, q, o = {}]] of Object.entries(def.subs)) jobs.push({ topic, sub, q, o });
-  await Promise.all(jobs.map(async ({ topic, sub, q, o }) => {
+  for (const [topic, def] of Object.entries(YT_TOPICS)) for (const [sub, [, q, o = {}]] of Object.entries(def.subs)) jobs.push({ topic, def, sub, q, o });
+  const found = new Map(); // video id -> { v, topic, subs: Set }
+  await Promise.all(jobs.map(async ({ topic, def, sub, q, o }) => {
     try {
       if (allTime !== true) {
         const fresh = await sb(`titles?select=id&kind=eq.yt&data->>sub=eq.${sub}&updated_at=gt.${encodeURIComponent(ago((o.every || 7) - 0.1))}&limit=1`);
         if (fresh && fresh.length) return;
       }
-      const sr = await yt(`search?part=id&type=video&order=viewCount&regionCode=US&relevanceLanguage=en&maxResults=30${o.days ? "&publishedAfter=" + encodeURIComponent(ago(o.days)) : ""}&q=${encodeURIComponent(q)}`);
+      const sr = await yt(`search?part=id&type=video&order=viewCount&regionCode=${def.region || "US"}&relevanceLanguage=en&maxResults=30${o.days ? "&publishedAfter=" + encodeURIComponent(ago(o.days)) : ""}&q=${encodeURIComponent(q)}`);
       const ids = (sr.items || []).map((x) => x.id && x.id.videoId).filter(Boolean);
       if (!ids.length) return;
       const d = await yt(`videos?part=snippet,statistics,contentDetails&id=${[...new Set(ids)].join(",")}`);
-      const list = (d.items || []).filter((v) => (YT_CATS[(v.snippet || {}).categoryId] || "") !== "Music")
-        .map((v) => toTitle(v, { topic, sub })).filter((t) => t.secs >= (o.days ? 90 : 180)); // skip Shorts and clips
-      await save(list); out[topic] = (out[topic] || 0) + list.length;
+      for (const v of d.items || []) {
+        const sn = v.snippet || {}, text = (sn.title || "") + " " + (sn.channelTitle || "");
+        if ((YT_CATS[sn.categoryId] || "") === "Music" || (def.not && def.not.test(text))) continue;
+        if (secs((v.contentDetails || {}).duration) < (o.days ? 90 : 180)) continue; // skip Shorts and clips
+        if (o.minViews && (+(v.statistics || {}).viewCount || 0) < o.minViews) continue; // skip tiny channels and game sims
+        const f = found.get(v.id) || { v, topic, subs: new Set() };
+        f.subs.add(sub); found.set(v.id, f);
+      }
     } catch (e) { out.errors.push(e.message); }
   }));
+  // a video found by several searches goes to the first tab (in menu order) whose title rule fits
+  const ok = (t, o) => (!o.must || o.must.test(t)) && (!o.mustNot || !o.mustNot.test(t));
+  const list = [];
+  for (const { v, topic, subs } of found.values()) {
+    const title = (v.snippet || {}).title || "", order = Object.entries(YT_TOPICS[topic].subs);
+    const recent = order.some(([k, [, , o = {}]]) => subs.has(k) && o.days);
+    // a recent video can move to another recent tab whose title rule fits (e.g. "Race Highlights" found by the sprint search)
+    const pick = order.find(([k, [, , o = {}]]) => o.must && ok(title, o) && (subs.has(k) || (recent && o.days)))
+      || order.find(([k, [, , o = {}]]) => subs.has(k) && ok(title, o))
+      || (recent && order.find(([, [, , o = {}]]) => o.days && !o.must)); // other recent news (practice, reactions) goes to News
+    if (pick) list.push(toTitle(v, { topic, sub: pick[0] }));
+  }
+  for (let i = 0; i < list.length; i += 100) await save(list.slice(i, i + 100));
+  for (const t of list) out[t.topic] = (out[t.topic] || 0) + 1;
   return out;
 }
 
