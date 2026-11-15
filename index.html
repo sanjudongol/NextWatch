@@ -182,6 +182,11 @@ footer{color:var(--mu);font-size:12px;margin-top:24px}
 .vthumb{position:relative;width:168px;aspect-ratio:16/9;border-radius:8px;overflow:hidden;background:linear-gradient(135deg,#c4302b,#6b1512)}
 .vthumb img{width:100%;height:100%;object-fit:cover;display:block}
 .vthumb .dur{position:absolute;right:4px;bottom:4px;background:rgba(0,0,0,.8);color:#fff;font-size:11px;font-weight:600;border-radius:4px;padding:1px 5px}
+.vthumb{display:block}
+.vthumb .play{position:absolute;inset:0;margin:auto;width:38px;height:38px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;display:grid;place-items:center;font-size:15px;padding-left:2px;opacity:.85;transition:opacity .15s}
+.vthumb:hover .play{opacity:1;background:#c4302b}
+.vid a.t{color:inherit;text-decoration:none}.vid a.t:hover{text-decoration:underline}
+.rb.ytgo{background:#c4302b;color:#fff;border-color:#c4302b;text-decoration:none;display:inline-flex;align-items:center}
 .vid .t{font-size:15px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .ytmodes{display:flex;gap:6px}
 #grid:has(.vid){grid-template-columns:1fr}
@@ -795,13 +800,15 @@ function row(t) {
   </div>
 </article>`;
 }
+const ytUrl = (t) => "https://www.youtube.com/watch?v=" + encodeURIComponent(t.id.replace(/^yt-/, ""));
 function vid(t) {
-  const id = t.id, mk = S.marks.get(id) || "";
+  const id = t.id, mk = S.marks.get(id) || "", url = esc(ytUrl(t));
+  const ext = `href="${url}" target="_blank" rel="noopener"`;
   const btn = (attrs, on, cls, label, title) => `<button class="rb ${cls} ${on ? "on" : ""}" ${attrs} data-id="${esc(id)}" title="${esc(title)}">${label}</button>`;
   const badges = badgeList(t);
   return `<article data-row="${esc(id)}" class="vid ${mk === "skipped" ? "dim" : ""}">
-  <div class="vthumb">${t.poster ? `<img src="${esc(t.poster)}" alt="" loading="lazy" onerror="this.remove()">` : ""}${t.secs ? `<span class="dur">${fmtDur(t.secs)}</span>` : ""}</div>
-  <div style="min-width:0"><div class="t">${esc(t.title)}</div>
+  <a class="vthumb" ${ext} aria-label="Watch on YouTube">${t.poster ? `<img src="${esc(t.poster)}" alt="" loading="lazy" onerror="this.remove()">` : ""}<span class="play">▶</span>${t.secs ? `<span class="dur">${fmtDur(t.secs)}</span>` : ""}</a>
+  <div style="min-width:0"><a class="t" ${ext}>${esc(t.title)}</a>
     <div class="meta">${esc(t.channel)}</div>
     <div class="meta">${fmtViews(t.views)} views${t.year ? " · " + t.year : ""} · ${esc(gl(t).join(", "))}</div>
     ${badges.length ? `<div class="badges">${badges.join("")}</div>` : ""}</div>
@@ -810,6 +817,7 @@ function vid(t) {
     ${S.partner ? btn('data-seen="partner"', theySaw(id), "", `${theySaw(id) ? "✓" : "○"} ${esc(pName())}`, `${pName()} watched`) : ""}
     ${btn('data-mark="want"', mk === "want", "mk-want", "★ Want", "Want to watch")}
     ${btn('data-mark="skipped"', mk === "skipped", "mk-skipped", "✕", "Not interested")}
+    <a class="rb ytgo" ${ext} title="Open on YouTube">▶ Watch</a>
   </div>
 </article>`;
 }
