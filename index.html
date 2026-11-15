@@ -54,6 +54,9 @@ select,.fgrid input{font:inherit;color:var(--tx);background:var(--bg);border:1px
 .chips{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px}
 .chips .chip{background:var(--bg)}
 .chips .chip.on{background:var(--ac)}
+.chips .chip:not(.on){text-decoration:line-through;opacity:.7}
+.chips .lbl{width:100%;font-size:12px;color:var(--mu)}
+.chips .chip.all{text-decoration:none;opacity:1;color:var(--ac);border-color:var(--ac)}
 .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
 .cats{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:12px;background:var(--pill);border-radius:12px;padding:4px}
 .cats button{border:0;background:transparent;border-radius:9px;padding:8px 6px;font-size:14px;font-weight:600;color:var(--mu)}
@@ -376,11 +379,18 @@ function buildFilters() {
   opts($("genre"), "All genres", [...new Set(all().flatMap((t) => t.genres || []))].sort());
   const dirs = [...new Set(all().flatMap((t) => t.dirs || []))].sort((a, b) => a.split(" ").pop().localeCompare(b.split(" ").pop()));
   $("dirlist").innerHTML = dirs.map((d) => `<option value="${esc(d)}"></option>`).join("");
+  renderServiceChips();
+}
+function renderServiceChips() {
   const svcs = [...new Set(all().flatMap((t) => t.services || []))].sort();
-  $("chips").innerHTML = svcs.map((s) => `<button class="chip ${F.svcOff.includes(s) ? "" : "on"}" data-svc="${esc(s)}">${esc(s)}</button>`).join("");
+  const off = F.svcOff.filter((x) => svcs.includes(x)).length;
+  $("chips").innerHTML = `<div class="lbl">Streaming services: tap one to hide it, tap again to bring it back</div>` +
+    svcs.map((s) => `<button class="chip ${F.svcOff.includes(s) ? "" : "on"}" data-svc="${esc(s)}" aria-pressed="${!F.svcOff.includes(s)}" title="${F.svcOff.includes(s) ? "Hidden: tap to show titles on " : "Showing: tap to hide titles only on "}${esc(s)}">${F.svcOff.includes(s) ? "" : "✓ "}${esc(s)}</button>`).join("") +
+    (off ? `<button class="chip all" data-svcall="1">Show all services</button>` : "");
 }
 function syncControls() {
   CTRL.forEach((k) => { if ($(k).value !== F[k]) $(k).value = F[k]; });
+  renderServiceChips();
   $("dir").textContent = F.desc ? "Highest first ↓" : "Lowest first ↑";
   $("cats").innerHTML = CATS.map(([k, l]) => `<button class="${F.cat === k ? "on" : ""}" data-cat="${k}">${l}</button>`).join("");
   $("presets").hidden = F.cat !== "main";
@@ -676,6 +686,7 @@ document.addEventListener("click", async (e) => {
     return;
   }
   if (b.dataset.open) { openRow = openRow === b.dataset.open ? null : b.dataset.open; render(); return; }
+  if (b.dataset.svcall) { F.svcOff = []; saveF(); render(); return; }
   if (b.dataset.svc) { const s = b.dataset.svc; F.svcOff = F.svcOff.includes(s) ? F.svcOff.filter((x) => x !== s) : F.svcOff.concat(s); saveF(); render(); return; }
   if (b.dataset.preset != null) {
     const i = +b.dataset.preset, wasOn = F.preset === i;
