@@ -335,6 +335,8 @@ body.noscroll{overflow:hidden}
     </header>
 
     <section id="account" class="box" hidden></section>
+    <section id="moodbox" class="box" hidden></section>
+    <section id="pick" hidden></section>
 
     <div id="home">
     <div class="topbar">
@@ -370,8 +372,6 @@ body.noscroll{overflow:hidden}
     <div id="alert" hidden></div>
     <div id="tipsbox"></div>
     <div class="tabs" id="tabs"></div>
-    <section id="moodbox" class="box" hidden></section>
-    <section id="pick" hidden></section>
     <section id="shelves" hidden></section>
     <div id="detail" hidden></div>
     <div class="statusbar"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><div id="status"></div><span id="findwrap" hidden style="display:inline-flex;gap:4px"><button class="chip" id="findmore"></button><button class="chip" id="clearfind" aria-label="Clear" title="Clear and show everything again">✕</button></span></div><div style="display:flex;gap:6px"><button class="chip" id="shelveson" hidden title="Show Tonight’s pick and the rows of picks again">✨ Picks</button><button class="chip" id="layout" title="Switch between detailed cards and a compact list"></button></div></div>
@@ -1148,7 +1148,7 @@ const MOOD_EXAMPLES = ["Something funny and short", "A tense thriller, nothing t
 function renderMood() {
   const el = $("moodbox");
   if (el.hidden) return;
-  const head = `<div class="moodhead"><b>🪄 What are you in the mood for?</b><button class="chip" id="moodclose" aria-label="Close">✕</button></div>
+  const head = `<div class="pagehead"><button class="btn" id="moodclose" aria-label="Back">←</button><h2>🪄 What are you in the mood for?</h2></div>
     <form id="moodform"><textarea id="moodtext" placeholder="Describe it in your own words, e.g. “something light and funny, under 2 hours, no horror”">${esc(moodText)}</textarea>
     <div class="row" style="margin-top:8px;justify-content:space-between"><div class="presets" style="padding:0;flex:1;min-width:0">${MOOD_EXAMPLES.map((e) => `<button type="button" class="chip" data-moodex="${esc(e)}">${esc(e)}</button>`).join("")}</div>
     <button class="btn primary">Find picks</button></div></form>`;
@@ -1244,13 +1244,13 @@ const typeChips = () => [["Movie", "🎬 Movie"], ["Series", "📺 Series"], [""
 function renderPick() {
   const el = $("pick"), t = pickId && all().find((x) => x.id === pickId);
   if (choosing && !t) {
-    el.innerHTML = `<div class="pickhead">🎲 Surprise me with…<div><button class="chip" id="closepick">Close</button></div></div>
+    el.innerHTML = `<div class="pagehead"><button class="btn" id="closepick" aria-label="Back">←</button><h2>🎲 Surprise me with…</h2></div>
       <div class="choose"><button class="btn primary" data-pick="Movie">🎬 A movie</button><button class="btn primary" data-pick="Series">📺 A series</button><button class="btn" data-pick="">🎲 Either</button></div>`;
-    el.hidden = false; return;
+    el.hidden = page !== "pick"; return;
   }
-  if (!t) { el.hidden = true; el.innerHTML = ""; return; }
-  el.innerHTML = `<div class="pickhead">🎲 Tonight’s ${t.type === "Movie" ? "movie" : "series"}<div>${typeChips()}<button class="chip" id="sharepick">📤 Share</button><button class="chip" id="again">Pick another</button><button class="chip" id="closepick">Close</button></div></div>${t.kind === "yt" ? vid(t) : card(t)}`;
-  el.hidden = false;
+  if (!t) { el.innerHTML = ""; if (page === "pick") showPage("home"); return; }
+  el.innerHTML = `<div class="pagehead"><button class="btn" id="closepick" aria-label="Back">←</button><h2>🎲 Surprise pick</h2></div><div class="pickhead">Tonight’s ${t.type === "Movie" ? "movie" : "series"}<div>${typeChips()}<button class="chip" id="sharepick">📤 Share</button><button class="chip" id="again">Pick another</button></div></div>${t.kind === "yt" ? vid(t) : card(t)}`;
+  el.hidden = page !== "pick";
 }
 function surprise() {
   // uses whatever is on screen (category, filters, search), narrowed to the type asked for
@@ -1263,7 +1263,7 @@ function surprise() {
     return;
   }
   pickId = pool[Math.floor(Math.random() * pool.length)].id; choosing = false;
-  renderPick(); $("pick").scrollIntoView({ behavior: "smooth", block: "start" });
+  if (page !== "pick") showPage("pick"); else { renderPick(); scrollTo({ top: 0 }); }
 }
 
 // ---------------- account panel ----------------
@@ -1271,9 +1271,12 @@ function surprise() {
 let page = "home";
 function showPage(p) {
   page = p;
-  $("account").hidden = p !== "account"; $("home").hidden = p !== "home";
+  $("account").hidden = p !== "account"; $("home").hidden = p !== "home"; $("moodbox").hidden = p !== "mood"; $("pick").hidden = p !== "pick";
   document.querySelectorAll(".pageswitch button").forEach((b) => b.classList.toggle("on", p === "home" && (b.dataset.page === "youtube") === (F.cat === "youtube")));
   if (p === "account") renderAccount();
+  if (p === "mood") { renderMood(); setTimeout(() => $("moodtext") && $("moodtext").focus(), 200); }
+  if (p === "pick") renderPick();
+  if (p === "home") render();
   scrollTo({ top: 0 });
 }
 function setCat(k) {
@@ -1287,7 +1290,7 @@ function setCat(k) {
   saveF(); render();
 }
 function goHome() { // Movies & TV, all matches, nothing searched
-  showPage("home"); $("q").value = ""; $("moodbox").hidden = true;
+  showPage("home"); $("q").value = "";
   if (F.cat === "youtube") setCat(F.lastCat || "movies"); else { F.view = "all"; saveF(); render(); }
 }
 function renderAccount() {
@@ -1436,9 +1439,9 @@ async function onClick(e) {
     }
     case "layout": F.layout = F.layout === "list" ? "cards" : "list"; openRow = null; saveF(); render(); return;
     case "install": if (installEvt) { installEvt.prompt(); installEvt = null; renderAccount(); } return;
-    case "surprise": pickId = null; choosing = true; renderPick(); $("pick").scrollIntoView({ behavior: "smooth", block: "start" }); return;
+    case "surprise": if (page === "pick") { showPage("home"); return; } pickId = null; choosing = true; showPage("pick"); return;
     case "again": surprise(); return;
-    case "closepick": pickId = null; choosing = false; renderPick(); return;
+    case "closepick": pickId = null; choosing = false; showPage("home"); return;
     case "acctBtn": case "partnerChip": showPage(page === "account" ? "home" : "account"); return;
     case "acctback": showPage("home"); return;
     case "homeBtn": case "homeLogo": goHome(); return;
@@ -1466,8 +1469,8 @@ async function onClick(e) {
       if ($("findmore").dataset.role === "director") F.director = ""; else $("q").value = "";
       saveF(); render(); return;
     }
-    case "moodBtn": { const el = $("moodbox"); el.hidden = !el.hidden; renderMood(); if (!el.hidden) { el.scrollIntoView({ behavior: "smooth", block: "start" }); setTimeout(() => $("moodtext") && $("moodtext").focus(), 300); } return; }
-    case "moodclose": $("moodbox").hidden = true; moodRes = null; return;
+    case "moodBtn": showPage(page === "mood" ? "home" : "mood"); return;
+    case "moodclose": moodRes = null; showPage("home"); return;
     case "openfilters": $("fp").open = true; return;
     case "alertclose": local.set("wf-alert-off", $("alert").dataset.sig || ""); renderAlert(); return;
     case "heronext": heroShift++; render(); return;
