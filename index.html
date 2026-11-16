@@ -1984,7 +1984,7 @@ function showSignIn(state) {
     gate(`<h1>Check your email</h1><p class="muted">We sent you a link. Open it on this device to finish signing in. It can take a minute to arrive — check spam too.</p><button class="btn" id="back">Back</button>`);
     $("back").onclick = () => showSignIn(); return;
   }
-  gate(`<h1 class="brandline"><img src="/icons/logo.png" alt="" width="34" height="34"> <span>Popcorn<span>Date</span></span></h1><div class="slogan" style="margin:-6px 0 10px;width:auto;max-width:none;white-space:nowrap">Instantly watch what’s good</div><p class="muted">Great movies and shows already included with your streaming services. <a href="/about.html" style="color:var(--ac)">How it works</a></p>
+  gate(`<img src="/icons/icon-192.png" alt="" width="76" height="76" style="display:block;margin:0 auto 10px;border-radius:18px;box-shadow:0 8px 24px rgb(232 71 155 / .3)"><h1 class="brandline"><span>Popcorn<span>Date</span></span></h1><div class="slogan" style="margin:-6px 0 10px;width:auto;max-width:none;white-space:nowrap">Instantly watch what’s good</div><p class="muted">Movie night for two: great movies and shows already included with your streaming services. <a href="/about.html" style="color:var(--ac)">How it works</a></p>
     <form id="signin" style="display:grid;gap:10px">
       <input type="email" id="email" required placeholder="you@example.com" autocomplete="email">
       <input type="password" id="pw" minlength="6" placeholder="Password (6+ characters)" autocomplete="current-password">
