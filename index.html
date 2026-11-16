@@ -568,8 +568,10 @@ textarea:focus,input:focus{outline:2px solid color-mix(in srgb,var(--ac) 60%,tra
   .phoneonly{display:block!important}
   #sheetscore select{font-weight:400}
   #scorebar,.ctlrow .sortpop,#fchipbox,#scorepop{display:none!important}
-  #home>#layout{display:flex;align-items:center;gap:4px;white-space:nowrap;margin:2px 2px 8px auto;width:max-content;background:none!important;border:0!important;color:var(--ac)!important;font-weight:600;padding:6px 2px!important;min-height:32px}
-  #home>#layout[hidden]{display:none}
+  #listbar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 10px}
+  #listbar:not(:has(> :not([hidden]))){display:none}
+  #listbar>#layout{display:flex;align-items:center;gap:4px;white-space:nowrap;margin-left:auto;background:none!important;border:0!important;color:var(--ac)!important;font-weight:600;padding:6px 2px!important;min-height:32px}
+  #listbar>#layout[hidden]{display:none}
   #layout .ico{width:16px;height:16px;stroke-width:2.2}
   body.hasq #layout{display:none}
   .ctlrow:not(:has(.ytmodes)){display:none}
@@ -704,6 +706,7 @@ textarea:focus,input:focus{outline:2px solid color-mix(in srgb,var(--ac) 60%,tra
     <div id="ytedit" hidden></div>
     <div class="shelfend" id="allhead" hidden>All matches</div>
     <div class="statusbar"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><div id="status"></div><span id="ratewho" hidden style="display:inline-flex;gap:4px"></span><span id="findwrap" hidden style="display:inline-flex;gap:4px"><button class="chip" id="findmore"></button><button class="chip" id="clearfind" aria-label="Clear" title="Clear and show everything again">✕</button></span></div><div style="display:flex;gap:6px"><button class="chip" id="shelveson" hidden title="Show Tonight’s pick and the rows of picks again">Picks</button><button class="chip" id="layout" title="Switch between detailed cards and a compact list"></button><button type="button" class="chip fbtn" id="openfilters2" title="Sort and filter this list"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M7 12h10M10 17h4"/></svg>Sort &amp; Filter<span class="fcount" id="fcount"></span></button></div></div>
+    <div id="listbar"></div>
     <div id="grid"></div>
 
     <footer>
@@ -2262,8 +2265,9 @@ function placeCtrls() {
   // iPhone: season news sits below For you, then "All matches", the section pills and the list
   const sb = document.querySelector(".statusbar");
   // iPhone: Expand all / Collapse all sits right on top of the list it expands; on wider screens it's back in the status row
-  if (ph) { if ($("layout").nextElementSibling !== $("grid")) $("grid").before($("layout")); }
-  else if ($("layout").parentElement === $("home")) $("openfilters2").before($("layout"));
+  // iPhone: Sort & Filter and Expand all share one bar right on top of the list they act on
+  if (ph) { if ($("listbar").nextElementSibling !== $("grid")) $("grid").before($("listbar")); if ($("openfilters2").parentElement !== $("listbar")) $("listbar").append($("openfilters2"), $("layout")); }
+  else if ($("layout").parentElement === $("listbar")) { const st = document.querySelector(".statusbar"); st.lastElementChild.append($("layout"), $("openfilters2")); }
   if (ph) { if (![$("tabs"), $("cats")].includes(sb.previousElementSibling)) { sb.before($("tabs")); $("tabs").before($("cats")); } if ($("alert").nextElementSibling !== $("allhead")) $("allhead").before($("alert")); }
   else { if ($("alert").nextElementSibling !== $("tipsbox")) $("tipsbox").before($("alert")); if ($("tabs").nextElementSibling !== $("shelves")) $("shelves").before($("tabs")); }
   if (!ph && $("cats").parentElement !== document.querySelector(".topbar")) document.querySelector(".topbar").appendChild($("cats"));
