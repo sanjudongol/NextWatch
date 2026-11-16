@@ -451,6 +451,10 @@ textarea:focus,input:focus{outline:2px solid color-mix(in srgb,var(--ac) 60%,tra
   .topbar{position:static;margin:0;padding:10px 0 0;background:none}
   .topbar .search{margin-top:0!important}
   .cats{background:none;padding:0;gap:8px;margin-top:12px}
+  .cats{flex-wrap:wrap;gap:6px!important;overflow:visible!important;-webkit-mask-image:none!important;mask-image:none!important} /* all sections and "＋ Edit" stay in view */
+  .cats button{padding:0 11px!important}
+  .cats button.catedit{width:34px;padding:0!important;font-size:20px!important;font-weight:400!important;border:0!important;background:color-mix(in srgb,var(--ac) 14%,transparent)!important;display:grid;place-items:center}
+  .cats .catedit .cl{display:none}
   .cats button{background:var(--pill);border-radius:999px;padding:0 14px!important;min-height:34px;color:var(--tx);font-weight:500;font-size:.882rem;box-shadow:none!important;position:relative}
   .cats button::after{content:"";position:absolute;inset:-5px 0}
   .cats button.on{background:var(--tx);color:var(--bg)}
@@ -761,7 +765,9 @@ const BUILTIN_CATS = ["movies", "series", "anime", "reality", "docs", "truecrime
 const isUs = (k) => typeof k === "string" && k.startsWith("us-");
 const secOf = (k) => S.sections.find((x) => x.key === k);
 const SEC_FILTERS = ["genre", "runtime", "recent", "director", "status2", "type", "imdb", "rt", "mode", "sort", "desc"];
-const catTabs = () => F.catTabs || { order: [], hidden: [] };
+// start with 4 sections so "＋ Edit" stays in view; Anime, True crime and Kids can be added back there
+const CAT_DEFAULT = { order: ["movies", "series", "reality", "docs"], hidden: ["anime", "truecrime", "kids"] };
+const catTabs = () => F.catTabs || CAT_DEFAULT;
 const allCatTabs = () => [...BUILTIN_CATS.map((k) => [k, { movies: "Movies", series: "Series", anime: "Anime", reality: "Reality", docs: "Docs", truecrime: "True crime", kids: "Kids" }[k]]), ...S.sections.map((x) => [x.key, x.label, x.user_id])];
 function visibleTabs(all, cfg) {
   const o = cfg.order || [], hid = new Set(cfg.hidden || []);
@@ -1109,7 +1115,7 @@ function syncControls() {
   const SHORT = { movies: "Movies", series: "Series", anime: "Anime", reality: "Reality", docs: "Docs", truecrime: "True crime", kids: "Kids", youtube: "YouTube" };
   if (isUs(F.cat) && !secOf(F.cat)) F.cat = "movies"; // a saved section that was deleted
   if (F.cat !== "youtube" && !catList().some(([k]) => k === F.cat) && catList().length) F.cat = catList()[0][0];
-  $("cats").innerHTML = catList().map(([k, l]) => `<button class="${F.cat === k ? "on" : ""}" data-cat="${k}" title="${esc(l)}">${esc(SHORT[k] || l)}</button>`).join("") + `<button class="catedit" id="cateditbtn" title="Add, remove or reorder sections">＋ Edit</button>`;
+  $("cats").innerHTML = catList().map(([k, l]) => `<button class="${F.cat === k ? "on" : ""}" data-cat="${k}" title="${esc(l)}">${esc(SHORT[k] || l)}</button>`).join("") + `<button class="catedit" id="cateditbtn" title="Add or edit sections" aria-label="Add or edit sections">＋<span class="cl"> Edit</span></button>`;
   const onCat = $("cats").querySelector(".on"); if (onCat && phone()) { const c = $("cats"), l = onCat.offsetLeft, r = l + onCat.offsetWidth; if (l < c.scrollLeft || r > c.scrollLeft + c.clientWidth) c.scrollLeft = l - 24; }
   const topCat = F.cat === "movies" || F.cat === "series";
 
@@ -1720,7 +1726,7 @@ function renderTips() {
   const box = $("tipsbox");
   if (local.get("wf-tips-done", false) || !S.me) { box.innerHTML = ""; return; }
   box.innerHTML = `<div class="tips"><div class="tipshead"><b>Quick tips</b><button class="btn" id="tipsok">Got it</button></div><ol>
-    <li><b>Pick a section</b> (Movies, Series, Anime…) just above the list, or search. Tap <b>＋ Edit</b> at the end of those pills to remove or reorder sections; to make your own, set filters in Sort &amp; Filter and tap <b>Save as section</b>. Videos live on their own <b>YouTube</b> page: History, Food & travel, Soccer, F1, Politics and Podcasts. Tap <b>+ Follow</b> on a video to see that channel under ★ Following. Tap <b>＋ Add or edit tabs</b> to add, remove or reorder tabs, or create up to 3 of your own. Tap the logo or Home to get back.</li>
+    <li><b>Pick a section</b> (Movies, Series, Anime…) just above the list, or search. Tap the <b>＋</b> at the end of those pills to remove or reorder sections; to make your own, set filters in Sort &amp; Filter and tap <b>Save as section</b>. Videos live on their own <b>YouTube</b> page: History, Food & travel, Soccer, F1, Politics and Podcasts. Tap <b>+ Follow</b> on a video to see that channel under ★ Following. Tap <b>＋ Add or edit tabs</b> to add, remove or reorder tabs, or create up to 3 of your own. Tap the logo or Home to get back.</li>
     <li><b>See details:</b> tap any title (or the <b>›</b> arrow) for the summary, cast and where to watch. In Cards view, tap <b>More</b> to read the full summary.</li>
     <li><b>Mark titles:</b> tap Seen, Want or Not interested.${"ontouchstart" in window ? " On your phone you can also <b>swipe right</b> for Seen and <b>swipe left</b> for Not interested." : ""}</li>
     <li><b>Sync</b> refreshes the catalog. It also updates by itself every night.</li>
@@ -2242,6 +2248,7 @@ async function toggleFollow(cid, name, on = !S.follows.has(cid)) {
   try { const r = await api.youtubeStep({ follow: cid }); await reload(); toast(`${name}: ${r.followed || 0} video${r.followed === 1 ? "" : "s"} under ★ Following`, () => { F.ytMode = "following"; F.ytSub = ""; saveF(); render(); scrollTo({ top: 0 }); }, "Show"); }
   catch (e) { toast(`Following ${name}. Their episodes will load on the next sync.`); }
 }
+if (!local.get("wf-cattabs-v1", false)) { delete F.catTabs; local.set("wf-cattabs-v1", true); saveF(); } // 4 sections to start
 if (!local.get("wf-yttabs-v2", false)) { delete F.ytTabs; local.set("wf-yttabs-v2", true); saveF(); } // new default YouTube tabs
 // iPhone: scores and sort move into the Sort & Filter sheet (the same controls, so their settings carry over)
 function placeCtrls() {
