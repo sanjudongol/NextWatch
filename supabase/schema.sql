@@ -55,6 +55,15 @@ create table if not exists public.follows (
 create table if not exists public.yt_channels (key text primary key, channel_id text not null, title text not null default '', resolved_at timestamptz not null default now());
 alter table public.yt_channels enable row level security;
 
+-- 7. Titles hand-picked for your linked partner
+create table if not exists public.picks (
+  user_id uuid not null references auth.users on delete cascade,
+  title_id text not null,
+  created_at timestamptz not null default now(),
+  primary key (user_id, title_id)
+);
+alter table public.picks enable row level security;
+
 -- Create a profile when someone signs in for the first time
 create or replace function public.handle_new_user() returns trigger
 language plpgsql security definer set search_path = public as $$
@@ -149,6 +158,13 @@ drop policy if exists "own follows: write" on public.follows;
 create policy "own follows: write" on public.follows for all to authenticated
   using (user_id = auth.uid()) with check (user_id = auth.uid());
 
+drop policy if exists "own and partner picks: read" on public.picks;
+create policy "own and partner picks: read" on public.picks for select to authenticated
+  using (user_id = auth.uid() or public.is_my_partner(user_id));
+drop policy if exists "own picks: write" on public.picks;
+create policy "own picks: write" on public.picks for all to authenticated
+  using (user_id = auth.uid()) with check (user_id = auth.uid());
+
 -- Table permissions
 revoke all on public.titles, public.profiles, public.marks, public.views from anon, authenticated;
 grant select on public.titles to authenticated;
@@ -160,6 +176,9 @@ grant all on public.titles, public.profiles, public.marks, public.views to servi
 revoke all on public.follows from anon, authenticated;
 grant select, insert, update, delete on public.follows to authenticated;
 grant all on public.follows to service_role;
+revoke all on public.picks from anon, authenticated;
+grant select, insert, delete on public.picks to authenticated;
+grant all on public.picks to service_role;
 revoke all on public.yt_channels from anon, authenticated;
 grant all on public.yt_channels to service_role;
 revoke execute on function public.handle_new_user() from public, anon, authenticated;   -- only the sign-up trigger runs it
