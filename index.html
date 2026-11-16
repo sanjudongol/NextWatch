@@ -1379,6 +1379,8 @@ function render() {
   $("grid").className = compact ? "list" : "";
   $("grid").innerHTML = list.length ? list.map((t) => t.kind === "yt" ? vid(t) : compact ? (openRow === t.id ? card(t, true) : row(t)) : card(t)).join("") : `<div class="empty">${empty}</div>`;
   renderShelves(list); renderDetail();
+  // iPhone: on Home the section pills come before All / New to both; on Lists and Watched the list picker comes first, then the pills
+  if (phone()) { const home = groupOf(F.view) === "discover"; if (home && $("cats").nextElementSibling !== $("tabs")) $("tabs").before($("cats")); if (!home && $("tabs").nextElementSibling !== $("cats")) $("cats").before($("tabs")); }
   $("allhead").hidden = !phone() || $("shelves").hidden || !document.querySelector("#shelves .shelfend"); // iPhone: heading sits under the season news
   renderPick(); renderSub(); renderAlert(); renderTips(); if (moodRes) { moodRes.picks = moodPicks(moodRes.want); renderMood(); }
 }
@@ -2075,7 +2077,7 @@ function placeCtrls() {
   const ph = phone(), rows = [...document.querySelectorAll("label.prow")];
   // iPhone: season news sits below For you, then "All matches", the section pills and the list
   const sb = document.querySelector(".statusbar");
-  if (ph) { if ($("tabs").nextElementSibling !== sb) sb.before($("tabs")); if ($("cats").nextElementSibling !== $("tabs")) $("tabs").before($("cats")); if ($("alert").nextElementSibling !== $("allhead")) $("allhead").before($("alert")); }
+  if (ph) { if (![$("tabs"), $("cats")].includes(sb.previousElementSibling)) { sb.before($("tabs")); $("tabs").before($("cats")); } if ($("alert").nextElementSibling !== $("allhead")) $("allhead").before($("alert")); }
   else { if ($("alert").nextElementSibling !== $("tipsbox")) $("tipsbox").before($("alert")); if ($("tabs").nextElementSibling !== $("shelves")) $("shelves").before($("tabs")); }
   if (!ph && $("cats").parentElement !== document.querySelector(".topbar")) document.querySelector(".topbar").appendChild($("cats"));
   if (ph) { rows.forEach((r) => $("sheetscore").appendChild(r)); if ($("sort").parentElement.id !== "sortrow") $("sortrow").appendChild($("sort")); }
