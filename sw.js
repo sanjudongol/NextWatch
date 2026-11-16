@@ -1,6 +1,6 @@
 // Lets the site be installed as an app. Pages always come from the network when online;
 // the last copy is kept so the app still opens (with a "you're offline" note) without a connection.
-const CACHE = "wf-shell-v2";
+const CACHE = "wf-shell-v3";
 const SHELL = ["/", "/manifest.webmanifest", "/icons/icon-192.png"];
 self.addEventListener("install", (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", (e) => {

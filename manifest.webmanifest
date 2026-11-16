@@ -1,6 +1,6 @@
 {
-  "name": "NextWatch",
-  "short_name": "NextWatch",
+  "name": "PopcornDate",
+  "short_name": "PopcornDate",
   "description": "Well-rated movies and series included with your streaming subscriptions.",
   "start_url": "/",
   "scope": "/",

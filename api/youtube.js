@@ -252,7 +252,9 @@ export default async function handler(req, res) {
     if (!(await requireUser(req))) return json(res, 401, { error: "Please sign in again." });
     const follow = (req.body && req.body.follow) || "";
     if (follow) return json(res, 200, { followed: await refreshChannel(follow) }); // just followed: load that channel now
-    return json(res, 200, await refreshYouTube());
+    const out = await refreshYouTube();
+    if (out.errors && out.errors.length) console.error("YouTube refresh problems:", out.errors.slice(0, 5).join(" | "));
+    return json(res, 200, out);
   } catch (e) {
     return json(res, 500, { error: String(e.message || e) });
   }

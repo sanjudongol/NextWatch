@@ -1,4 +1,4 @@
--- NextWatch database setup. Paste this whole file into Supabase → SQL Editor → Run.
+-- PopcornDate database setup. Paste this whole file into Supabase → SQL Editor → Run.
 -- Safe to run again: it only creates what's missing.
 
 -- 1. The shared catalog of titles (written only by the server's sync, read by signed-in people)

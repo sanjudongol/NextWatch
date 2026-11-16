@@ -1,4 +1,4 @@
-# NextWatch
+# PopcornDate
 
 Find well-rated movies and series that are included with your streaming subscriptions (or free with ads on YouTube), never rent or buy.
 
