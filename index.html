@@ -616,7 +616,7 @@ textarea:focus,input:focus{outline:2px solid color-mix(in srgb,var(--ac) 60%,tra
     <div class="tabs" id="tabs"></div>
     <section id="shelves" hidden></section>
     <div id="detail" hidden></div>
-    <div class="statusbar"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><div id="status"></div><span id="findwrap" hidden style="display:inline-flex;gap:4px"><button class="chip" id="findmore"></button><button class="chip" id="clearfind" aria-label="Clear" title="Clear and show everything again">✕</button></span></div><div style="display:flex;gap:6px"><button class="chip" id="shelveson" hidden title="Show Tonight’s pick and the rows of picks again">Picks</button><button class="chip" id="layout" title="Switch between detailed cards and a compact list"></button></div></div>
+    <div class="statusbar"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><div id="status"></div><span id="ratewho" hidden style="display:inline-flex;gap:4px"></span><span id="findwrap" hidden style="display:inline-flex;gap:4px"><button class="chip" id="findmore"></button><button class="chip" id="clearfind" aria-label="Clear" title="Clear and show everything again">✕</button></span></div><div style="display:flex;gap:6px"><button class="chip" id="shelveson" hidden title="Show Tonight’s pick and the rows of picks again">Picks</button><button class="chip" id="layout" title="Switch between detailed cards and a compact list"></button></div></div>
     <div id="grid"></div>
 
     <footer>
@@ -677,8 +677,10 @@ const YT_SUBS = { // same keys as YT_TOPICS in api/youtube.js
 };
 // English only (same rule as api/youtube.js): hides older saved videos in another language or script
 const ytForeign = (t) => { if (t.lang && !/^en|^zxx/i.test(t.lang)) return true; if (/\b(telugu|tamil|malayalam|kannada|hindi|bhojpuri|gujarati|marathi|punjabi|bengali|bangla|odia|urdu|nepali|sinhala|tagalog|dubbed|full (?:hd |youtube |length )?(?:movie|film)|yt film|south indian)\b/i.test(t.title + " " + (t.channel || ""))) return true; const all = (t.title.match(/\p{L}/gu) || []).length; return all > 3 && (t.title.match(/[A-Za-z\u00C0-\u024F]/g) || []).length / all < 0.7; };
-// watched but no Not for me / Liked / Loved yet, by you or (if linked) your partner; not YouTube videos
-const needsRate = (t) => t.kind !== "yt" && ((iSaw(t.id) && !S.rate.get(t.id)) || (S.partner && theySaw(t.id) && !S.pRate.get(t.id)));
+// watched but no Not for me / Liked / Loved yet; "To rate" shows yours, or (switch) the ones waiting on your partner. Not YouTube videos
+const myUnrated = (t) => t.kind !== "yt" && iSaw(t.id) && !S.rate.get(t.id);
+const theirUnrated = (t) => t.kind !== "yt" && !!S.partner && theySaw(t.id) && !S.pRate.get(t.id);
+const needsRate = (t) => (F.rateWho === "them" && S.partner ? theirUnrated : myUnrated)(t);
 const favCh = (t) => !!t.channelId && (S.follows.has(t.channelId) || S.pFollows.has(t.channelId)); // a channel you or your partner follow
 const ytMaxAge = (t) => ((YT_SUBS[t.topic] || []).find((x) => x[0] === t.sub) || [])[2]; // e.g. highlights: last 10 days only
 const fmtViews = (n) => n >= 1e9 ? (n / 1e9).toFixed(1).replace(/\.0$/, "") + "B" : n >= 1e6 ? Math.round(n / 1e6) + "M" : n >= 1e3 ? Math.round(n / 1e3) + "K" : String(n || 0);
@@ -1005,7 +1007,7 @@ function syncControls() {
     : k === "person" ? all().filter((t) => byPerson(t, F.person)).length
     : k === "faves" ? all().filter((t) => S.pRate.get(t.id) > 0).length
     : k === "nopes" ? all().filter((t) => S.pRate.get(t.id) === -1).length
-    : k === "unrated" ? all().filter(needsRate).length
+    : k === "unrated" ? all().filter(myUnrated).length
     : k === "watched" ? all().filter((t) => watched(t.id)).length
     : all().filter((t) => S.marks.get(t.id) === "skipped").length;
   const tabs = [["all", "All matches"], ...(seasonNews().length ? [["seasons", "New seasons"]] : []), ...(S.partner ? [["together", "Watch together"]] : []), ["mine", "My list"], ["want", "Our list"], ["watching", "Watching now"], ["directors", "Top directors"], ["watched", "Watched"], ["unrated", "Not rated yet"], ...(S.partner ? [["faves", `${esc(pName())}’s favorites`], ["nopes", `${esc(pName())}’s nopes`], ["onlyme", "Only you’ve seen"], ["onlythem", `Only ${esc(pName())} has seen`]] : []), ["skipped", "Not interested"]];
@@ -1141,10 +1143,7 @@ function badgeList(t) {
   else if (pmk === "want") badges.push(`<span class="badge b-want">${esc(pName())} wants this</span>`);
   if (mk === "skipped") badges.push(`<span class="badge b-skipped">Not interested</span>`);
   const rt = S.rate.get(id), prt = S.pRate.get(id);
-  if (F.view === "unrated") {
-    if (iSaw(id) && !rt) badges.push(`<span class="badge b-nah">You haven’t rated it</span>`);
-    if (S.partner && theySaw(id) && !prt) badges.push(`<span class="badge b-nah">${esc(pName())} hasn’t rated it</span>`);
-  }
+  if (F.view === "unrated" && F.rateWho === "them" && S.partner) badges.push(`<span class="badge b-nah">${esc(pName())} hasn’t rated it</span>`);
   const verb = (r) => r === 2 ? "loved it" : r === 1 ? "liked it" : "didn’t like it", cls = (r) => r > 0 ? "b-like" : "b-nah";
   if (rt && prt === rt) badges.push(`<span class="badge ${cls(rt)}">${rt > 0 ? `You both ${verb(rt)}` : "Neither of you liked it"}</span>`);
   else {
@@ -1269,7 +1268,6 @@ function render() {
   // pinned first: in "Watch together", what you both want; elsewhere, series you're in the middle of
   const pri = (t) => F.view === "together" ? wantCount(t.id) : F.view === "seasons" ? (newSeason(t) ? 1 : 0)
     : F.view === "want" ? (bothWant(t.id) ? 3 : 0) + (newSeason(t) ? 2 : isWatching(t.id) ? 1 : 0) : F.view === "all" || F.view === "mine" ? (newSeason(t) ? 2 : isWatching(t.id) ? 1 : 0)
-    : F.view === "unrated" ? (iSaw(t.id) && !S.rate.get(t.id) ? 1 : 0)
     : F.view === "faves" ? (iSaw(t.id) ? 0 : 2) + (S.pRate.get(t.id) === 2 ? 1 : 0) : 0;
   const newest = F.cat === "youtube" && (F.ytSub ? ((YT_SUBS[F.ytMode] || []).find((x) => x[0] === F.ytSub) || [])[2] : ["soccer", "f1", "following"].includes(F.ytMode)) || F.ytMode === "podcasts"; // "latest" tabs and sports: newest first
   const sq = $("q").value.trim().toLowerCase();
@@ -1286,6 +1284,10 @@ function render() {
   else if (F.view === "all" && q.length >= 3) { fm.hidden = false; fm.dataset.role = "any"; fm.dataset.q = q; fm.textContent = `Look up “${q}” on your services`; fm.title = "Finds titles, or a person’s films and shows, that aren’t in the list yet"; }
   else fm.hidden = true;
   $("findwrap").hidden = fm.hidden; fm.hidden = false;
+  // To rate: switch between yours and the ones waiting on your partner
+  const rw = $("ratewho"), showRw = F.view === "unrated" && !!S.partner;
+  rw.hidden = !showRw;
+  rw.innerHTML = !showRw ? "" : [["me", `Yours (${all().filter(myUnrated).length})`], ["them", `Waiting on ${esc(pName())} (${all().filter(theirUnrated).length})`]].map(([k, l]) => `<button class="chip ${(F.rateWho || "me") === k ? "on" : ""}" data-ratewho="${k}">${l}</button>`).join("");
   const inSection = all().filter((t) => categoryOf(t) === F.cat).length;
   if (F.view === "all" && !["movies", "series"].includes(F.cat) && inSection < 15)
     $("status").textContent += ` · only ${inSection} in this section so far. Tap Sync to pull in more`;
@@ -1295,7 +1297,7 @@ function render() {
   if (F.view === "want") empty = S.partner ? `Nothing you both want yet. When you and ${esc(pName())} both tap Want on the same title, it shows up here.` : `<b>Our list</b> is what you and your partner both want to watch, in one place.<br><br><button class="btn primary" id="emptylink">Link your partner</button>`;
   if (F.view === "bothwant") empty = `Nothing you both want yet. When you and ${esc(pName())} both tap “Want to watch” on a title, it shows up here.`;
   if (F.view === "seasons") empty = "No new or upcoming seasons for series you’ve watched.";
-  if (F.view === "unrated") empty = S.partner ? `All caught up: everything you or ${esc(pName())} watched has a rating.` : "All caught up: everything you watched has a rating.";
+  if (F.view === "unrated") empty = F.rateWho === "them" && S.partner ? `${esc(pName())} is all caught up: everything ${esc(pName())} watched has a rating.` : "All caught up: everything you watched has a rating.";
   if (F.view === "nopes") empty = `Nothing here yet. When ${esc(pName())} taps Not for me (Nope) on something, it shows up here so you can skip it.`;
   if (F.view === "faves") empty = `Nothing here yet. When ${esc(pName())} taps Liked it or Loved it on something, it shows up here, with what you haven’t seen first.`;
   if (F.view === "watching") empty = "Nothing in progress. On a series, tap “Watching now” to keep it here until you finish.";
@@ -1751,6 +1753,7 @@ async function onClick(e) {
     saveF(); render(); scrollTo({ top: 0 }); return;
   }
   if (b.dataset.moodex) { runMood(b.dataset.moodex); return; }
+  if (b.dataset.ratewho) { F.rateWho = b.dataset.ratewho === "them" ? "them" : ""; saveF(); render(); return; }
   if (b.dataset.follow) { toggleFollow(b.dataset.follow, b.dataset.ch || ""); return; }
   if (b.dataset.ytsub != null) { F.ytSub = b.dataset.ytsub; F.ytSubs = { ...(F.ytSubs || {}), [F.ytMode]: F.ytSub }; saveF(); render(); return; }
   if (b.dataset.ytmode) { F.ytMode = b.dataset.ytmode; F.ytSub = F.ytMode in (F.ytSubs || {}) ? F.ytSubs[F.ytMode] : (F.ytMode === "f1" ? "race" : ""); if (!(YT_SUBS[F.ytMode] || []).some((x) => x[0] === F.ytSub)) F.ytSub = ""; F.view = F.view === "together" ? "together" : "all"; saveF(); render(); return; }
