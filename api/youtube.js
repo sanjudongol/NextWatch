@@ -251,6 +251,7 @@ export async function refreshYouTube({ allTime = "auto" } = {}) {
   for (const t of list) out[t.topic] = (out[t.topic] || 0) + 1;
   try { await refreshPodcasts(out); } catch (e) { out.errors.push("Podcasts: " + e.message); }
   try { await refreshCustom(out); } catch (e) { out.errors.push("Your topics: " + e.message); }
+  try { await refreshChannelTabs(out); } catch (e) { out.errors.push("Channel tabs: " + e.message); }
   await refreshFollows(out);
   return out;
 }
@@ -288,7 +289,7 @@ async function showChannel([name, ...handles], cache, budget) {
 // newest full episodes (15+ minutes) of every listed show, refreshed once a day: about 2 quota units per show
 export async function refreshPodcasts(out, force = false) {
   if (!force) {
-    const fresh = await sb(`titles?select=id&kind=eq.yt&data->>show=not.is.null&updated_at=gt.${encodeURIComponent(new Date(Date.now() - 20 * 36e5).toISOString())}&limit=1`);
+    const fresh = await sb(`titles?select=id&kind=eq.yt&data->>topic=eq.podcasts&data->>show=not.is.null&updated_at=gt.${encodeURIComponent(new Date(Date.now() - 20 * 36e5).toISOString())}&limit=1`);
     if (fresh && fresh.length) return;
   }
   const cache = new Map(((await sb("yt_channels?select=key,channel_id")) || []).map((r) => [r.key, r.channel_id]));
@@ -331,6 +332,34 @@ export async function refreshCustom(out, onlyKey = "") {
       out.custom = (out.custom || 0) + list.length;
     } catch (e) { out.errors.push(label + ": " + e.message); }
   }));
+}
+
+// Tabs made of specific channels (newest uploads, refreshed daily): e.g. everything from the Sidemen channels
+export const CHANNEL_TABS = {
+  sidemen: { label: "Sidemen", minSecs: 180, shows: [["Sidemen", "@Sidemen"], ["MoreSidemen", "@MoreSidemen"], ["Sidemen Reacts", "@SidemenReacts"]] },
+};
+export async function refreshChannelTabs(out, force = false) {
+  const cache = new Map(((await sb("yt_channels?select=key,channel_id")) || []).map((r) => [r.key, r.channel_id]));
+  const budget = { searches: 2 };
+  for (const [topic, def] of Object.entries(CHANNEL_TABS)) {
+    if (!force) {
+      const fresh = await sb(`titles?select=id&kind=eq.yt&data->>topic=eq.${topic}&updated_at=gt.${encodeURIComponent(new Date(Date.now() - 20 * 36e5).toISOString())}&limit=5`);
+      if (fresh && fresh.length >= 5) continue;
+    }
+    const list = [];
+    await Promise.all(def.shows.map(async (show) => {
+      try {
+        const cid = await showChannel(show, cache, budget); if (!cid) return;
+        const pl = await yt(`playlistItems?part=contentDetails&maxResults=20&playlistId=UU${cid.slice(2)}`);
+        const ids = (pl.items || []).map((x) => (x.contentDetails || {}).videoId).filter(Boolean);
+        if (!ids.length) return;
+        const d = await yt(`videos?part=snippet,statistics,contentDetails,status&id=${ids.join(",")}`);
+        for (const v of d.items || []) if (secs((v.contentDetails || {}).duration) >= def.minSecs) list.push(toTitle(v, { topic, sub: null, show: show[0] }));
+      } catch (e) { out.errors.push(show[0] + ": " + e.message); }
+    }));
+    await save(list);
+    out[topic] = list.length;
+  }
 }
 
 export default async function handler(req, res) {
