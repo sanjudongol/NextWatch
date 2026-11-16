@@ -384,6 +384,7 @@ button:active:not(:disabled),a.rb:active,.popbtn:active{opacity:.5}
 .rb.on.mk-skipped,.acts .on.mk-skipped{background:var(--pill);color:var(--mu)}
 .checks .tick{border-color:var(--mu)}
 .hacts .btn.on{background:color-mix(in srgb,var(--want) 16%,transparent);color:var(--want)}
+@media (max-width:620px){.hacts{gap:6px;flex-wrap:nowrap}.hacts .btn{padding:0 6px!important;flex:1 1 auto;min-width:0;font-size:.85rem;white-space:nowrap}.hacts .heroskip{flex:0 0 38px;padding:0!important;color:var(--mu)}}
 select,.fgrid input,input[type=search],input[type=email],input[type=text],input[type=password],#moodbox textarea{border:0;background:var(--pill);border-radius:10px}
 textarea:focus,input:focus{outline:2px solid color-mix(in srgb,var(--ac) 60%,transparent);outline-offset:0}
 /* search field */
@@ -1480,7 +1481,7 @@ function renderShelves(list) {
       <div class="meta">${[t.year, lenText(t), gl(t).slice(0, 3).join(", ")].filter(Boolean).map(esc).join(" · ")}</div>
       <div class="meta"><b>${esc(scoreTxt(t))}</b>${(t.services || []).length ? " · " + esc(t.services.join(", ")) : ""}</div>
       ${t.summary ? `<p class="hsum">${esc(t.summary)}</p>` : ""}
-      <div class="hacts"><button class="btn primary" data-seen="me" data-id="${esc(t.id)}">Seen it</button><button class="btn ${mk === "want" ? "on" : ""}" data-mark="want" data-id="${esc(t.id)}">${mk === "want" ? "Wanted" : "Want"}</button><button class="btn" id="heronext" title="Pick another">Another</button></div>
+      <div class="hacts"><button class="btn primary" data-seen="me" data-id="${esc(t.id)}">Seen it</button><button class="btn ${mk === "want" ? "on" : ""}" data-mark="want" data-id="${esc(t.id)}">${mk === "want" ? "Wanted" : "Want"}</button><button class="btn" id="heronext" title="Pick another">Another</button><button class="btn heroskip" data-mark="skipped" data-id="${esc(t.id)}" title="Not interested: never suggest this again" aria-label="Not interested">✕</button></div>
     </div></div>`;
   const rows = shelfRows(list.filter((x) => x.id !== t.id));
   el.innerHTML = `<div class="shelfhead"><b>For you</b><button class="chip" id="shelvesoff" title="Hide these picks (bring them back from the list below)">Hide</button></div>${hero}` +
