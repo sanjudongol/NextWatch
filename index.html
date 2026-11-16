@@ -567,7 +567,10 @@ textarea:focus,input:focus{outline:2px solid color-mix(in srgb,var(--ac) 60%,tra
   .fcount:empty{display:none}
   .phoneonly{display:block!important}
   #sheetscore select{font-weight:400}
-  #scorebar,.ctlrow .sortpop,#fchipbox,#layout,#scorepop{display:none!important}
+  #scorebar,.ctlrow .sortpop,#fchipbox,#scorepop{display:none!important}
+  #layout{width:40px;height:34px;padding:0!important;display:inline-grid;place-items:center}#layout[hidden]{display:none}
+  #layout .ico{width:20px;height:20px;stroke-width:2}
+  body.hasq #layout{display:none}
   .ctlrow:not(:has(.ytmodes)){display:none}
   #home>.cats{margin:4px 0 10px}
   .scoreline{display:block;font-size:.8rem;color:var(--mu);margin-top:2px}
@@ -1181,7 +1184,9 @@ function syncControls() {
   $("tabs").className = seg ? "tabs seg" : "tabs";
   if (seg) { $("tabs").innerHTML = shown.map(([k]) => `<button class="chip ${F.view === k ? "on" : ""}" data-view="${k}">${esc(SEG[k] || k)}</button>`).join(""); }
   else $("tabs").innerHTML = (shown.length < 2 && grouped() ? [] : shown).map(([k, l]) => `<button class="chip ${F.view === k ? "on" : ""}" data-view="${k}" ${k === "directors" ? `title="Directors and creators whose titles on your services score best, plus acclaimed directors to explore"` : ""} ${k === "together" ? `title="Only what neither of you has seen, with what you both want first. Uses the filters and section above."` : ""}>${l}${k === "all" || k === "together" || k === "directors" ? "" : ` (${count(k)})`}</button>`).join("");
-  $("layout").textContent = F.layout === "list" ? "Cards" : "Compact list";
+  // iPhone: an icon button next to Sort & Filter; it shows what you'll switch to
+  if (phone()) { const toCards = F.layout === "list"; $("layout").innerHTML = toCards ? `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="7" rx="2"/><rect x="4" y="13" width="16" height="7" rx="2"/></svg>` : `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>`; $("layout").setAttribute("aria-label", toCards ? "Show full cards" : "Show compact list"); $("layout").title = toCards ? "Show full cards for everything" : "Show a compact list"; }
+  else $("layout").textContent = F.layout === "list" ? "Cards" : "Compact list";
   const sectionName = { movies: "Movies", series: "Series", anime: "Anime", reality: "Reality & competition", docs: "Documentaries", kids: "Kids & family", truecrime: "True crime", youtube: "YouTube" }[F.cat] || (secOf(F.cat) || {}).label || "this section";
   $("scorehint").textContent = `Score settings are remembered separately for each section (now: ${sectionName}).`;
 }
@@ -1463,7 +1468,7 @@ function render() {
   // iPhone: the score bar lives in Sort & Filter, so say what it is right under the count
   document.body.classList.toggle("hasq", !!q);
   if (phone() && F.cat !== "youtube" && !q && ["all", "together"].includes(F.view))
-    $("status").insertAdjacentHTML("beforeend", `<span class="scoreline">${+F.imdb || +F.rt ? `Rated IMDb ${+F.imdb ? F.imdb + "+" : "any"} ${F.mode === "any" ? "or" : "and"} RT ${+F.rt ? F.rt + "%+" : "any"}` : "Any score"}</span>`);
+    $("status").insertAdjacentHTML("beforeend", `<span class="scoreline">${+F.imdb || +F.rt ? `IMDb ${+F.imdb ? F.imdb + "+" : "any"} ${F.mode === "any" ? "or" : "and"} RT ${+F.rt ? F.rt + "%+" : "any"}` : "Any score"}</span>`);
   let empty = "Nothing here yet.";
   if (F.view === "together") empty = "Nothing here that neither of you has seen. Try another section or loosen the filters.";
   if (F.view === "mine") empty = "Nothing on your list yet. Tap Want on anything you’d like to watch.";
