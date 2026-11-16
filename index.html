@@ -510,6 +510,25 @@ textarea:focus,input:focus{outline:2px solid color-mix(in srgb,var(--ac) 60%,tra
 
 .sortpop select{position:absolute;inset:0;opacity:0;width:100%}
 #fchipbox:empty{display:none}
+.searchrow{display:flex;gap:8px;align-items:center}.searchrow .search{flex:1;min-width:0}
+.fbtn,.phoneonly{display:none!important}
+/* iPhone: search pinned under the header, with one Sort & Filter button; scores, sort, vibe and view live in that sheet */
+@media (max-width:620px){
+  .searchrow{position:sticky;top:var(--hh,56px);z-index:15;margin:0 -16px;padding:8px 16px;background:color-mix(in srgb,var(--bg) 80%,transparent);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px)}
+  header.scrolled{box-shadow:none}
+  header.scrolled~#home .searchrow{box-shadow:0 .5px 0 var(--sep)}
+  .fbtn{display:grid!important;place-items:center;position:relative;flex:none;width:44px;height:44px;border:0;border-radius:12px;background:var(--pill);color:var(--tx);padding:0}
+  .fbtn .ico{width:22px;height:22px;stroke-width:2}
+  .fbtn.on{background:color-mix(in srgb,var(--ac) 16%,transparent);color:var(--ac)}
+  .fcount{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--ac);color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center}
+  .fcount:empty{display:none}
+  .phoneonly{display:block!important}
+  #sheetscore select{font-weight:400}
+  #scorebar,.ctlrow .sortpop,#fchipbox,#layout,#scorepop{display:none!important}
+  .ctlrow:not(:has(.ytmodes)){display:none}
+  .topbar{padding-top:0}
+  body.onyt .fbtn{display:none!important}
+}
 @media (max-width:620px){
   .hbtns .nophone{display:none!important}
   .ctlrow{overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:12px 16px 4px}
@@ -574,8 +593,8 @@ textarea:focus,input:focus{outline:2px solid color-mix(in srgb,var(--ac) 60%,tra
     <section id="pick" data-sheet="closepick" hidden></section>
 
     <div id="home">
+      <div class="searchrow"><input class="search" id="q" type="search" placeholder="Search titles, directors or actors…" autocomplete="off" enterkeyhint="search"><button type="button" class="fbtn" id="openfilters2" aria-label="Sort and filter" title="Sort and filter"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M7 12h10M10 17h4"/></svg><span class="fcount" id="fcount"></span></button></div>
     <div class="topbar">
-      <input class="search" id="q" type="search" placeholder="Search titles, directors or actors…" autocomplete="off" enterkeyhint="search">
       <div class="cats" id="cats"></div>
     </div>
     <div class="ctlrow">
@@ -598,7 +617,9 @@ textarea:focus,input:focus{outline:2px solid color-mix(in srgb,var(--ac) 60%,tra
     <details class="panel box" id="fp">
       <summary><div class="fsum" id="fsum"></div><span class="caret">▾</span></summary>
       <div class="fgrid" data-sheet="sheetclose">
-        <div class="sheethead"><span class="grab"></span><button type="button" id="sheetcancel">Cancel</button><b>Filters</b><button type="button" id="sheetclose">Done</button></div>
+        <div class="sheethead"><span class="grab"></span><button type="button" id="sheetcancel">Cancel</button><b>Sort &amp; Filter</b><button type="button" id="sheetclose">Done</button></div>
+        <div class="fgroup phoneonly" id="sheetview"><label id="sortrow">Sort by</label><label id="vibebox">Vibe<select id="vibe2" aria-label="Vibe"></select></label><label>View<select id="layoutsel" aria-label="View"><option value="cards">Cards</option><option value="list">Compact list</option></select></label></div>
+        <div class="fgroup phoneonly" id="sheetscore"></div>
         <div class="fgroup">
         <label id="typebox">Type<select id="type"><option value="">Movies &amp; series</option><option>Movie</option><option>Series</option></select></label>
         <label>Genre<select id="genre"></select></label>
@@ -1008,6 +1029,12 @@ function syncControls() {
   $("ytsubs").innerHTML = !isYt ? "" : (subs ? [["", "All"], ...subs].map(([k, l]) => `<button class="chip ${(F.ytSub || "") === k ? "on" : ""}" data-ytsub="${k}">${l}</button>`).join("") : "");
   $("presets").classList.toggle("ytmodes", isYt);
   $("fchipbox").innerHTML = isYt ? "" : fchip;
+  document.body.classList.toggle("onyt", isYt);
+  const scoreOn = +F.imdb !== +DEFAULTS.imdb || +F.rt !== +DEFAULTS.rt || F.mode !== DEFAULTS.mode ? 1 : 0;
+  $("fcount").textContent = nOn + scoreOn || ""; $("openfilters2").classList.toggle("on", !!(nOn + scoreOn));
+  $("vibebox").hidden = !topCat;
+  $("vibe2").innerHTML = `<option value="-1">Any</option>` + PRESETS.map((p, i) => p.only && p.only !== F.cat ? "" : `<option value="${i}" ${F.preset === i ? "selected" : ""}>${esc(p.name)}</option>`).join("");
+  $("layoutsel").value = F.layout === "list" ? "list" : "cards";
   $("presets").innerHTML = isYt ? YT_MODES.map(([k, l]) => `<button class="ytmode ${(F.ytMode || "history") === k ? "on" : ""}" data-ytmode="${k}">${l}</button>`).join("")
  : (!topCat ? "" : `<label class="popbtn sortpop vibepop ${F.preset >= 0 ? "set" : ""}" title="Pick a vibe"><span class="sl">Vibe:</span><span>${F.preset >= 0 ? esc(PRESETS[F.preset].name) : "Any"}</span><select id="vibe" aria-label="Vibe"><option value="-1">Any</option>${PRESETS.map((p, i) => p.only && p.only !== F.cat ? "" : `<option value="${i}" ${F.preset === i ? "selected" : ""}>${esc(p.name)}</option>`).join("")}</select><svg class="ico ud" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 9.5 12 5.5l4 4M8 14.5l4 4 4-4"/></svg></label>`);
   const all = () => pool(); // counts cover only this page (videos on YouTube, movies & TV elsewhere)
@@ -1847,7 +1874,7 @@ async function onClick(e) {
     }
     case "moodBtn": showPage(page === "mood" ? "home" : "mood"); return;
     case "moodclose": moodRes = null; showPage("home"); return;
-    case "openfilters": fsnap = JSON.stringify(F); $("fp").open = true; return;
+    case "openfilters": case "openfilters2": fsnap = JSON.stringify(F); $("fp").open = true; return;
     case "sheetcancel": if (fsnap) { Object.assign(F, JSON.parse(fsnap)); saveF(); render(); } closeSheet(); return;
     case "scorebtn": { const pop = $("scorepop"); pop.hidden = !pop.hidden; if (phone()) pop.style.top = b.getBoundingClientRect().bottom + 8 + "px"; else pop.style.top = ""; b.setAttribute("aria-expanded", String(!pop.hidden)); return; }
     case "acctsync": showPage("home"); $("sync").click(); return;
@@ -1889,7 +1916,10 @@ function setPreset(i) { // a vibe resets the other filters, then applies its own
   if (i >= 0) { Object.assign(F, PRESETS[i].set); F.preset = i; }
   saveF(); render();
 }
-document.addEventListener("change", (e) => { if (e.target.id === "vibe") setPreset(+e.target.value); });
+document.addEventListener("change", (e) => {
+  if (e.target.id === "vibe" || e.target.id === "vibe2") setPreset(+e.target.value);
+  if (e.target.id === "layoutsel") { F.layout = e.target.value; openRow = null; saveF(); render(); }
+});
 CTRL.forEach((k) => $(k).addEventListener("input", () => { F[k] = $(k).value; F.preset = -1; if (SCORE_KEYS.includes(k)) rememberCatScores(); saveF(); render(); }));
 addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); installEvt = e; if (!$("account").hidden) renderAccount(); });
 if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("/sw.js").catch(() => {});
@@ -2006,6 +2036,14 @@ async function toggleFollow(cid, name, on = !S.follows.has(cid)) {
   try { const r = await api.youtubeStep({ follow: cid }); await reload(); toast(`${name}: ${r.followed || 0} video${r.followed === 1 ? "" : "s"} under ★ Following`, () => { F.ytMode = "following"; F.ytSub = ""; saveF(); render(); scrollTo({ top: 0 }); }, "Show"); }
   catch (e) { toast(`Following ${name}. Their episodes will load on the next sync.`); }
 }
+// iPhone: scores and sort move into the Sort & Filter sheet (the same controls, so their settings carry over)
+function placeCtrls() {
+  const ph = phone(), rows = [...document.querySelectorAll("label.prow")];
+  if (ph) { rows.forEach((r) => $("sheetscore").appendChild(r)); if ($("sort").parentElement.id !== "sortrow") $("sortrow").appendChild($("sort")); }
+  else { rows.forEach((r) => $("scorepop").insertBefore(r, $("scorepop").querySelector(".popnote"))); const sp = document.querySelector("label.sortpop:not(.vibepop)"); if ($("sort").parentElement !== sp) sp.appendChild($("sort")); }
+}
+placeCtrls(); { let wasPh = phone(); addEventListener("resize", () => { if (phone() !== wasPh) { wasPh = phone(); placeCtrls(); } }); }
+new ResizeObserver(() => document.documentElement.style.setProperty("--hh", document.querySelector("header").offsetHeight + "px")).observe(document.querySelector("header"));
 // ---------------- startup ----------------
 let lastLoad = 0;
 async function reload() {
