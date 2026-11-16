@@ -64,6 +64,26 @@ create table if not exists public.picks (
 );
 alter table public.picks enable row level security;
 
+-- 8. Your own YouTube topics (up to 3 each; the server runs one search per topic weekly)
+create table if not exists public.yt_topics (
+  user_id uuid not null references auth.users on delete cascade,
+  key text not null check (key ~ '^ut-[a-z0-9]{6}$'),
+  label text not null check (char_length(label) between 2 and 40),
+  created_at timestamptz not null default now(),
+  primary key (user_id, key)
+);
+create unique index if not exists yt_topics_key on public.yt_topics (key);
+alter table public.yt_topics enable row level security;
+create or replace function public.yt_topics_limit() returns trigger language plpgsql set search_path = public as $$
+begin
+  if (select count(*) from public.yt_topics where user_id = new.user_id) >= 3 then
+    raise exception 'You can have up to 3 of your own topics. Remove one to add another.';
+  end if;
+  return new;
+end $$;
+drop trigger if exists yt_topics_limit on public.yt_topics;
+create trigger yt_topics_limit before insert on public.yt_topics for each row execute function public.yt_topics_limit();
+
 -- Create a profile when someone signs in for the first time
 create or replace function public.handle_new_user() returns trigger
 language plpgsql security definer set search_path = public as $$
@@ -165,6 +185,13 @@ drop policy if exists "own picks: write" on public.picks;
 create policy "own picks: write" on public.picks for all to authenticated
   using (user_id = auth.uid()) with check (user_id = auth.uid());
 
+drop policy if exists "own and partner topics: read" on public.yt_topics;
+create policy "own and partner topics: read" on public.yt_topics for select to authenticated
+  using (user_id = auth.uid() or public.is_my_partner(user_id));
+drop policy if exists "own topics: write" on public.yt_topics;
+create policy "own topics: write" on public.yt_topics for all to authenticated
+  using (user_id = auth.uid()) with check (user_id = auth.uid());
+
 -- Table permissions
 revoke all on public.titles, public.profiles, public.marks, public.views from anon, authenticated;
 grant select on public.titles to authenticated;
@@ -179,6 +206,10 @@ grant all on public.follows to service_role;
 revoke all on public.picks from anon, authenticated;
 grant select, insert, delete on public.picks to authenticated;
 grant all on public.picks to service_role;
+revoke all on public.yt_topics from anon, authenticated;
+grant select, insert, delete on public.yt_topics to authenticated;
+grant all on public.yt_topics to service_role;
+revoke execute on function public.yt_topics_limit() from public, anon, authenticated;
 revoke all on public.yt_channels from anon, authenticated;
 grant all on public.yt_channels to service_role;
 revoke execute on function public.handle_new_user() from public, anon, authenticated;   -- only the sign-up trigger runs it

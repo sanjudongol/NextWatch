@@ -510,6 +510,32 @@ textarea:focus,input:focus{outline:2px solid color-mix(in srgb,var(--ac) 60%,tra
 
 .sortpop select{position:absolute;inset:0;opacity:0;width:100%}
 #fchipbox:empty{display:none}
+/* YouTube "Edit tabs" sheet */
+#ytedit{position:fixed;inset:0;z-index:40;background:rgb(0 0 0 / .35);display:flex;align-items:flex-end;justify-content:center}
+#ytedit[hidden]{display:none}
+.yesheet{background:var(--bg);width:100%;max-width:520px;max-height:88vh;overflow-y:auto;border-radius:14px 14px 0 0;padding:0 16px calc(24px + env(safe-area-inset-bottom,0px))}
+@media (min-width:621px){#ytedit{align-items:center}.yesheet{border-radius:14px}}
+.yehead{position:sticky;top:0;z-index:2;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;margin:0 -16px 10px;padding:14px 16px 8px;background:var(--bg)}
+.yehead b{text-align:center;font-weight:600}.yehead button{justify-self:end;background:none;border:0;color:var(--ac);font:inherit;font-weight:600;font-size:1rem;min-height:44px;cursor:pointer}
+.yecap{font-size:.8rem;color:var(--mu);text-transform:uppercase;letter-spacing:.02em;margin:16px 4px 6px}
+.yenote{font-size:.8rem;color:var(--mu);margin:6px 4px 0;line-height:1.4}
+.yelist{background:var(--card);border-radius:12px;overflow:hidden}
+.yerow{display:flex;align-items:center;gap:8px;padding:0 8px 0 16px;min-height:48px;border-top:.5px solid var(--sep)}
+.yerow:first-child{border-top:0}
+.yerow .yl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.yerow .yl small{color:var(--mu)}
+.yerow.off .yl{color:var(--mu)}
+.yerow button{background:none;border:0;color:var(--ac);min-width:36px;min-height:40px;font:inherit;font-size:1.05rem;cursor:pointer;border-radius:8px}
+.yerow button:disabled{opacity:.25}
+.yerow .del{color:var(--red)}
+.sw{position:relative;width:51px;height:31px;border-radius:16px;background:var(--pill);flex:none;transition:background .2s;min-width:51px!important;padding:0!important}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 2px 4px rgb(0 0 0 / .2);transition:transform .2s}
+.sw.on{background:#34c759}.sw.on::after{transform:translateX(20px)}
+.yeadd{display:flex;gap:8px;padding:8px}
+.yeadd input{flex:1;min-width:0;border:0;background:var(--pill);border-radius:10px;padding:10px 12px;font:inherit;font-size:16px;color:var(--tx)}
+.yeadd button{border:0;border-radius:10px;background:var(--ac);color:#fff;font:inherit;font-weight:600;padding:0 16px;min-height:44px;cursor:pointer}
+.yeadd button:disabled{opacity:.4}
+.ytmode.yted{background:none!important;border:1px dashed var(--bd)!important;color:var(--ac)!important}
 .searchrow{display:flex;gap:8px;align-items:center}.searchrow .search{flex:1;min-width:0}
 .fbtn,.phoneonly{display:none!important}
 .statusbar .chip{white-space:nowrap}
@@ -657,6 +683,7 @@ textarea:focus,input:focus{outline:2px solid color-mix(in srgb,var(--ac) 60%,tra
     <div class="tabs" id="tabs"></div>
     <section id="shelves" hidden></section>
     <div id="detail" hidden></div>
+    <div id="ytedit" hidden></div>
     <div class="shelfend" id="allhead" hidden>All matches</div>
     <div class="statusbar"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><div id="status"></div><span id="ratewho" hidden style="display:inline-flex;gap:4px"></span><span id="findwrap" hidden style="display:inline-flex;gap:4px"><button class="chip" id="findmore"></button><button class="chip" id="clearfind" aria-label="Clear" title="Clear and show everything again">✕</button></span></div><div style="display:flex;gap:6px"><button class="chip" id="shelveson" hidden title="Show Tonight’s pick and the rows of picks again">Picks</button><button class="chip" id="layout" title="Switch between detailed cards and a compact list"></button><button type="button" class="chip fbtn" id="openfilters2" title="Sort and filter this list"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M7 12h10M10 17h4"/></svg>Sort &amp; Filter<span class="fcount" id="fcount"></span></button></div></div>
     <div id="grid"></div>
@@ -709,6 +736,14 @@ const CAT_SCORES = { movies: { imdb: "6.5", rt: "70", mode: "any" }, series: { i
 const SCORE_KEYS = ["imdb", "rt", "mode"];
 const KIDS_RE = /cocomelon|nursery rhyme|baby shark|kids songs?|songs for (kids|children)|for kids\b|toddler|peppa pig|blippi|ms ?rachel|pinkfong|little baby bum|super simple songs|chuchu|kids diana|vlad (and|&) niki|like nastya|bluey|paw patrol|learn (colors|numbers|abc)/i; // same as api/youtube.js
 const YT_MODES = [["following", "★ Following"], ["trending", "Trending now"], ["alltime", "Most viewed"], ["history", "History"], ["food", "Food & travel"], ["soccer", "Soccer"], ["f1", "F1"], ["politics", "Politics"], ["podcasts", "Podcasts"]];
+// YouTube tabs as you arranged them (Edit tabs): built-in ones plus your and your partner's own topics, in your order, minus hidden ones
+const allYtModes = () => [...YT_MODES, ...S.ytTopics.map((t) => [t.key, t.label, t.user_id])];
+function ytModes() {
+  const o = (F.ytTabs || {}).order || [], hid = new Set((F.ytTabs || {}).hidden || []);
+  const pos = (k) => { const i = o.indexOf(k); return i < 0 ? 1000 + allYtModes().findIndex((m) => m[0] === k) : i; };
+  return allYtModes().filter(([k]) => !hid.has(k)).sort((a, b) => pos(a[0]) - pos(b[0]));
+}
+const curYtMode = () => { const ms = ytModes(); return ms.some((m) => m[0] === F.ytMode) ? F.ytMode : (ms[0] || ["history"])[0]; };
 const YT_SUBS = { // same keys as YT_TOPICS in api/youtube.js
   history: [["world", "World"], ["us", "US history"], ["ancient", "Ancient"], ["medieval", "Medieval"], ["wars", "World wars"], ["empires", "Empires"], ["mysteries", "Mysteries & archaeology"]],
   food: [["streetfood", "Street food"], ["cooking", "Cooking"], ["foodtours", "Food tours"], ["destinations", "Destinations"], ["wonders", "Amazing places"]],
@@ -765,7 +800,7 @@ if (F.cat === "main" || !F.cat) { // "Movies & series" became two sections
   if (F.byCat && F.byCat.main) { F.byCat.movies = F.byCat.series = F.byCat.main; delete F.byCat.main; }
   F.cat = F.type === "Series" ? "series" : "movies"; F.type = "";
 } if (!Array.isArray(F.svcOn)) F.svcOn = []; // old "hide a service" setting is replaced by "only these"
-let S = { ytOn: DEMO, titles: [], me: null, partner: null, marks: new Map(), pMarks: new Map(), views: new Set(), pViews: new Set(), seen: new Map(), pSeen: new Map(), rate: new Map(), pRate: new Map(), follows: new Map(), pFollows: new Map(), picks: new Set(), pPicks: new Map(), pSkip: new Set(), lastUpdated: null };
+let S = { ytOn: DEMO, titles: [], me: null, partner: null, marks: new Map(), pMarks: new Map(), views: new Set(), pViews: new Set(), seen: new Map(), pSeen: new Map(), rate: new Map(), pRate: new Map(), follows: new Map(), pFollows: new Map(), picks: new Set(), pPicks: new Map(), ytTopics: [], pSkip: new Set(), lastUpdated: null };
 let openRow = null, installEvt = null;
 let api, pickId = null;
 const tid = (t) => t.id;
@@ -805,7 +840,8 @@ async function supabaseApi(cfg) {
       const marks = must(await sb.from("marks").select("user_id,title_id,status"));
       const views = must(await sb.from("views").select("user_id,title_id,seasons,rating"));
       const follows = (await sb.from("follows").select("user_id,channel_id,channel_name")).data || [];
-      const picks = (await sb.from("picks").select("user_id,title_id,created_at")).data || []; // hand-picked for each other // podcasters you follow (empty if the table isn't set up yet)
+      const picks = (await sb.from("picks").select("user_id,title_id,created_at")).data || []; // hand-picked for each other
+      const ytTopics = (await sb.from("yt_topics").select("user_id,key,label,created_at").order("created_at")).data || []; // your own YouTube topics // podcasters you follow (empty if the table isn't set up yet)
       // titles your partner isn't interested in: only used to leave them out of "Watch together"
       const pSkip = partner ? (must(await sb.rpc("partner_skipped")) || []).map((x) => (typeof x === "string" ? x : Object.values(x)[0])) : [];
       return {
@@ -822,6 +858,7 @@ async function supabaseApi(cfg) {
         follows: new Map(follows.filter((f) => f.user_id === uid).map((f) => [f.channel_id, f.channel_name])),
         pFollows: new Map(follows.filter((f) => partner && f.user_id === partner.id).map((f) => [f.channel_id, f.channel_name])),
         picks: new Set(picks.filter((x) => x.user_id === uid).map((x) => x.title_id)),
+        ytTopics: ytTopics.filter((x) => x.user_id === uid || (partner && x.user_id === partner.id)),
         pPicks: new Map(picks.filter((x) => partner && x.user_id === partner.id).map((x) => [x.title_id, x.created_at])),
       };
     },
@@ -845,6 +882,12 @@ async function supabaseApi(cfg) {
       if (!r.ok) throw new Error(body.error || "Lookup failed");
       return body;
     },
+    async addTopic(label) {
+      const key = "ut-" + Math.random().toString(36).slice(2, 8).padEnd(6, "0");
+      must(await sb.from("yt_topics").insert({ user_id: S.me.id, key, label }));
+      return key;
+    },
+    async delTopic(key) { must(await sb.from("yt_topics").delete().eq("user_id", S.me.id).eq("key", key)); },
     async pick(titleId, on) {
       if (on) must(await sb.from("picks").upsert({ user_id: S.me.id, title_id: titleId }));
       else must(await sb.from("picks").delete().eq("user_id", S.me.id).eq("title_id", titleId));
@@ -905,7 +948,7 @@ function demoApi() {
   Object.assign(titles.find((t) => t.id === "tv-3"), { aired: 5, next: null });
   Object.assign(titles.find((t) => t.id === "tv-1"), { aired: 2, next: { season: 3, date: "2027-01-16" } });
   Object.assign(titles.find((t) => t.id === "tv-2"), { aired: 5, next: null });
-  const db = { marks: new Map(), views: new Map([["me", new Set(["tv-3", "tv-1"])], ["p", new Set()]]), seen: new Map([["tv-3", 4], ["tv-1", 2]]), rate: new Map([["tv-3", 2]]), follows: new Map(), picks: new Set() };
+  const db = { marks: new Map(), views: new Map([["me", new Set(["tv-3", "tv-1"])], ["p", new Set()]]), seen: new Map([["tv-3", 4], ["tv-1", 2]]), rate: new Map([["tv-3", 2]]), follows: new Map(), picks: new Set(), topics: [] };
   let partner = null;
   return {
     async session() { return signedIn ? { user: { id: "me" } } : null; },
@@ -917,11 +960,13 @@ function demoApi() {
     async signOut() { signedIn = false; local.set("demo-in", false); },
     async load() {
       return { titles, me: { id: "me", name: "You", invite_code: "AB12CD", partner_id: partner && "p" }, partner, lastUpdated: new Date().toISOString(),
-        marks: new Map(db.marks), pMarks: new Map([["tv-3", "want"], ["tv-1", "watching"]].filter(() => partner)), pSkip: new Set(partner ? ["movie-4"] : []), views: new Set(db.views.get("me")), pViews: new Set(partner ? db.views.get("p") : []), seen: new Map(db.seen), pSeen: new Map(), rate: new Map(db.rate), follows: new Map(db.follows), pFollows: new Map(), picks: new Set(db.picks), pPicks: new Map(partner ? [["movie-3", "2026-11-15T20:00:00Z"]] : []), pRate: new Map(partner ? [["tv-3", 1], ["movie-2", 2], ["movie-6", 1], ["movie-7", -1]] : []) };
+        marks: new Map(db.marks), pMarks: new Map([["tv-3", "want"], ["tv-1", "watching"]].filter(() => partner)), pSkip: new Set(partner ? ["movie-4"] : []), views: new Set(db.views.get("me")), pViews: new Set(partner ? db.views.get("p") : []), seen: new Map(db.seen), pSeen: new Map(), rate: new Map(db.rate), follows: new Map(db.follows), pFollows: new Map(), picks: new Set(db.picks), ytTopics: [...db.topics], pPicks: new Map(partner ? [["movie-3", "2026-11-15T20:00:00Z"]] : []), pRate: new Map(partner ? [["tv-3", 1], ["movie-2", 2], ["movie-6", 1], ["movie-7", -1]] : []) };
     },
     async setMark(t, s) { s ? db.marks.set(t, s) : db.marks.delete(t); },
     async follow(c, n, on) { on ? db.follows.set(c, n) : db.follows.delete(c); },
     async pick(t, on) { on ? db.picks.add(t) : db.picks.delete(t); },
+    async addTopic(label) { if (db.topics.filter((x) => x.user_id === "me").length >= 3) throw new Error("You can have up to 3 of your own topics. Remove one to add another."); const key = "ut-" + Math.random().toString(36).slice(2, 8).padEnd(6, "0"); db.topics.push({ user_id: "me", key, label }); return key; },
+    async delTopic(key) { db.topics = db.topics.filter((x) => x.key !== key); },
     async youtubeStep() { return { followed: 0 }; },
     async setView(u, t, on, n, r) { const k = u === "me" ? "me" : "p"; on ? db.views.get(k).add(t) : db.views.get(k).delete(t); if (k === "me") { on && n != null ? db.seen.set(t, n) : db.seen.delete(t); if (!on) db.rate.delete(t); else if (r !== undefined) r ? db.rate.set(t, r) : db.rate.delete(t); } },
     async saveSeasons(rows) { rows.forEach((r) => r.user_id === "me" && db.seen.set(r.title_id, r.seasons)); },
@@ -1054,7 +1099,8 @@ function syncControls() {
   $("vibebox").hidden = !topCat;
   $("vibe2").innerHTML = `<option value="-1">Any</option>` + PRESETS.map((p, i) => p.only && p.only !== F.cat ? "" : `<option value="${i}" ${F.preset === i ? "selected" : ""}>${esc(p.name)}</option>`).join("");
   $("layoutsel").value = F.layout === "list" ? "list" : "cards";
-  $("presets").innerHTML = isYt ? YT_MODES.map(([k, l]) => `<button class="ytmode ${(F.ytMode || "history") === k ? "on" : ""}" data-ytmode="${k}">${l}</button>`).join("")
+  if (isYt) F.ytMode = curYtMode();
+  $("presets").innerHTML = isYt ? ytModes().map(([k, l]) => `<button class="ytmode ${F.ytMode === k ? "on" : ""}" data-ytmode="${k}">${esc(l)}</button>`).join("") + `<button class="ytmode yted" id="yteditbtn" title="Pin, hide or reorder tabs and add your own topics">Edit tabs</button>`
  : (!topCat ? "" : `<label class="popbtn sortpop vibepop ${F.preset >= 0 ? "set" : ""}" title="Pick a vibe"><span class="sl">Vibe:</span><span>${F.preset >= 0 ? esc(PRESETS[F.preset].name) : "Any"}</span><select id="vibe" aria-label="Vibe"><option value="-1">Any</option>${PRESETS.map((p, i) => p.only && p.only !== F.cat ? "" : `<option value="${i}" ${F.preset === i ? "selected" : ""}>${esc(p.name)}</option>`).join("")}</select><svg class="ico ud" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 9.5 12 5.5l4 4M8 14.5l4 4 4-4"/></svg></label>`);
   const all = () => pool(); // counts cover only this page (videos on YouTube, movies & TV elsewhere)
   const count = (k) => k === "mine" ? all().filter((t) => S.marks.get(t.id) === "want" && !iSaw(t.id)).length
@@ -1094,7 +1140,7 @@ const saveF = () => local.set("wf-filters", F);
 function filterSummary() {
   const p = [];
   p.push({ movies: "Movies", series: "Series", anime: "Anime", reality: "Reality & competition", docs: "Documentaries", kids: "Kids & family", truecrime: "True crime", youtube: "YouTube" }[F.cat]);
-  if (F.cat === "youtube") { p.push(YT_MODES.find((m) => m[0] === (F.ytMode || "history"))[1]); if (F.ytSub && YT_SUBS[F.ytMode]) p.push((YT_SUBS[F.ytMode].find((x) => x[0] === F.ytSub) || ["", ""])[1]); if (F.genre) p.push(F.genre); if (+F.recent) p.push(`Last ${F.recent} yrs`); return p.join(" · "); }
+  if (F.cat === "youtube") { p.push((allYtModes().find((m) => m[0] === F.ytMode) || ["", "YouTube"])[1]); if (F.ytSub && YT_SUBS[F.ytMode]) p.push((YT_SUBS[F.ytMode].find((x) => x[0] === F.ytSub) || ["", ""])[1]); if (F.genre) p.push(F.genre); if (+F.recent) p.push(`Last ${F.recent} yrs`); return p.join(" · "); }
   if (F.preset >= 0) p.push(PRESETS[F.preset].name);
   if (F.type) p.push(F.type === "Movie" ? "Movies" : "Series");
   if (F.genre) p.push(F.genre);
@@ -1149,11 +1195,11 @@ function filteredAll(cats = [F.cat]) {
   if (F.view === "watched") return all().filter((t) => watched(t.id) && matchesSearch(t, q));
   if (F.view === "skipped") return all().filter((t) => S.marks.get(t.id) === "skipped" && matchesSearch(t, q));
   if (cats.length === 1 && cats[0] === "youtube") {
-    const mode = F.ytMode || "history", fresh = Date.now() - 4 * 864e5;
+    const mode = curYtMode(), fresh = Date.now() - 4 * 864e5;
     return all().filter((t) => t.kind === "yt" && !iSaw(t.id) && S.marks.get(t.id) !== "skipped"
       && (YT_SUBS[mode] || !KIDS_RE.test(t.title + " " + (t.channel || ""))) // no kids' videos in Trending / Most viewed
       && !ytForeign(t)
-      && (YT_SUBS[mode] ? t.topic === mode && (!F.ytSub || t.sub === F.ytSub || (F.ytSub === "podnew" && Date.parse(t.released) > Date.now() - 9 * 864e5)) && (!ytMaxAge(t) || Date.parse(t.released) > Date.now() - ytMaxAge(t) * 864e5) : mode === "following" ? favCh(t) : mode === "alltime" ? t.alltime && !t.topic : t.trendingAt && Date.parse(t.trendingAt) > fresh)
+      && (YT_SUBS[mode] ? t.topic === mode && (!F.ytSub || t.sub === F.ytSub || (F.ytSub === "podnew" && Date.parse(t.released) > Date.now() - 9 * 864e5)) && (!ytMaxAge(t) || Date.parse(t.released) > Date.now() - ytMaxAge(t) * 864e5) : mode.startsWith("ut-") ? t.topic === "custom" && t.sub === mode : mode === "following" ? favCh(t) : mode === "alltime" ? t.alltime && !t.topic : t.trendingAt && Date.parse(t.trendingAt) > fresh)
       && (F.view !== "together" || (!theySaw(t.id) && !S.pSkip.has(t.id))));
   }
   const imdb = parseFloat(F.imdb) || 0, rt = parseFloat(F.rt) || 0;
@@ -1622,7 +1668,7 @@ function renderTips() {
   const box = $("tipsbox");
   if (local.get("wf-tips-done", false) || !S.me) { box.innerHTML = ""; return; }
   box.innerHTML = `<div class="tips"><div class="tipshead"><b>Quick tips</b><button class="btn" id="tipsok">Got it</button></div><ol>
-    <li><b>Pick a section</b> (Movies, Series, Anime…) just above the list, or search. Videos live on their own <b>YouTube</b> page: History, Food & travel, Soccer, F1, Politics and Podcasts. Tap <b>+ Follow</b> on a video to see that channel under ★ Following. Tap the logo or Home to get back.</li>
+    <li><b>Pick a section</b> (Movies, Series, Anime…) just above the list, or search. Videos live on their own <b>YouTube</b> page: History, Food & travel, Soccer, F1, Politics and Podcasts. Tap <b>+ Follow</b> on a video to see that channel under ★ Following. Tap <b>Edit tabs</b> to reorder or hide them, or add up to 3 topics of your own. Tap the logo or Home to get back.</li>
     <li><b>See details:</b> tap any title (or the <b>›</b> arrow) for the summary, cast and where to watch. In Cards view, tap <b>More</b> to read the full summary.</li>
     <li><b>Mark titles:</b> tap Seen, Want or Not interested.${"ontouchstart" in window ? " On your phone you can also <b>swipe right</b> for Seen and <b>swipe left</b> for Not interested." : ""}</li>
     <li><b>Sync</b> refreshes the catalog. It also updates by itself every night.</li>
@@ -1792,6 +1838,7 @@ async function onClick(e) {
   const sum = e.target.closest("[data-sum]"); if (sum) { sum.classList.toggle("open"); const m = sum.nextElementSibling; if (m && m.dataset.summore != null) m.textContent = sum.classList.contains("open") ? "Less" : "More"; return; }
   const sm = e.target.closest("[data-summore]"); if (sm) { const p = sm.previousElementSibling; p.classList.toggle("open"); sm.textContent = p.classList.contains("open") ? "Less" : "More"; return; }
   if (e.target.id === "detail") { detailId = null; renderDetail(); return; } // tap outside the pop-up
+  if (e.target.id === "ytedit") { closeYtEdit(); return; }
   const b = e.target.closest("button"); if (!b) return;
   if (b.dataset.detail) { detailId = b.dataset.detail; renderDetail(); return; }
   if (b.closest("#detail") && !b.dataset.mark && !b.dataset.seen && !b.dataset.rate && !b.dataset.pick && !b.dataset.open) { detailId = null; renderDetail(); if (b.id === "detailclose") return; }
@@ -1831,6 +1878,11 @@ async function onClick(e) {
     saveF(); render(); scrollTo({ top: 0 }); return;
   }
   if (b.dataset.moodex) { runMood(b.dataset.moodex); return; }
+  if (b.id === "yteditbtn") { openYtEdit(); return; }
+  if (b.id === "yteditdone") { closeYtEdit(); return; }
+  if (b.dataset.ytmove) { const o = ytFullOrder(), i = o.indexOf(b.dataset.ytmove), j = i + +b.dataset.dir; if (j >= 0 && j < o.length) { [o[i], o[j]] = [o[j], o[i]]; saveYtTabs({ order: o }); } return; }
+  if (b.dataset.ythide) { const h = new Set((F.ytTabs || {}).hidden || []), k = b.dataset.ythide; if (h.has(k)) h.delete(k); else if (ytModes().length > 1) h.add(k); else { toast("Keep at least one tab showing."); return; } saveYtTabs({ hidden: [...h] }); return; }
+  if (b.dataset.ytdel) { const k = b.dataset.ytdel, t = S.ytTopics.find((x) => x.key === k); try { await api.delTopic(k); await reload(); renderYtEdit(); toast(`Removed “${t ? t.label : "topic"}”`); } catch (e) { toast("Couldn’t remove it: " + e.message); } return; }
   if (b.dataset.pick) { togglePick(b.dataset.pick, name(b.dataset.pick)); return; }
   if (b.dataset.ratewho) { F.rateWho = b.dataset.ratewho === "them" ? "them" : ""; saveF(); render(); return; }
   if (b.dataset.follow) { toggleFollow(b.dataset.follow, b.dataset.ch || ""); return; }
@@ -2059,6 +2111,40 @@ async function runSync() {
   } finally { syncing = false; btn.disabled = false; btn.innerHTML = `${ICO.sync}<span class="lbl"> Sync</span>`; }
 }
 
+// ---------------- YouTube: Edit tabs (order, show/hide, your own topics) ----------------
+function ytFullOrder() { const o = (F.ytTabs || {}).order || [], all = allYtModes(); const pos = (k) => { const i = o.indexOf(k); return i < 0 ? 1000 + all.findIndex((m) => m[0] === k) : i; }; return all.map((m) => m[0]).sort((a, b) => pos(a) - pos(b)); }
+function renderYtEdit() {
+  const el = $("ytedit"); if (el.hidden) return;
+  const order = ytFullOrder(), hid = new Set((F.ytTabs || {}).hidden || []), byKey = new Map(allYtModes().map((m) => [m[0], m]));
+  const mine = S.ytTopics.filter((t) => t.user_id === S.me.id).length;
+  el.innerHTML = `<div class="yesheet" role="dialog" aria-modal="true" aria-label="Edit YouTube tabs">
+    <div class="yehead"><span></span><b>YouTube tabs</b><button id="yteditdone">Done</button></div>
+    <div class="yecap">Your tabs</div>
+    <div class="yelist">${order.map((k, i) => { const [, l, owner] = byKey.get(k); const on = !hid.has(k), own = owner === S.me.id;
+      return `<div class="yerow ${on ? "" : "off"}"><span class="yl">${esc(l)}${owner && !own ? ` <small>· ${esc(pName())}’s</small>` : ""}</span>
+        <button data-ytmove="${k}" data-dir="-1" aria-label="Move ${esc(l)} up" ${i === 0 ? "disabled" : ""}>↑</button><button data-ytmove="${k}" data-dir="1" aria-label="Move ${esc(l)} down" ${i === order.length - 1 ? "disabled" : ""}>↓</button>
+        ${own ? `<button class="del" data-ytdel="${k}" aria-label="Remove ${esc(l)}">✕</button>` : ""}
+        <button class="sw ${on ? "on" : ""}" data-ythide="${k}" role="switch" aria-checked="${on}" aria-label="Show ${esc(l)}"></button></div>`; }).join("")}</div>
+    <div class="yenote">Turn a tab off to hide it, or use the arrows to move it. This layout is saved on this device.</div>
+    <div class="yecap">Add your own topic (${mine} of 3)</div>
+    <div class="yelist"><form class="yeadd" id="ytaddform"><input id="ytaddq" maxlength="40" placeholder="e.g. woodworking, Arsenal, Japanese cooking" autocomplete="off" enterkeyhint="done" ${mine >= 3 ? "disabled" : ""}><button id="ytaddbtn" ${mine >= 3 ? "disabled" : ""}>Add</button></form></div>
+    <div class="yenote">Each topic becomes its own tab with popular English videos on that subject (no Shorts), refreshed weekly. To follow a specific creator, tap + Follow on one of their videos instead.</div>
+  </div>`;
+}
+function openYtEdit() { $("ytedit").hidden = false; document.body.classList.add("noscroll"); renderYtEdit(); }
+function closeYtEdit() { $("ytedit").hidden = true; document.body.classList.remove("noscroll"); render(); }
+function saveYtTabs(t) { F.ytTabs = Object.assign({ order: ytFullOrder(), hidden: [] }, F.ytTabs, t); saveF(); renderYtEdit(); render(); }
+async function addYtTopic(label) {
+  label = label.replace(/\s+/g, " ").trim(); if (label.length < 2) return;
+  try {
+    const key = await api.addTopic(label);
+    await reload(); F.ytMode = key; F.ytSub = ""; saveF(); renderYtEdit(); render();
+    toast(`Added “${label}”. Finding videos…`);
+    try { const r = await api.youtubeStep({ topic: key }); await reload(); toast(r.custom ? `${label}: ${r.custom} videos` : (r.errors || []).some((m) => /quota/i.test(m)) ? `${label} will fill in tonight: YouTube’s daily limit is used up` : `No videos found for “${label}” yet. Try a broader topic.`); }
+    catch { toast(`${label} will fill in on the next sync.`); }
+  } catch (e) { toast(e.message.replace(/^.*?(You can have)/, "$1")); }
+}
+document.addEventListener("submit", (e) => { if (e.target.id === "ytaddform") { e.preventDefault(); addYtTopic($("ytaddq").value); } });
 // hand-pick a title for your partner (shows under their Lists → From you)
 async function togglePick(id, title, on = !S.picks.has(id)) {
   on ? S.picks.add(id) : S.picks.delete(id); render(); renderDetail();

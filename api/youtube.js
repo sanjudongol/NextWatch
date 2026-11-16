@@ -250,6 +250,7 @@ export async function refreshYouTube({ allTime = "auto" } = {}) {
   for (let i = 0; i < list.length; i += 100) await save(list.slice(i, i + 100));
   for (const t of list) out[t.topic] = (out[t.topic] || 0) + 1;
   try { await refreshPodcasts(out); } catch (e) { out.errors.push("Podcasts: " + e.message); }
+  try { await refreshCustom(out); } catch (e) { out.errors.push("Your topics: " + e.message); }
   await refreshFollows(out);
   return out;
 }
@@ -308,12 +309,38 @@ export async function refreshPodcasts(out, force = false) {
   if (missing.length) out.errors.push("Podcasts not found on YouTube: " + missing.join(", "));
 }
 
+// Your own topics (Lists > YouTube > Edit tabs): one YouTube search each, refreshed weekly; up to 3 per person
+export async function refreshCustom(out, onlyKey = "") {
+  const rows = (await sb(`yt_topics?select=key,label${onlyKey ? "&key=eq." + encodeURIComponent(onlyKey) : ""}`)) || [];
+  const ago = (d) => new Date(Date.now() - d * 864e5).toISOString();
+  await Promise.all(rows.map(async ({ key, label }) => {
+    try {
+      if (!onlyKey) {
+        const fresh = await sb(`titles?select=id&kind=eq.yt&data->>sub=eq.${encodeURIComponent(key)}&updated_at=gt.${encodeURIComponent(ago(6.9))}&limit=5`);
+        if (fresh && fresh.length >= 5) return;
+      }
+      const sr = await yt(`search?part=id&type=video&order=relevance&regionCode=US&relevanceLanguage=en&maxResults=40&videoDuration=medium&q=${encodeURIComponent(label)}`);
+      const sr2 = await yt(`search?part=id&type=video&order=relevance&regionCode=US&relevanceLanguage=en&maxResults=20&videoDuration=long&q=${encodeURIComponent(label)}`).catch(() => ({ items: [] }));
+      const ids = [...new Set([...(sr.items || []), ...(sr2.items || [])].map((x) => x.id && x.id.videoId).filter(Boolean))].slice(0, 50);
+      if (!ids.length) return;
+      const d = await yt(`videos?part=snippet,statistics,contentDetails,status&id=${ids.join(",")}`);
+      const ch = await channels(d.items || []);
+      const list = (d.items || []).filter((v) => !isKids(v) && !isForeign(v, ch) && secs((v.contentDetails || {}).duration) >= 180)
+        .map((v) => toTitle(v, { topic: "custom", sub: key }));
+      await save(list);
+      out.custom = (out.custom || 0) + list.length;
+    } catch (e) { out.errors.push(label + ": " + e.message); }
+  }));
+}
+
 export default async function handler(req, res) {
   try {
     if (!env("YOUTUBE_KEY")) return json(res, 200, { skipped: "no key" });
     if (!(await requireUser(req))) return json(res, 401, { error: "Please sign in again." });
     const follow = (req.body && req.body.follow) || "";
     if (follow) return json(res, 200, { followed: await refreshChannel(follow) }); // just followed: load that channel now
+    const topic = (req.body && req.body.topic) || "";
+    if (/^ut-[a-z0-9]{6}$/.test(topic)) { const o = { errors: [] }; await refreshCustom(o, topic); return json(res, 200, { custom: o.custom || 0, errors: o.errors }); } // just added: load it now
     const out = await refreshYouTube();
     if (out.errors && out.errors.length) console.error("YouTube refresh problems:", out.errors.slice(0, 5).join(" | "));
     return json(res, 200, out);
