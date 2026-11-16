@@ -38,7 +38,9 @@ create table if not exists public.views (
 );
 -- how many seasons of a series this person had seen when they ticked it (for "new season" alerts)
 alter table public.views add column if not exists seasons int;
-alter table public.views add column if not exists rating smallint check (rating in (1,2)); -- 1 liked, 2 loved
+alter table public.views add column if not exists rating smallint; -- -1 not for me, 1 liked, 2 loved
+alter table public.views drop constraint if exists views_rating_check;
+alter table public.views add constraint views_rating_check check (rating in (-1, 1, 2));
 
 -- 5. YouTube channels (podcasters) you follow: their newest episodes are fetched on every refresh
 create table if not exists public.follows (

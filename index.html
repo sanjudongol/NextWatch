@@ -190,6 +190,9 @@ footer{color:var(--mu);font-size:12px;margin-top:24px}
 #toast{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);background:var(--tx);color:var(--bg);border-radius:12px;padding:10px 14px;display:flex;gap:14px;align-items:center;max-width:calc(100% - 32px);opacity:0;pointer-events:none;transition:.2s;font-size:14px;z-index:10}
 #toast.show{opacity:1;pointer-events:auto;transform:translate(-50%,0)}
 #toast button{background:none;border:0;color:var(--ac);font-weight:700;padding:0}
+#toast.rateask{flex-wrap:wrap;row-gap:8px;width:max-content}
+#toast .tacts{display:flex;gap:6px;flex-wrap:wrap}
+#toast .tacts button{background:color-mix(in srgb,var(--bg) 16%,transparent);color:var(--bg);border-radius:999px;padding:6px 12px;font-weight:600}
 @media (max-width:520px){h1{font-size:21px}.btn{padding:8px 11px}}
 /* bottom tab bar (phones) */
 #bnav{display:none}
@@ -372,6 +375,8 @@ button:active:not(:disabled),a.rb:active,.popbtn:active{opacity:.5}
 .rateseg{display:flex;gap:2px;background:var(--pill);border-radius:10px;padding:2px}
 .rateseg button{border:0;background:transparent;color:var(--tx);border-radius:8px;padding:7px 14px;font:inherit;font-weight:500;min-height:36px}
 .rateseg button.on{background:var(--seg);color:var(--red);font-weight:600;box-shadow:0 1px 3px rgb(0 0 0 / .12)}
+.rateseg button.nah.on,.rb.mk-nah.on{color:var(--mu)}
+.b-nah{background:color-mix(in srgb,var(--mu) 18%,transparent);color:var(--mu)}
 .rb.on.mk-like{background:color-mix(in srgb,var(--red) 14%,transparent);color:var(--red)}
 .rb.on,.acts .on,.checks .on{background:color-mix(in srgb,var(--ok) 16%,transparent);color:var(--ok);border:0}
 .rb.on.mk-want,.rb.on.mk-watching,.acts .on.mk-want,.acts .on.mk-watching{background:color-mix(in srgb,var(--want) 16%,transparent);color:var(--want)}
@@ -997,7 +1002,7 @@ function syncControls() {
     : k === "onlyme" ? all().filter((t) => onlyMe(t.id)).length
     : k === "onlythem" ? all().filter((t) => onlyThem(t.id)).length
     : k === "person" ? all().filter((t) => byPerson(t, F.person)).length
-    : k === "faves" ? all().filter((t) => S.pRate.get(t.id)).length
+    : k === "faves" ? all().filter((t) => S.pRate.get(t.id) > 0).length
     : k === "watched" ? all().filter((t) => watched(t.id)).length
     : all().filter((t) => S.marks.get(t.id) === "skipped").length;
   const tabs = [["all", "All matches"], ...(seasonNews().length ? [["seasons", "New seasons"]] : []), ...(S.partner ? [["together", "Watch together"]] : []), ["mine", "My list"], ["want", "Our list"], ["watching", "Watching now"], ["directors", "Top directors"], ...(S.partner ? [["onlyme", "Only you’ve seen"], ["onlythem", `Only ${esc(pName())} has seen`]] : []), ["watched", "Watched"], ...(S.partner ? [["faves", `${esc(pName())}’s favorites`]] : []), ["skipped", "Not interested"]];
@@ -1069,7 +1074,7 @@ function filteredAll(cats = [F.cat]) {
   if (F.view === "onlyme") return all().filter((t) => onlyMe(t.id) && matchesSearch(t, q));
   if (F.view === "onlythem") return all().filter((t) => onlyThem(t.id) && matchesSearch(t, q));
   if (F.view === "person") return all().filter((t) => byPerson(t, F.person) && matchesSearch(t, q));
-  if (F.view === "faves") return all().filter((t) => S.pRate.get(t.id) && matchesSearch(t, q));
+  if (F.view === "faves") return all().filter((t) => S.pRate.get(t.id) > 0 && matchesSearch(t, q));
   if (F.view === "watched") return all().filter((t) => watched(t.id) && matchesSearch(t, q));
   if (F.view === "skipped") return all().filter((t) => S.marks.get(t.id) === "skipped" && matchesSearch(t, q));
   if (cats.length === 1 && cats[0] === "youtube") {
@@ -1131,10 +1136,11 @@ function badgeList(t) {
   else if (pmk === "want") badges.push(`<span class="badge b-want">${esc(pName())} wants this</span>`);
   if (mk === "skipped") badges.push(`<span class="badge b-skipped">Not interested</span>`);
   const rt = S.rate.get(id), prt = S.pRate.get(id);
-  if (rt && prt === rt) badges.push(`<span class="badge b-like">You both ${rt === 2 ? "loved" : "liked"} it</span>`);
+  const verb = (r) => r === 2 ? "loved it" : r === 1 ? "liked it" : "didn’t like it", cls = (r) => r > 0 ? "b-like" : "b-nah";
+  if (rt && prt === rt) badges.push(`<span class="badge ${cls(rt)}">${rt > 0 ? `You both ${verb(rt)}` : "Neither of you liked it"}</span>`);
   else {
-    if (rt) badges.push(`<span class="badge b-like">You ${rt === 2 ? "loved" : "liked"} it</span>`);
-    if (prt) badges.push(`<span class="badge b-like">${esc(pName())} ${prt === 2 ? "loved" : "liked"} it</span>`);
+    if (rt) badges.push(`<span class="badge ${cls(rt)}">You ${verb(rt)}</span>`);
+    if (prt) badges.push(`<span class="badge ${cls(prt)}">${esc(pName())} ${verb(prt)}</span>`);
   }
   return badges;
 }
@@ -1156,10 +1162,10 @@ function row(t) {
     ${ns ? btn(`data-season="${ns}"`, false, "", `✓ Seen S${ns}`, `I’ve watched season ${ns}`) : ""}
     ${btn('data-seen="me"', iSaw(id), "", `${iSaw(id) ? "✓ " : ""}${S.partner ? "Me" : "Seen"}`, S.partner ? "I watched" : "Watched")}
     ${S.partner ? btn('data-seen="partner"', theySaw(id), "", `${theySaw(id) ? "✓ " : ""}${esc(pName())}`, `${pName()} watched`) : ""}
-    ${iSaw(id) ? btn('data-rate="1"', S.rate.get(id) === 1, "mk-like", S.rate.get(id) === 1 ? "✓ Liked" : "Liked", "Liked it") + btn('data-rate="2"', S.rate.get(id) === 2, "mk-like", S.rate.get(id) === 2 ? "✓ Loved" : "Loved", "Loved it")
+    ${iSaw(id) ? btn('data-rate="-1"', S.rate.get(id) === -1, "mk-nah", S.rate.get(id) === -1 ? "✓ Nope" : "Nope", "Not for me") + btn('data-rate="1"', S.rate.get(id) === 1, "mk-like", S.rate.get(id) === 1 ? "✓ Liked" : "Liked", "Liked it") + btn('data-rate="2"', S.rate.get(id) === 2, "mk-like", S.rate.get(id) === 2 ? "✓ Loved" : "Loved", "Loved it")
       : btn('data-mark="want"', mk === "want", "mk-want", "Want", "Want to watch")}
     ${t.type === "Series" ? btn('data-mark="watching"', mk === "watching", "mk-watching", "Watching", "Watching now: keeps it at the top until you finish") : ""}
-    ${btn('data-mark="skipped"', mk === "skipped", "mk-skipped", "✕", "Not interested")}
+    ${iSaw(id) ? "" : btn('data-mark="skipped"', mk === "skipped", "mk-skipped", "✕", "Not interested")}
   </div>
 </article>`;
 }
@@ -1211,6 +1217,7 @@ function card(t, collapsible) {
   ${ns ? `<button class="seasonbtn" data-season="${ns}" data-id="${esc(id)}">✓ I’ve watched season ${ns}</button>` : ""}
   ${checks}
   <div class="rate"><span>How was it?</span><div class="rateseg" role="group" aria-label="Your rating">
+    <button class="nah ${S.rate.get(id) === -1 ? "on" : ""}" data-rate="-1" data-id="${esc(id)}" aria-pressed="${S.rate.get(id) === -1}">Not for me</button>
     <button class="${S.rate.get(id) === 1 ? "on" : ""}" data-rate="1" data-id="${esc(id)}" aria-pressed="${S.rate.get(id) === 1}">Liked it</button>
     <button class="${S.rate.get(id) === 2 ? "on" : ""}" data-rate="2" data-id="${esc(id)}" aria-pressed="${S.rate.get(id) === 2}">Loved it</button>
   </div></div>
@@ -1301,7 +1308,7 @@ function shelfRows(list) {
   const byQ = [...list].sort((a, b) => q(b) - q(a));
   // because you watched: one of your best-rated watched titles in this section (changes daily)
   const liked = (t) => (S.rate.get(t.id) || 0) * 10; // titles you loved, then liked, come first
-  const seen = all().filter((t) => iSaw(t.id) && categoryOf(t) === F.cat && t.kind !== "yt").sort((a, b) => liked(b) + q(b) - liked(a) - q(a)).slice(0, S.rate.size ? 4 : 8);
+  const seen = all().filter((t) => iSaw(t.id) && (S.rate.get(t.id) || 0) >= 0 && categoryOf(t) === F.cat && t.kind !== "yt").sort((a, b) => liked(b) + q(b) - liked(a) - q(a)).slice(0, S.rate.size ? 4 : 8);
   if (seen.length) {
     const base = seen[daySeed(F.cat + "b") % seen.length], g = new Set(gl(base)), d = new Set(base.dirs || []);
     const sim = (t) => (t.dirs || []).filter((x) => d.has(x)).length * 3 + gl(t).filter((x) => g.has(x)).length;
@@ -1309,7 +1316,7 @@ function shelfRows(list) {
   }
   if (S.partner) { // what your partner liked or loved that you haven't seen yet
     const pr = (t) => S.pRate.get(t.id) || 0;
-    add(`${pName()}’s favorites`, list.filter((t) => pr(t)).sort((a, b) => pr(b) - pr(a) || q(b) - q(a)), 1);
+    add(`${pName()}’s favorites`, list.filter((t) => pr(t) > 0).sort((a, b) => pr(b) - pr(a) || q(b) - q(a)), 1);
   }
   const yr = new Date().getFullYear();
   add("New and well rated", byQ.filter((t) => t.year >= yr - 1));
@@ -1640,12 +1647,14 @@ function renderAccount() {
 
 // ---------------- toast ----------------
 let toastT;
-function toast(msg, undo, label = "Undo") {
+function toast(msg, undo, label = "Undo", acts) { // acts: extra choices, e.g. [["Liked", fn]]
   const t = $("toast");
-  t.innerHTML = `<span>${esc(msg)}</span>` + (undo ? `<button id="undo">${esc(label)}</button>` : "");
+  t.classList.toggle("rateask", !!acts);
+  t.innerHTML = `<span>${esc(msg)}</span>` + (undo ? `<button id="undo">${esc(label)}</button>` : "") + (acts ? `<div class="tacts">${acts.map(([l], i) => `<button data-tact="${i}">${esc(l)}</button>`).join("")}</div>` : "");
   t.classList.add("show"); clearTimeout(toastT);
-  toastT = setTimeout(() => t.classList.remove("show"), undo ? 8000 : 4500);
+  toastT = setTimeout(() => t.classList.remove("show"), acts ? 12000 : undo ? 8000 : 4500);
   if (undo) $("undo").onclick = () => { undo(); t.classList.remove("show"); };
+  if (acts) t.querySelectorAll("[data-tact]").forEach((x) => (x.onclick = (e) => { e.stopPropagation(); t.classList.remove("show"); acts[+x.dataset.tact][1](); }));
 }
 
 // ---------------- changes (optimistic, with undo) ----------------
@@ -1668,10 +1677,19 @@ async function apply(id, next, prev) {
     if ((next.them !== prev.them || next.pseen !== prev.pseen) && S.partner) await api.setView(S.partner.id, id, next.them, next.pseen);
   } catch (e) { set(prev); render(); toast("Couldn’t save that: " + e.message); }
 }
-function change(id, patch, msg) {
+function change(id, patch, msg, acts) {
   const prev = snap(id), next = Object.assign({}, prev, patch);
   apply(id, next, prev);
-  toast(msg, () => apply(id, prev, next));
+  toast(msg, () => apply(id, prev, next), "Undo", acts);
+}
+// rate a title: -1 not for me, 1 liked, 2 loved (tapping the same one again clears it)
+function rateTitle(id, want, title) {
+  const s = snap(id), nx = s.rate === want ? 0 : want;
+  const patch = { rate: nx };
+  if (nx && !s.me) { patch.me = true; patch.seen = airedNow(id); } // rating it means you've seen it
+  const after = Object.assign({}, s, patch);
+  if (after.me && (!S.partner || after.them) && (after.mk === "want" || after.mk === "watching")) patch.mk = "";
+  change(id, patch, nx === 2 ? `Loved ${title}` : nx === 1 ? `Liked ${title}` : nx === -1 ? `${title}: not for you. It won’t be used for suggestions` : `Cleared your rating for ${title}`);
 }
 
 // ---------------- events ----------------
@@ -1699,19 +1717,13 @@ async function onClick(e) {
     const who = mine ? "You" : pName();
     const on = mine ? after.me : after.them;
     const where = mine && on && !both ? ` · waiting for ${pName()}` : "";
-    change(id, patch, both && S.partner ? `You’ve both seen ${name(id)}, moved to Watched` : on ? `${who} watched ${name(id)}${where}` : `Unticked ${mine ? "you" : who} for ${name(id)}`);
+    // you just watched it: the tile may leave this list, so ask how it was right in the message (not for YouTube videos)
+    const t = all().find((x) => x.id === id), ask = mine && on && !s.rate && t && t.kind !== "yt";
+    const acts = ask ? [["Not for me", () => rateTitle(id, -1, t.title)], ["Liked it", () => rateTitle(id, 1, t.title)], ["Loved it", () => rateTitle(id, 2, t.title)]] : undefined;
+    change(id, patch, (both && S.partner ? `You’ve both seen ${name(id)}, moved to Watched` : on ? `${who} watched ${name(id)}${where}` : `Unticked ${mine ? "you" : who} for ${name(id)}`) + (ask ? ". How was it?" : ""), acts);
     return;
   }
-  if (b.dataset.rate) {
-    const id = b.dataset.id, s = snap(id);
-    const want = b.dataset.rate === "cycle" ? (s.rate + 1) % 3 : +b.dataset.rate;
-    const nx = b.dataset.rate !== "cycle" && s.rate === want ? 0 : want;
-    const patch = { rate: nx };
-    if (nx && !s.me) { patch.me = true; patch.seen = airedNow(id); } // rating it means you've seen it
-    const after = Object.assign({}, s, patch);
-    if (after.me && (!S.partner || after.them) && (after.mk === "want" || after.mk === "watching")) patch.mk = "";
-    change(id, patch, nx === 2 ? `Loved ${name(id)}` : nx === 1 ? `Liked ${name(id)}` : `Cleared your rating for ${name(id)}`); return;
-  }
+  if (b.dataset.rate) { rateTitle(b.dataset.id, +b.dataset.rate, name(b.dataset.id)); return; }
   if (b.dataset.season) {
     const id = b.dataset.id, n = +b.dataset.season;
     change(id, { me: true, seen: n }, `Marked season ${n} of ${name(id)} as watched`); return;
