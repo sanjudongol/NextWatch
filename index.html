@@ -1264,7 +1264,7 @@ function render() {
   if (F.view === "seasons") empty = "No new or upcoming seasons for series you’ve watched.";
   if (F.view === "faves") empty = `Nothing here yet. When ${esc(pName())} taps Liked it or Loved it on something, it shows up here, with what you haven’t seen first.`;
   if (F.view === "watching") empty = "Nothing in progress. On a series, tap “Watching now” to keep it here until you finish.";
-  if (F.view === "all" && F.cat === "youtube") empty = !S.ytOn ? "YouTube isn’t switched on yet: the site needs a YouTube key in Vercel (YOUTUBE_KEY). Once it’s added, tap Sync." : "No videos here yet. Tap Sync to load them.";
+  if (F.view === "all" && F.cat === "youtube") empty = !S.ytOn ? "YouTube isn’t switched on yet: the site needs a YouTube key in Vercel (YOUTUBE_KEY). Once it’s added, tap Sync." : `No videos here yet. ${phone() ? "Pull down on this screen" : "Tap Sync"} to load them.`;
   else if (F.view === "all") empty = all().length ? "Nothing matches these filters. Try lowering a score, widening the dates, or tapping Reset filters." : "No titles yet. Tap Sync to pull in the catalog — the first sync takes a minute or two.";
   const compact = F.layout === "list";
   $("grid").className = compact ? "list" : "";
