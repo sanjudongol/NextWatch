@@ -1379,8 +1379,12 @@ function render() {
   $("grid").className = compact ? "list" : "";
   $("grid").innerHTML = list.length ? list.map((t) => t.kind === "yt" ? vid(t) : compact ? (openRow === t.id ? card(t, true) : row(t)) : card(t)).join("") : `<div class="empty">${empty}</div>`;
   renderShelves(list); renderDetail();
-  // iPhone: on Home the section pills come before All / New to both; on Lists and Watched the list picker comes first, then the pills
-  if (phone()) { const home = groupOf(F.view) === "discover"; if (home && $("cats").nextElementSibling !== $("tabs")) $("tabs").before($("cats")); if (!home && $("tabs").nextElementSibling !== $("cats")) $("cats").before($("tabs")); }
+  // iPhone: on Home the section pills come before All / New to both; on Lists and Watched the pills sit under the count and Sort & Filter
+  if (phone()) {
+    const home = groupOf(F.view) === "discover", sb = document.querySelector(".statusbar");
+    if (home) { if ($("tabs").nextElementSibling !== sb) sb.before($("tabs")); if ($("cats").nextElementSibling !== $("tabs")) $("tabs").before($("cats")); }
+    else { if ($("tabs").nextElementSibling !== sb) sb.before($("tabs")); if (sb.nextElementSibling !== $("cats")) sb.after($("cats")); } // Lists / Watched: picker, count + Sort & Filter, then pills
+  }
   $("allhead").hidden = !phone() || $("shelves").hidden || !document.querySelector("#shelves .shelfend"); // iPhone: heading sits under the season news
   renderPick(); renderSub(); renderAlert(); renderTips(); if (moodRes) { moodRes.picks = moodPicks(moodRes.want); renderMood(); }
 }
