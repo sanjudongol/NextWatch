@@ -799,6 +799,9 @@ const ytForeign = (t) => { if (t.lang && !/^en|^zxx/i.test(t.lang)) return true;
 const myUnrated = (t) => t.kind !== "yt" && iSaw(t.id) && !S.rate.get(t.id);
 const theirUnrated = (t) => t.kind !== "yt" && !!S.partner && theySaw(t.id) && !S.pRate.get(t.id);
 const needsRate = (t) => (F.rateWho === "them" && S.partner ? theirUnrated : myUnrated)(t);
+// niche services: their titles only show when you pick that service in Sort & Filter (same names as lib/server.js)
+const EXTRA_SERVICES = new Set(["Hoopla", "Starz", "MGM+", "AMC+", "Criterion Channel", "MUBI", "BritBox", "Acorn TV", "Shudder"]);
+const svcOk = (t) => { const sv = t.services || []; if (F.svcOn.length) return sv.some((s) => F.svcOn.includes(s)); return !sv.length || sv.some((s) => !EXTRA_SERVICES.has(s)); };
 const favCh = (t) => !!t.channelId && (S.follows.has(t.channelId) || S.pFollows.has(t.channelId)); // a channel you or your partner follow
 const ytMaxAge = (t) => ((YT_SUBS[t.topic] || []).find((x) => x[0] === t.sub) || [])[2]; // e.g. highlights: last 10 days only
 const fmtViews = (n) => n >= 1e9 ? (n / 1e9).toFixed(1).replace(/\.0$/, "") + "B" : n >= 1e6 ? Math.round(n / 1e6) + "M" : n >= 1e3 ? Math.round(n / 1e3) + "K" : String(n || 0);
@@ -1082,11 +1085,13 @@ function buildFilters() {
   renderServiceChips();
 }
 function renderServiceChips() {
-  const svcs = [...new Set(all().flatMap((t) => t.services || []))].sort();
+  const svcsAll = [...new Set(all().flatMap((t) => t.services || []))].sort();
+  const svcs = svcsAll.filter((x) => !EXTRA_SERVICES.has(x)), extras = svcsAll.filter((x) => EXTRA_SERVICES.has(x));
   const on = F.svcOn.filter((x) => svcs.includes(x));
   $("chips").innerHTML = `<div class="lbl">Streaming services: tap one to see only its titles; tap more to add them</div>` +
     `<button class="chip ${on.length ? "" : "on"}" data-svcall="1">All services</button>` +
-    svcs.map((s) => `<button class="chip ${on.includes(s) ? "on" : ""}" data-svc="${esc(s)}" aria-pressed="${on.includes(s)}">${esc(s)}</button>`).join("");
+    svcs.map((s) => `<button class="chip ${on.includes(s) ? "on" : ""}" data-svc="${esc(s)}" aria-pressed="${on.includes(s)}">${esc(s)}</button>`).join("") +
+    (extras.length ? `<div class="lbl" style="flex-basis:100%;margin-top:8px">More services: only shown when you pick them</div>` + extras.map((s) => `<button class="chip ${on.includes(s) ? "on" : ""}" data-svc="${esc(s)}" aria-pressed="${on.includes(s)}">${esc(s)}</button>`).join("") : "");
 }
 const ICO = {home: `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 10.5 12 3.5l8.5 7V20a1 1 0 0 1-1 1H15v-6H9v6H4.5a1 1 0 0 1-1-1z"/></svg>`,spark: `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l1.7 4.8 4.8 1.7-4.8 1.7L12 16.5l-1.7-4.8L5.5 10l4.8-1.7z M18.5 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z"/></svg>`,shuffle: `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h3.2c2 0 3.2.9 4.2 2.6l3.2 4.8c1 1.7 2.2 2.6 4.2 2.6H21 M18.5 14.5 21 17l-2.5 2.5 M3 17h3.2c1.5 0 2.5-.5 3.3-1.4 M14.5 8.4c.8-.9 1.8-1.4 3.3-1.4H21 M18.5 4.5 21 7l-2.5 2.5"/></svg>`,person: `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 11.5a3.75 3.75 0 1 0 0-7.5 3.75 3.75 0 0 0 0 7.5z M4.5 20.5c.4-3.6 3.6-5.5 7.5-5.5s7.1 1.9 7.5 5.5"/></svg>`,people: `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11a3.25 3.25 0 1 0 0-6.5A3.25 3.25 0 0 0 9 11z M2.5 20c.4-3.3 3-5 6.5-5s6.1 1.7 6.5 5 M15.5 4.7a3.25 3.25 0 0 1 0 6.1 M17.5 15.2c2.2.5 3.7 2 4 4.8"/></svg>`,sync: `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3 M19.5 4.5v4h-4"/></svg>`,star: `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.8l2.5 5.1 5.6.8-4 3.9 1 5.6-5.1-2.7-5.1 2.7 1-5.6-4-3.9 5.6-.8z"/></svg>`,check: `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z"/><path class="in" d="M8.2 12.2l2.6 2.6 5-5.3"/></svg>`,film: `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5h12a1.5 1.5 0 0 1 1.5 1.5v12a1.5 1.5 0 0 1-1.5 1.5H6A1.5 1.5 0 0 1 4.5 18V6A1.5 1.5 0 0 1 6 4.5z"/><path class="in" d="M4.5 9h15 M4.5 15h15 M9 4.5V9 M15 4.5V9 M9 15v4.5 M15 15v4.5"/></svg>`};
 const GROUPS = [
@@ -1270,7 +1275,7 @@ function filteredAll(cats = curCats()) {
   return all().filter((t) => {
     if (S.marks.get(t.id) === "skipped") return false;
     if (newSeason(t) && F.view === "all") // a series you've seen with a new season: back on your list, whatever the score filters
-      return cats.includes(categoryOf(t)) && (!F.svcOn.length || (t.services || []).some((s) => F.svcOn.includes(s))) && matchesSearch(t, q);
+      return cats.includes(categoryOf(t)) && svcOk(t) && matchesSearch(t, q);
     if (iSaw(t.id)) return false; // once you've seen it, it leaves your list
     if (F.view === "together" && (iSaw(t.id) || theySaw(t.id) || S.pSkip.has(t.id))) return false;
     if (!cats.includes(categoryOf(t))) return false;
@@ -1284,7 +1289,7 @@ function filteredAll(cats = curCats()) {
     if (+F.runtime && t.type === "Movie" && !(t.len && t.len <= +F.runtime)) return false;
     if (F.status2 && t.type === "Series" && (F.status2 === "done" ? t.status === "Ongoing" : t.status !== "Ongoing")) return false;
     if (F.mood && !moodsOf(t).includes(F.mood)) return false;
-    if (F.svcOn.length && !(t.services || []).some((s) => F.svcOn.includes(s))) return false;
+    if (!svcOk(t)) return false;
     return matchesSearch(t, q);
   });
 }
