@@ -969,7 +969,7 @@ function syncControls() {
  : (!topCat ? "" : `<label class="popbtn sortpop vibepop ${F.preset >= 0 ? "set" : ""}" title="Pick a vibe"><span class="sl">Vibe:</span><span>${F.preset >= 0 ? esc(PRESETS[F.preset].name) : "Any"}</span><select id="vibe" aria-label="Vibe"><option value="-1">Any</option>${PRESETS.map((p, i) => p.only && p.only !== F.cat ? "" : `<option value="${i}" ${F.preset === i ? "selected" : ""}>${esc(p.name)}</option>`).join("")}</select><svg class="ico ud" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 9.5 12 5.5l4 4M8 14.5l4 4 4-4"/></svg></label>`);
   const all = () => pool(); // counts cover only this page (videos on YouTube, movies & TV elsewhere)
   const count = (k) => k === "mine" ? all().filter((t) => S.marks.get(t.id) === "want" && !iSaw(t.id)).length
-    : k === "want" ? !S.partner ? 0 : all().filter((t) => (S.marks.get(t.id) === "want" || S.pMarks.get(t.id) === "want") && !iSaw(t.id)).length
+    : k === "want" ? !S.partner ? 0 : all().filter((t) => bothWant(t.id)).length
     : k === "watching" ? all().filter((t) => isWatching(t.id)).length
     : k === "seasons" ? seasonNews().length
     : k === "bothwant" ? all().filter((t) => bothWant(t.id)).length
@@ -1039,7 +1039,7 @@ function filteredAll(cats = [F.cat]) {
   const q = $("q").value.trim();
   if (F.view === "mine") return all().filter((t) => S.marks.get(t.id) === "want" && !iSaw(t.id) && matchesSearch(t, q));
   if (F.view === "want" && !S.partner) return [];
-  if (F.view === "want") return all().filter((t) => (S.marks.get(t.id) === "want" || S.pMarks.get(t.id) === "want") && !iSaw(t.id) && matchesSearch(t, q));
+  if (F.view === "want") return all().filter((t) => bothWant(t.id) && matchesSearch(t, q)); // only what you both want
   // searching looks through everything: every section, score, service and mark (filters come back when the box is cleared)
   if (q && (F.view === "all" || F.view === "together")) return all().filter((t) => matchesSearch(t, q));
   if (F.view === "seasons") return seasonNews().filter((t) => matchesSearch(t, q));
@@ -1254,7 +1254,7 @@ function render() {
   let empty = "Nothing here yet.";
   if (F.view === "together") empty = "Nothing here that neither of you has seen. Try another section or loosen the filters.";
   if (F.view === "mine") empty = "Nothing on your list yet. Tap Want on anything you’d like to watch.";
-  if (F.view === "want") empty = S.partner ? `Nothing on your shared list yet. Anything you or ${esc(pName())} tap Want on shows up here, with what you both want first.` : `<b>Our list</b> is what you and your partner both want to watch, in one place.<br><br><button class="btn primary" id="emptylink">Link your partner</button>`;
+  if (F.view === "want") empty = S.partner ? `Nothing you both want yet. When you and ${esc(pName())} both tap Want on the same title, it shows up here.` : `<b>Our list</b> is what you and your partner both want to watch, in one place.<br><br><button class="btn primary" id="emptylink">Link your partner</button>`;
   if (F.view === "bothwant") empty = `Nothing you both want yet. When you and ${esc(pName())} both tap “Want to watch” on a title, it shows up here.`;
   if (F.view === "seasons") empty = "No new or upcoming seasons for series you’ve watched.";
   if (F.view === "faves") empty = `Nothing here yet. When ${esc(pName())} taps Liked it or Loved it on something, it shows up here, with what you haven’t seen first.`;
