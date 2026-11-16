@@ -125,8 +125,16 @@ async function save(list) {
     return { id: t.id, kind: "yt", updated_at: now, data: { ...t, alltime: t.alltime || p.alltime || false, trendingAt: t.trendingAt || p.trendingAt || null, topic, sub: t.sub || p.sub || null,
       genres: topic && YT_TOPICS[topic] ? [YT_TOPICS[topic].label] : t.genres } };
   });
-  await sb("titles", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify(rows) });
+  const post = (r) => sb("titles", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" }, body: clean(r) });
+  try { await post(rows); }
+  catch (e) { // one odd video shouldn't sink the batch: save them one by one and skip any the database refuses
+    let bad = 0;
+    for (const r of rows) { try { await post([r]); } catch { bad++; } }
+    if (bad === rows.length) throw e;
+  }
 }
+// JSON the database accepts: no null characters or half emoji (a description cut mid-emoji)
+const clean = (rows) => JSON.stringify([...new Map(rows.map((r) => [r.id, r])).values()], (k, v) => typeof v === "string" ? v.replace(/\u0000/g, "").toWellFormed() : v);
 
 export async function refreshYouTube({ allTime = "auto" } = {}) {
   if (!env("YOUTUBE_KEY")) return { skipped: "no key" };
