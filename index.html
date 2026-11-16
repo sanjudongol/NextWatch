@@ -669,7 +669,7 @@ const YT_SUBS = { // same keys as YT_TOPICS in api/youtube.js
   soccer: [["barca", "Barcelona", 12], ["lfc", "Liverpool", 12], ["highlights", "Latest highlights", 10], ["pl", "Premier League", 10], ["ucl", "Champions League", 16], ["transfers", "Transfer news", 6], ["fpl", "FPL", 9], ["tactics", "Tactics & analysis"], ["goals", "Best goals"], ["legends", "Legends"], ["worldcup", "World Cup"], ["skills", "Skills"], ["stories", "Stories & documentaries"]],
   f1: [["race", "Race highlights", 21], ["quali", "Qualifying", 21], ["sprint", "Sprint", 21], ["f1news", "News & analysis", 9], ["overtakes", "Best overtakes"], ["classics", "Classic races"], ["tech", "Tech explained"], ["f1docs", "Documentaries"]],
   politics: [["polnews", "Latest news", 4], ["polworld", "World affairs", 9], ["polinterviews", "Interviews", 16], ["poldebates", "Debates"], ["polexplained", "Explained"]],
-  podcasts: [["podnew", "New episodes", 9], ["podcomedy", "Comedy"], ["podinterviews", "Interviews"], ["podcrime", "True crime"], ["podscience", "Science & ideas"], ["podsports", "Sports talk"], ["podbiz", "Business & money"]],
+  podcasts: [["podnew", "New episodes"], ["podnews", "News & politics"], ["podcomedy", "Comedy"], ["podinterviews", "Interviews"], ["podcrime", "True crime"], ["podscience", "Science & health"], ["podsports", "Sports"], ["podbiz", "Business & tech"]], // same keys as PODCASTS in api/youtube.js
 };
 // English only (same rule as api/youtube.js): hides older saved videos in another language or script
 const ytForeign = (t) => { if (t.lang && !/^en|^zxx/i.test(t.lang)) return true; if (/\b(telugu|tamil|malayalam|kannada|hindi|bhojpuri|gujarati|marathi|punjabi|bengali|bangla|odia|urdu|nepali|sinhala|tagalog|dubbed|full (?:hd |youtube |length )?(?:movie|film)|yt film|south indian)\b/i.test(t.title + " " + (t.channel || ""))) return true; const all = (t.title.match(/\p{L}/gu) || []).length; return all > 3 && (t.title.match(/[A-Za-z\u00C0-\u024F]/g) || []).length / all < 0.7; };
@@ -1077,7 +1077,7 @@ function filteredAll(cats = [F.cat]) {
     return all().filter((t) => t.kind === "yt" && !iSaw(t.id) && S.marks.get(t.id) !== "skipped"
       && (YT_SUBS[mode] || !KIDS_RE.test(t.title + " " + (t.channel || ""))) // no kids' videos in Trending / Most viewed
       && !ytForeign(t)
-      && (YT_SUBS[mode] ? t.topic === mode && (!F.ytSub || t.sub === F.ytSub) && (!ytMaxAge(t) || Date.parse(t.released) > Date.now() - ytMaxAge(t) * 864e5) : mode === "following" ? favCh(t) : mode === "alltime" ? t.alltime && !t.topic : t.trendingAt && Date.parse(t.trendingAt) > fresh)
+      && (YT_SUBS[mode] ? t.topic === mode && (!F.ytSub || t.sub === F.ytSub || (F.ytSub === "podnew" && Date.parse(t.released) > Date.now() - 9 * 864e5)) && (!ytMaxAge(t) || Date.parse(t.released) > Date.now() - ytMaxAge(t) * 864e5) : mode === "following" ? favCh(t) : mode === "alltime" ? t.alltime && !t.topic : t.trendingAt && Date.parse(t.trendingAt) > fresh)
       && (F.view !== "together" || (!theySaw(t.id) && !S.pSkip.has(t.id))));
   }
   const imdb = parseFloat(F.imdb) || 0, rt = parseFloat(F.rt) || 0;
@@ -1254,7 +1254,7 @@ function render() {
   const pri = (t) => F.view === "together" ? wantCount(t.id) : F.view === "seasons" ? (newSeason(t) ? 1 : 0)
     : F.view === "want" ? (bothWant(t.id) ? 3 : 0) + (newSeason(t) ? 2 : isWatching(t.id) ? 1 : 0) : F.view === "all" || F.view === "mine" ? (newSeason(t) ? 2 : isWatching(t.id) ? 1 : 0)
     : F.view === "faves" ? (iSaw(t.id) ? 0 : 2) + (S.pRate.get(t.id) === 2 ? 1 : 0) : 0;
-  const newest = F.cat === "youtube" && (F.ytSub ? ((YT_SUBS[F.ytMode] || []).find((x) => x[0] === F.ytSub) || [])[2] : ["soccer", "f1", "following"].includes(F.ytMode)); // "latest" tabs and sports: newest first
+  const newest = F.cat === "youtube" && (F.ytSub ? ((YT_SUBS[F.ytMode] || []).find((x) => x[0] === F.ytSub) || [])[2] : ["soccer", "f1", "following"].includes(F.ytMode)) || F.ytMode === "podcasts"; // "latest" tabs and sports: newest first
   const sq = $("q").value.trim().toLowerCase();
   const hit = (t) => { const ti = (t.title || "").toLowerCase(); return ti === sq ? 3 : ti.startsWith(sq) ? 2 : ti.includes(sq) ? 1 : 0; };
   if (sq) list.sort((x, y) => hit(y) - hit(x) || imdbOrTmdb(y) - imdbOrTmdb(x) || (y.views || 0) - (x.views || 0));

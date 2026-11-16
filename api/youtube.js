@@ -68,15 +68,38 @@ export const YT_TOPICS = {
     polexplained: ["Explained", "politics explained"],
   } },
   // podcasts: full episodes only (20+ minutes), so clips and Shorts stay out
-  podcasts: { label: "Podcasts", minSecs: 1200, subs: {
-    podnew: ["New episodes", "podcast full episode", { days: 7, every: 1, minViews: 50000 }],
-    podcomedy: ["Comedy", "comedy podcast full episode"],
-    podinterviews: ["Interviews", "long form interview podcast"],
-    podcrime: ["True crime", "true crime podcast episode"],
-    podscience: ["Science & ideas", "science podcast episode"],
-    podsports: ["Sports talk", "sports podcast episode"],
-    podbiz: ["Business & money", "business podcast episode"],
-  } },
+  // podcasts come from a hand-picked list of shows (PODCASTS below), not from searches
+  podcasts: { label: "Podcasts", subs: {} },
+};
+// Podcasts: well-known US and UK shows, grouped by tab. Each show: [name, ...YouTube handles to try in order].
+// If no handle matches, the show is looked up by name once and the channel is remembered (yt_channels table).
+export const PODCASTS = {
+  podnews: ["News & politics", [
+    ["The Daily", "@TheDailyNYT", "@thedaily", "@nytimes"], ["Pod Save America", "@PodSaveAmerica"], ["The Megyn Kelly Show", "@MegynKelly"],
+    ["Breaking Points", "@breakingpoints"], ["The Rest Is Politics", "@TheRestIsPolitics"], ["The Bulwark Podcast", "@BulwarkTakes", "@TheBulwark"],
+  ]],
+  podcomedy: ["Comedy", [
+    ["Good Hang with Amy Poehler", "@GoodHang", "@goodhangpod", "@GoodHangWithAmyPoehler"], ["SmartLess", "@SmartLess"], ["Conan O'Brien Needs a Friend", "@TeamCoco"],
+    ["This Past Weekend w/ Theo Von", "@TheoVon"], ["Bad Friends", "@BadFriends"], ["Flagrant", "@flagrant"], ["Kill Tony", "@KillTony"],
+  ]],
+  podinterviews: ["Interviews", [
+    ["Armchair Expert", "@ArmchairExpertPod", "@armchairexpert"], ["The Diary Of A CEO", "@TheDiaryOfACEO"], ["Call Her Daddy", "@CallHerDaddy"],
+    ["The Joe Rogan Experience", "@joerogan", "@PowerfulJRE"], ["Lex Fridman Podcast", "@lexfridman"], ["Jay Shetty Podcast", "@JayShettyPodcast"], ["Shawn Ryan Show", "@ShawnRyanShow"],
+  ]],
+  podcrime: ["True crime", [
+    ["Crime Junkie", "@CrimeJunkiePodcast", "@crimejunkie"], ["MrBallen Podcast", "@MrBallenPodcast", "@MrBallen"], ["Morbid", "@MorbidPodcast"],
+    ["Rotten Mango", "@RottenMangoPodcast", "@StephanieSooRottenMango"], ["Bailey Sarian", "@BaileySarian"], ["Dateline NBC", "@DatelineNBC"],
+  ]],
+  podscience: ["Science & health", [
+    ["StarTalk", "@StarTalk"], ["Huberman Lab", "@hubermanlab"], ["The Mel Robbins Podcast", "@melrobbins"], ["The Peter Attia Drive", "@PeterAttiaMD"], ["Hidden Brain", "@HiddenBrain"],
+  ]],
+  podsports: ["Sports", [
+    ["New Heights", "@NewHeightsShow"], ["The Pat McAfee Show", "@ThePatMcAfeeShow"], ["Club Shay Shay", "@ClubShayShay"], ["The Bill Simmons Podcast", "@TheBillSimmonsPodcast", "@TheRinger"],
+    ["Pardon My Take", "@PardonMyTake"], ["The Rest Is Football", "@TheRestIsFootball"], ["Mind the Game", "@MindTheGamePod"],
+  ]],
+  podbiz: ["Business & tech", [
+    ["All-In Podcast", "@allin", "@AllInPod"], ["My First Million", "@MyFirstMillionPod"], ["Acquired", "@AcquiredFM"], ["The Prof G Pod", "@TheProfGPod"], ["How I Built This", "@HowIBuiltThis"],
+  ]],
 };
 // English only: skip videos tagged with another language, or whose title is mostly in another script
 const LATIN = /[A-Za-z\u00C0-\u024F]/g, LETTER = /\p{L}/gu;
@@ -225,6 +248,7 @@ export async function refreshYouTube({ allTime = "auto" } = {}) {
   }
   for (let i = 0; i < list.length; i += 100) await save(list.slice(i, i + 100));
   for (const t of list) out[t.topic] = (out[t.topic] || 0) + 1;
+  try { await refreshPodcasts(out); } catch (e) { out.errors.push("Podcasts: " + e.message); }
   await refreshFollows(out);
   return out;
 }
@@ -244,6 +268,43 @@ async function refreshFollows(out) {
   const rows = await sb("follows?select=channel_id");
   const ids = [...new Set((rows || []).map((r) => r.channel_id))].slice(0, 60);
   await Promise.all(ids.map(async (c) => { try { out.followed = (out.followed || 0) + await refreshChannel(c); } catch (e) { out.errors.push(e.message); } }));
+}
+
+// which channel is this show? cached, then each handle (1 unit each), then one search by name (100 units, at most a few per run)
+async function showChannel([name, ...handles], cache, budget) {
+  if (cache.has(name)) return cache.get(name);
+  let cid = "", title = "";
+  for (const h of handles) {
+    try { const d = await yt(`channels?part=snippet&forHandle=${encodeURIComponent(h)}`); const c = (d.items || [])[0]; if (c) { cid = c.id; title = (c.snippet || {}).title || ""; break; } } catch { /* try the next one */ }
+  }
+  if (!cid && budget.searches-- > 0) {
+    try { const d = await yt(`search?part=snippet&type=channel&maxResults=1&regionCode=US&relevanceLanguage=en&q=${encodeURIComponent(name + " podcast")}`); const c = (d.items || [])[0]; if (c) { cid = (c.id || {}).channelId || ""; title = (c.snippet || {}).channelTitle || ""; } } catch { /* skipped this run */ }
+  }
+  if (cid) { cache.set(name, cid); await sb("yt_channels", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify([{ key: name, channel_id: cid, title }]) }).catch(() => {}); }
+  return cid;
+}
+// newest full episodes (15+ minutes) of every listed show, refreshed once a day: about 2 quota units per show
+export async function refreshPodcasts(out, force = false) {
+  if (!force) {
+    const fresh = await sb(`titles?select=id&kind=eq.yt&data->>show=not.is.null&updated_at=gt.${encodeURIComponent(new Date(Date.now() - 20 * 36e5).toISOString())}&limit=1`);
+    if (fresh && fresh.length) return;
+  }
+  const cache = new Map(((await sb("yt_channels?select=key,channel_id")) || []).map((r) => [r.key, r.channel_id]));
+  const budget = { searches: 5 }, list = [], missing = [];
+  await Promise.all(Object.entries(PODCASTS).flatMap(([sub, [, shows]]) => shows.map(async (show) => {
+    try {
+      const cid = await showChannel(show, cache, budget);
+      if (!cid) { missing.push(show[0]); return; }
+      const pl = await yt(`playlistItems?part=contentDetails&maxResults=15&playlistId=UU${cid.slice(2)}`);
+      const ids = (pl.items || []).map((x) => (x.contentDetails || {}).videoId).filter(Boolean);
+      if (!ids.length) return;
+      const d = await yt(`videos?part=snippet,statistics,contentDetails,status&id=${ids.join(",")}`);
+      for (const v of d.items || []) if (secs((v.contentDetails || {}).duration) >= 900) list.push(toTitle(v, { topic: "podcasts", sub, show: show[0] }));
+    } catch (e) { out.errors.push(show[0] + ": " + e.message); }
+  })));
+  for (let i = 0; i < list.length; i += 100) await save(list.slice(i, i + 100));
+  out.podcasts = list.length;
+  if (missing.length) out.errors.push("Podcasts not found on YouTube: " + missing.join(", "));
 }
 
 export default async function handler(req, res) {
