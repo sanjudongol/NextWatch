@@ -538,6 +538,11 @@ textarea:focus,input:focus{outline:2px solid color-mix(in srgb,var(--ac) 60%,tra
 .yeadd input{flex:1;min-width:0;border:0;background:var(--pill);border-radius:10px;padding:10px 12px;font:inherit;font-size:16px;color:var(--tx)}
 .yeadd button{border:0;border-radius:10px;background:var(--ac);color:#fff;font:inherit;font-weight:600;padding:0 16px;min-height:44px;cursor:pointer}
 .yeadd button:disabled{opacity:.4}
+.cats .catedit{border:1px dashed var(--bd)!important;background:none!important;color:var(--ac)!important}
+.savesec{margin:14px 0 4px}.sscap{font-size:.8rem;color:var(--mu);text-transform:uppercase;letter-spacing:.02em;margin:0 4px 6px}
+.savesec .reset{margin:0 0 8px}
+.ssrow{display:flex;gap:8px}.ssrow input{flex:1;min-width:0;border:1px solid var(--bd);background:var(--card);border-radius:10px;padding:10px 12px;font:inherit;font-size:16px;color:var(--tx)}
+.ssrow button{border:0;border-radius:10px;background:var(--ac);color:#fff;font:inherit;font-weight:600;padding:0 14px;min-height:44px;cursor:pointer;white-space:nowrap}
 .ytmode.yted{background:none!important;border:1px dashed var(--bd)!important;color:var(--ac)!important;grid-column:1/-1}
 .searchrow{display:flex;gap:8px;align-items:center}.searchrow .search{flex:1;min-width:0}
 .fbtn,.phoneonly{display:none!important}
@@ -676,6 +681,7 @@ textarea:focus,input:focus{outline:2px solid color-mix(in srgb,var(--ac) 60%,tra
         <label id="statusbox">Series status<select id="status2"><option value="">Any</option><option value="Ongoing">Still airing</option><option value="done">Finished</option></select></label>
         </div>
         <button class="dirbtn" id="dir" type="button"></button>
+        <div id="savesec" class="savesec"></div>
         <button class="reset" id="reset" type="button">Reset filters</button>
         <div class="hint" id="scorehint"></div>
         <div class="chips" id="chips"></div>
@@ -750,6 +756,21 @@ function ytModes() {
   const pos = (k) => { const i = o.indexOf(k); return i < 0 ? 1000 + allYtModes().findIndex((m) => m[0] === k) : i; };
   return allYtModes().filter(([k]) => !hid.has(k)).sort((a, b) => pos(a[0]) - pos(b[0]));
 }
+// Movies & TV sections: built-in ones plus saved ones ("Save as section" in Sort & Filter), arranged in Add or edit sections
+const BUILTIN_CATS = ["movies", "series", "anime", "reality", "docs", "truecrime", "kids"];
+const isUs = (k) => typeof k === "string" && k.startsWith("us-");
+const secOf = (k) => S.sections.find((x) => x.key === k);
+const SEC_FILTERS = ["genre", "runtime", "recent", "director", "status2", "type", "imdb", "rt", "mode", "sort", "desc"];
+const catTabs = () => F.catTabs || { order: [], hidden: [] };
+const allCatTabs = () => [...BUILTIN_CATS.map((k) => [k, { movies: "Movies", series: "Series", anime: "Anime", reality: "Reality", docs: "Docs", truecrime: "True crime", kids: "Kids" }[k]]), ...S.sections.map((x) => [x.key, x.label, x.user_id])];
+function visibleTabs(all, cfg) {
+  const o = cfg.order || [], hid = new Set(cfg.hidden || []);
+  const pos = (k) => { const i = o.indexOf(k); return i < 0 ? 1000 + all.findIndex((m) => m[0] === k) : i; };
+  return all.filter(([k]) => !hid.has(k)).sort((a, b) => pos(a[0]) - pos(b[0]));
+}
+const catList = () => visibleTabs(allCatTabs(), catTabs());
+const baseCatOf = (k) => isUs(k) ? ((secOf(k) || {}).base || "any") : k;
+const curCats = () => { const b = baseCatOf(F.cat); return b === "any" ? BUILTIN_CATS : [b]; };
 const curYtMode = () => { const ms = ytModes(); return ms.some((m) => m[0] === F.ytMode) ? F.ytMode : (ms[0] || ["history"])[0]; };
 const YT_SUBS = { // same keys as YT_TOPICS in api/youtube.js
   history: [["world", "World"], ["us", "US history"], ["ancient", "Ancient"], ["medieval", "Medieval"], ["wars", "World wars"], ["empires", "Empires"], ["mysteries", "Mysteries & archaeology"]],
@@ -807,7 +828,7 @@ if (F.cat === "main" || !F.cat) { // "Movies & series" became two sections
   if (F.byCat && F.byCat.main) { F.byCat.movies = F.byCat.series = F.byCat.main; delete F.byCat.main; }
   F.cat = F.type === "Series" ? "series" : "movies"; F.type = "";
 } if (!Array.isArray(F.svcOn)) F.svcOn = []; // old "hide a service" setting is replaced by "only these"
-let S = { ytOn: DEMO, titles: [], me: null, partner: null, marks: new Map(), pMarks: new Map(), views: new Set(), pViews: new Set(), seen: new Map(), pSeen: new Map(), rate: new Map(), pRate: new Map(), follows: new Map(), pFollows: new Map(), picks: new Set(), pPicks: new Map(), ytTopics: [], pSkip: new Set(), lastUpdated: null };
+let S = { ytOn: DEMO, titles: [], me: null, partner: null, marks: new Map(), pMarks: new Map(), views: new Set(), pViews: new Set(), seen: new Map(), pSeen: new Map(), rate: new Map(), pRate: new Map(), follows: new Map(), pFollows: new Map(), picks: new Set(), pPicks: new Map(), ytTopics: [], sections: [], pSkip: new Set(), lastUpdated: null };
 let openRow = null, installEvt = null;
 let api, pickId = null;
 const tid = (t) => t.id;
@@ -848,6 +869,7 @@ async function supabaseApi(cfg) {
       const views = must(await sb.from("views").select("user_id,title_id,seasons,rating"));
       const follows = (await sb.from("follows").select("user_id,channel_id,channel_name")).data || [];
       const picks = (await sb.from("picks").select("user_id,title_id,created_at")).data || []; // hand-picked for each other
+      const sections = (await sb.from("sections").select("user_id,key,label,base,filters,created_at").order("created_at")).data || []; // saved sections
       const ytTopics = (await sb.from("yt_topics").select("user_id,key,label,created_at").order("created_at")).data || []; // your own YouTube topics // podcasters you follow (empty if the table isn't set up yet)
       // titles your partner isn't interested in: only used to leave them out of "Watch together"
       const pSkip = partner ? (must(await sb.rpc("partner_skipped")) || []).map((x) => (typeof x === "string" ? x : Object.values(x)[0])) : [];
@@ -866,6 +888,7 @@ async function supabaseApi(cfg) {
         pFollows: new Map(follows.filter((f) => partner && f.user_id === partner.id).map((f) => [f.channel_id, f.channel_name])),
         picks: new Set(picks.filter((x) => x.user_id === uid).map((x) => x.title_id)),
         ytTopics: ytTopics.filter((x) => x.user_id === uid || (partner && x.user_id === partner.id)),
+        sections: sections.filter((x) => x.user_id === uid || (partner && x.user_id === partner.id)),
         pPicks: new Map(picks.filter((x) => partner && x.user_id === partner.id).map((x) => [x.title_id, x.created_at])),
       };
     },
@@ -895,6 +918,9 @@ async function supabaseApi(cfg) {
       return key;
     },
     async delTopic(key) { must(await sb.from("yt_topics").delete().eq("user_id", S.me.id).eq("key", key)); },
+    async addSection(label, base, filters) { const key = "us-" + Math.random().toString(36).slice(2, 8).padEnd(6, "0"); must(await sb.from("sections").insert({ user_id: S.me.id, key, label, base, filters })); return key; },
+    async updSection(key, filters) { must(await sb.from("sections").update({ filters }).eq("user_id", S.me.id).eq("key", key)); },
+    async delSection(key) { must(await sb.from("sections").delete().eq("user_id", S.me.id).eq("key", key)); },
     async pick(titleId, on) {
       if (on) must(await sb.from("picks").upsert({ user_id: S.me.id, title_id: titleId }));
       else must(await sb.from("picks").delete().eq("user_id", S.me.id).eq("title_id", titleId));
@@ -955,7 +981,7 @@ function demoApi() {
   Object.assign(titles.find((t) => t.id === "tv-3"), { aired: 5, next: null });
   Object.assign(titles.find((t) => t.id === "tv-1"), { aired: 2, next: { season: 3, date: "2027-01-16" } });
   Object.assign(titles.find((t) => t.id === "tv-2"), { aired: 5, next: null });
-  const db = { marks: new Map(), views: new Map([["me", new Set(["tv-3", "tv-1"])], ["p", new Set()]]), seen: new Map([["tv-3", 4], ["tv-1", 2]]), rate: new Map([["tv-3", 2]]), follows: new Map(), picks: new Set(), topics: [] };
+  const db = { marks: new Map(), views: new Map([["me", new Set(["tv-3", "tv-1"])], ["p", new Set()]]), seen: new Map([["tv-3", 4], ["tv-1", 2]]), rate: new Map([["tv-3", 2]]), follows: new Map(), picks: new Set(), topics: [], sections: [] };
   let partner = null;
   return {
     async session() { return signedIn ? { user: { id: "me" } } : null; },
@@ -967,13 +993,16 @@ function demoApi() {
     async signOut() { signedIn = false; local.set("demo-in", false); },
     async load() {
       return { titles, me: { id: "me", name: "You", invite_code: "AB12CD", partner_id: partner && "p" }, partner, lastUpdated: new Date().toISOString(),
-        marks: new Map(db.marks), pMarks: new Map([["tv-3", "want"], ["tv-1", "watching"]].filter(() => partner)), pSkip: new Set(partner ? ["movie-4"] : []), views: new Set(db.views.get("me")), pViews: new Set(partner ? db.views.get("p") : []), seen: new Map(db.seen), pSeen: new Map(), rate: new Map(db.rate), follows: new Map(db.follows), pFollows: new Map(), picks: new Set(db.picks), ytTopics: [...db.topics], pPicks: new Map(partner ? [["movie-3", "2026-11-15T20:00:00Z"]] : []), pRate: new Map(partner ? [["tv-3", 1], ["movie-2", 2], ["movie-6", 1], ["movie-7", -1]] : []) };
+        marks: new Map(db.marks), pMarks: new Map([["tv-3", "want"], ["tv-1", "watching"]].filter(() => partner)), pSkip: new Set(partner ? ["movie-4"] : []), views: new Set(db.views.get("me")), pViews: new Set(partner ? db.views.get("p") : []), seen: new Map(db.seen), pSeen: new Map(), rate: new Map(db.rate), follows: new Map(db.follows), pFollows: new Map(), picks: new Set(db.picks), ytTopics: [...db.topics], sections: db.sections.map((x) => ({ ...x })), pPicks: new Map(partner ? [["movie-3", "2026-11-15T20:00:00Z"]] : []), pRate: new Map(partner ? [["tv-3", 1], ["movie-2", 2], ["movie-6", 1], ["movie-7", -1]] : []) };
     },
     async setMark(t, s) { s ? db.marks.set(t, s) : db.marks.delete(t); },
     async follow(c, n, on) { on ? db.follows.set(c, n) : db.follows.delete(c); },
     async pick(t, on) { on ? db.picks.add(t) : db.picks.delete(t); },
     async addTopic(label) { if (db.topics.filter((x) => x.user_id === "me").length >= 3) throw new Error("You can have up to 3 of your own topics. Remove one to add another."); const key = "ut-" + Math.random().toString(36).slice(2, 8).padEnd(6, "0"); db.topics.push({ user_id: "me", key, label }); return key; },
     async delTopic(key) { db.topics = db.topics.filter((x) => x.key !== key); },
+    async addSection(label, base, filters) { const key = "us-" + Math.random().toString(36).slice(2, 8).padEnd(6, "0"); db.sections.push({ user_id: "me", key, label, base, filters }); return key; },
+    async updSection(key, filters) { const x = db.sections.find((y) => y.key === key); if (x) x.filters = filters; },
+    async delSection(key) { db.sections = db.sections.filter((x) => x.key !== key); },
     async youtubeStep() { return { followed: 0 }; },
     async setView(u, t, on, n, r) { const k = u === "me" ? "me" : "p"; on ? db.views.get(k).add(t) : db.views.get(k).delete(t); if (k === "me") { on && n != null ? db.seen.set(t, n) : db.seen.delete(t); if (!on) db.rate.delete(t); else if (r !== undefined) r ? db.rate.set(t, r) : db.rate.delete(t); } },
     async saveSeasons(rows) { rows.forEach((r) => r.user_id === "me" && db.seen.set(r.title_id, r.seasons)); },
@@ -1078,12 +1107,18 @@ function syncControls() {
   renderServiceChips();
   $("dir").textContent = F.desc ? "Highest first ↓" : "Lowest first ↑";
   const SHORT = { movies: "Movies", series: "Series", anime: "Anime", reality: "Reality", docs: "Docs", truecrime: "True crime", kids: "Kids", youtube: "YouTube" };
-  $("cats").innerHTML = CATS.filter(([k]) => k !== "youtube").map(([k, l]) => `<button class="${F.cat === k ? "on" : ""}" data-cat="${k}" title="${esc(l)}">${SHORT[k]}</button>`).join("");
+  if (isUs(F.cat) && !secOf(F.cat)) F.cat = "movies"; // a saved section that was deleted
+  if (F.cat !== "youtube" && !catList().some(([k]) => k === F.cat) && catList().length) F.cat = catList()[0][0];
+  $("cats").innerHTML = catList().map(([k, l]) => `<button class="${F.cat === k ? "on" : ""}" data-cat="${k}" title="${esc(l)}">${esc(SHORT[k] || l)}</button>`).join("") + `<button class="catedit" id="cateditbtn" title="Add, remove or reorder sections">＋ Edit</button>`;
   const onCat = $("cats").querySelector(".on"); if (onCat && phone()) { const c = $("cats"), l = onCat.offsetLeft, r = l + onCat.offsetWidth; if (l < c.scrollLeft || r > c.scrollLeft + c.clientWidth) c.scrollLeft = l - 24; }
   const topCat = F.cat === "movies" || F.cat === "series";
 
   $("typebox").hidden = topCat; // the section already picks movies or series
-  $("lenbox").hidden = F.cat === "series"; $("statusbox").hidden = F.cat === "movies";
+  $("lenbox").hidden = baseCatOf(F.cat) === "series"; $("statusbox").hidden = baseCatOf(F.cat) === "movies";
+  const sec = secOf(F.cat), ownSec = sec && sec.user_id === S.me.id;
+  $("savesec").innerHTML = F.cat === "youtube" ? "" : `<div class="sscap">${ownSec ? `Section “${esc(sec.label)}”` : "Save these filters as a section"}</div>
+    ${ownSec ? `<button type="button" class="reset" id="updsec">Update “${esc(sec.label)}” with these filters</button>` : ""}
+    <form id="savesecform" class="ssrow"><input id="secname" maxlength="40" placeholder="Name, e.g. Date night comedies" autocomplete="off" enterkeyhint="done"><button>Save as section</button></form>`;
   const isYt = F.cat === "youtube";
   $("cats").hidden = isYt; // YouTube is its own page
   document.querySelectorAll(".pageswitch button").forEach((b) => b.classList.toggle("on", (b.dataset.page === "youtube") === isYt));
@@ -1141,13 +1176,14 @@ function syncControls() {
   if (seg) { $("tabs").innerHTML = shown.map(([k]) => `<button class="chip ${F.view === k ? "on" : ""}" data-view="${k}">${esc(SEG[k] || k)}</button>`).join(""); }
   else $("tabs").innerHTML = (shown.length < 2 && grouped() ? [] : shown).map(([k, l]) => `<button class="chip ${F.view === k ? "on" : ""}" data-view="${k}" ${k === "directors" ? `title="Directors and creators whose titles on your services score best, plus acclaimed directors to explore"` : ""} ${k === "together" ? `title="Only what neither of you has seen, with what you both want first. Uses the filters and section above."` : ""}>${l}${k === "all" || k === "together" || k === "directors" ? "" : ` (${count(k)})`}</button>`).join("");
   $("layout").textContent = F.layout === "list" ? "Cards" : "Compact list";
-  const sectionName = { movies: "Movies", series: "Series", anime: "Anime", reality: "Reality & competition", docs: "Documentaries", kids: "Kids & family", truecrime: "True crime", youtube: "YouTube" }[F.cat];
+  const sectionName = { movies: "Movies", series: "Series", anime: "Anime", reality: "Reality & competition", docs: "Documentaries", kids: "Kids & family", truecrime: "True crime", youtube: "YouTube" }[F.cat] || (secOf(F.cat) || {}).label || "this section";
   $("scorehint").textContent = `Score settings are remembered separately for each section (now: ${sectionName}).`;
 }
 const saveF = () => local.set("wf-filters", F);
+const DEFAULTS_FILTERS = () => Object.fromEntries(SEC_FILTERS.map((k) => [k, DEFAULTS[k]]));
 function filterSummary() {
   const p = [];
-  p.push({ movies: "Movies", series: "Series", anime: "Anime", reality: "Reality & competition", docs: "Documentaries", kids: "Kids & family", truecrime: "True crime", youtube: "YouTube" }[F.cat]);
+  p.push({ movies: "Movies", series: "Series", anime: "Anime", reality: "Reality & competition", docs: "Documentaries", kids: "Kids & family", truecrime: "True crime", youtube: "YouTube" }[F.cat] || (secOf(F.cat) || {}).label || "");
   if (F.cat === "youtube") { p.push((allYtModes().find((m) => m[0] === F.ytMode) || ["", "YouTube"])[1]); if (F.ytSub && YT_SUBS[F.ytMode]) p.push((YT_SUBS[F.ytMode].find((x) => x[0] === F.ytSub) || ["", ""])[1]); if (F.genre) p.push(F.genre); if (+F.recent) p.push(`Last ${F.recent} yrs`); return p.join(" · "); }
   if (F.preset >= 0) p.push(PRESETS[F.preset].name);
   if (F.type) p.push(F.type === "Movie" ? "Movies" : "Series");
@@ -1180,14 +1216,14 @@ function categoryOf(t) {
 const pool = () => S.titles.filter((t) => (t.kind === "yt") === (F.cat === "youtube"));
 // search is universal: movies, shows and videos together, whatever page or list you're on
 const searchQ = () => $("q").value.trim();
-function filtered(cats = [F.cat]) {
+function filtered(cats = curCats()) {
   const yt = cats.length === 1 && cats[0] === "youtube";
-  if (searchQ() && cats.length === 1) return filteredAll(cats);
+  if (searchQ()) return filteredAll(cats);
   return filteredAll(cats).filter((t) => (t.kind === "yt") === yt);
 }
-function filteredAll(cats = [F.cat]) {
+function filteredAll(cats = curCats()) {
   const q = $("q").value.trim();
-  if (q && cats.length === 1) return S.titles.filter((t) => matchesSearch(t, q) && !(t.kind === "yt" && ytForeign(t)));
+  if (q) return S.titles.filter((t) => matchesSearch(t, q) && !(t.kind === "yt" && ytForeign(t)));
   if (F.view === "mine") return all().filter((t) => S.marks.get(t.id) === "want" && !iSaw(t.id) && matchesSearch(t, q));
   if (F.view === "want" && !S.partner) return [];
   if (F.view === "want") return all().filter((t) => bothWant(t.id) && matchesSearch(t, q)); // only what you both want
@@ -1416,7 +1452,7 @@ function render() {
   rw.hidden = !showRw;
   rw.innerHTML = !showRw ? "" : [["me", `Yours (${all().filter(myUnrated).length})`], ["them", `Waiting on ${esc(pName())} (${all().filter(theirUnrated).length})`]].map(([k, l]) => `<button class="chip ${(F.rateWho || "me") === k ? "on" : ""}" data-ratewho="${k}">${l}</button>`).join("");
   const inSection = all().filter((t) => categoryOf(t) === F.cat).length;
-  if (!q && F.view === "all" && !["movies", "series"].includes(F.cat) && inSection < 15)
+  if (!q && !isUs(F.cat) && F.view === "all" && !["movies", "series"].includes(F.cat) && inSection < 15)
     $("status").textContent += ` · only ${inSection} in this section so far. Tap Sync to pull in more`;
   // iPhone: the score bar lives in Sort & Filter, so say what it is right under the count
   document.body.classList.toggle("hasq", !!q);
@@ -1481,7 +1517,7 @@ function shelfRows(list) {
 }
 function renderShelves(list) {
   const el = $("shelves");
-  const on = F.view === "all" && F.cat !== "youtube" && !$("q").value.trim() && F.shelves !== false && list.length >= 6;
+  const on = F.view === "all" && F.cat !== "youtube" && !isUs(F.cat) && !$("q").value.trim() && F.shelves !== false && list.length >= 6;
   if (!on) { el.hidden = true; el.innerHTML = ""; return; }
   // tonight's pick: something you want first, else one of the best matches; same pick all day unless you ask for another
   const q = (t) => imdbOrTmdb(t) + (t.rt ?? 60) / 40;
@@ -1684,7 +1720,7 @@ function renderTips() {
   const box = $("tipsbox");
   if (local.get("wf-tips-done", false) || !S.me) { box.innerHTML = ""; return; }
   box.innerHTML = `<div class="tips"><div class="tipshead"><b>Quick tips</b><button class="btn" id="tipsok">Got it</button></div><ol>
-    <li><b>Pick a section</b> (Movies, Series, Anime…) just above the list, or search. Videos live on their own <b>YouTube</b> page: History, Food & travel, Soccer, F1, Politics and Podcasts. Tap <b>+ Follow</b> on a video to see that channel under ★ Following. Tap <b>＋ Add or edit tabs</b> to add, remove or reorder tabs, or create up to 3 of your own. Tap the logo or Home to get back.</li>
+    <li><b>Pick a section</b> (Movies, Series, Anime…) just above the list, or search. Tap <b>＋ Edit</b> at the end of those pills to remove or reorder sections; to make your own, set filters in Sort &amp; Filter and tap <b>Save as section</b>. Videos live on their own <b>YouTube</b> page: History, Food & travel, Soccer, F1, Politics and Podcasts. Tap <b>+ Follow</b> on a video to see that channel under ★ Following. Tap <b>＋ Add or edit tabs</b> to add, remove or reorder tabs, or create up to 3 of your own. Tap the logo or Home to get back.</li>
     <li><b>See details:</b> tap any title (or the <b>›</b> arrow) for the summary, cast and where to watch. In Cards view, tap <b>More</b> to read the full summary.</li>
     <li><b>Mark titles:</b> tap Seen, Want or Not interested.${"ontouchstart" in window ? " On your phone you can also <b>swipe right</b> for Seen and <b>swipe left</b> for Not interested." : ""}</li>
     <li><b>Sync</b> refreshes the catalog. It also updates by itself every night.</li>
@@ -1757,9 +1793,12 @@ function showPage(p) {
   if (!sheet) scrollTo({ top: 0 });
 }
 function setCat(k) {
+  const wasUs = isUs(F.cat);
   rememberCatScores(); const wasYt = F.cat === "youtube";
+  if (wasUs && !isUs(k)) ["genre", "runtime", "recent", "director", "status2", "type"].forEach((x) => (F[x] = DEFAULTS[x])); // leaving a saved section
   if (!wasYt) F.lastCat = F.cat;
   F.cat = k; useCatScores();
+  if (isUs(k) && secOf(k)) { Object.assign(F, DEFAULTS_FILTERS(), secOf(k).filters || {}); F.preset = -1; F.mood = ""; } // a saved section brings its filters
   if (wasYt !== (F.cat === "youtube")) { F.genre = ""; $("q").value = ""; buildFilters(); }
   if (F.view !== "together") F.view = "all";
   if (!["movies", "series"].includes(F.cat)) { F.mood = ""; F.preset = -1; }
@@ -1894,16 +1933,18 @@ async function onClick(e) {
     saveF(); render(); scrollTo({ top: 0 }); return;
   }
   if (b.dataset.moodex) { runMood(b.dataset.moodex); return; }
-  if (b.id === "yteditbtn") { openYtEdit(); return; }
+  if (b.id === "yteditbtn") { openYtEdit("yt"); return; }
+  if (b.id === "cateditbtn") { openYtEdit("cats"); return; }
+  if (b.id === "updsec") { const k = F.cat, sec = secOf(k); try { await api.updSection(k, Object.fromEntries(SEC_FILTERS.map((x) => [x, F[x]]))); await reload(); toast(`Updated “${sec.label}”`); } catch (e) { toast("Couldn’t save that: " + e.message); } return; }
   if (b.id === "yteditdone") { closeYtEdit(); return; }
   if (b.dataset.ytmove) { const o = ytFullOrder(), i = o.indexOf(b.dataset.ytmove), j = i + +b.dataset.dir; if (j >= 0 && j < o.length) { [o[i], o[j]] = [o[j], o[i]]; saveYtTabs({ order: o }); } return; }
   if (b.dataset.ytrm) { // remove a tab: your own topic is deleted (frees a spot); built-in and partner tabs move to "Add a tab"
-    const k = b.dataset.ytrm, t = S.ytTopics.find((x) => x.key === k), label = (allYtModes().find((m) => m[0] === k) || ["", "tab"])[1];
-    if (ytModes().length <= 1) { toast("Keep at least one tab."); return; }
-    if (t && t.user_id === S.me.id) { try { await api.delTopic(k); await reload(); renderYtEdit(); render(); toast(`Deleted “${label}”`); } catch (e) { toast("Couldn’t remove it: " + e.message); } return; }
-    saveYtTabs({ hidden: [...new Set([...(ytTabs().hidden || []), k])] }); toast(`Removed ${label}. You can add it back below.`); return;
+    const k = b.dataset.ytrm, t = ownTab(k), label = (tabAll().find((m) => m[0] === k) || ["", "tab"])[1];
+    if (visibleTabs(tabAll(), tabCfg()).length <= 1) { toast("Keep at least one."); return; }
+    if (t) { try { await (editKind === "yt" ? api.delTopic(k) : api.delSection(k)); await reload(); renderYtEdit(); render(); toast(`Deleted “${label}”`); } catch (e) { toast("Couldn’t remove it: " + e.message); } return; }
+    saveYtTabs({ hidden: [...new Set([...(tabCfg().hidden || []), k])] }); toast(`Removed ${label}. You can add it back below.`); return;
   }
-  if (b.dataset.ytadd) { const k = b.dataset.ytadd; const o = ytFullOrder().filter((x) => x !== k); const lastShown = o.filter((x) => !(ytTabs().hidden || []).includes(x)).pop(); o.splice(o.indexOf(lastShown) + 1, 0, k); saveYtTabs({ order: o, hidden: (ytTabs().hidden || []).filter((x) => x !== k) }); return; }
+  if (b.dataset.ytadd) { const k = b.dataset.ytadd, hid = tabCfg().hidden || []; const o = ytFullOrder().filter((x) => x !== k); const lastShown = o.filter((x) => !hid.includes(x)).pop(); o.splice(o.indexOf(lastShown) + 1, 0, k); saveYtTabs({ order: o, hidden: hid.filter((x) => x !== k) }); return; }
   if (b.dataset.pick) { togglePick(b.dataset.pick, name(b.dataset.pick)); return; }
   if (b.dataset.ratewho) { F.rateWho = b.dataset.ratewho === "them" ? "them" : ""; saveF(); render(); return; }
   if (b.dataset.follow) { toggleFollow(b.dataset.follow, b.dataset.ch || ""); return; }
@@ -2133,28 +2174,33 @@ async function runSync() {
 }
 
 // ---------------- YouTube: Edit tabs (order, show/hide, your own topics) ----------------
-function ytFullOrder() { const o = ytTabs().order || [], all = allYtModes(); const pos = (k) => { const i = o.indexOf(k); return i < 0 ? 1000 + all.findIndex((m) => m[0] === k) : i; }; return all.map((m) => m[0]).sort((a, b) => pos(a) - pos(b)); }
+let editKind = "yt";
+const tabAll = () => editKind === "yt" ? allYtModes() : allCatTabs();
+const tabCfg = () => editKind === "yt" ? ytTabs() : catTabs();
+const ownTab = (k) => editKind === "yt" ? S.ytTopics.find((x) => x.key === k && x.user_id === S.me.id) : S.sections.find((x) => x.key === k && x.user_id === S.me.id);
+function ytFullOrder() { const o = tabCfg().order || [], all = tabAll(); const pos = (k) => { const i = o.indexOf(k); return i < 0 ? 1000 + all.findIndex((m) => m[0] === k) : i; }; return all.map((m) => m[0]).sort((a, b) => pos(a) - pos(b)); }
 function renderYtEdit() {
   const el = $("ytedit"); if (el.hidden) return;
-  const hid = new Set(ytTabs().hidden || []), byKey = new Map(allYtModes().map((m) => [m[0], m]));
+  const hid = new Set(tabCfg().hidden || []), byKey = new Map(tabAll().map((m) => [m[0], m])), yt = editKind === "yt";
   const shown = ytFullOrder().filter((k) => !hid.has(k)), removed = ytFullOrder().filter((k) => hid.has(k));
   const mine = S.ytTopics.filter((t) => t.user_id === S.me.id).length;
   const name = (k) => { const [, l, owner] = byKey.get(k); return `${esc(l)}${owner && owner !== S.me.id ? ` <small>· ${esc(pName())}’s</small>` : ""}`; };
-  el.innerHTML = `<div class="yesheet" role="dialog" aria-modal="true" aria-label="Add or edit YouTube tabs">
-    <div class="yehead"><span></span><b>YouTube tabs</b><button id="yteditdone">Done</button></div>
-    <div class="yecap">Your tabs</div>
-    <div class="yelist">${shown.map((k, i) => `<div class="yerow"><button class="del" data-ytrm="${k}" aria-label="Remove ${esc(byKey.get(k)[1])}" title="Remove this tab">⊖</button><span class="yl">${name(k)}</span>
+  el.innerHTML = `<div class="yesheet" role="dialog" aria-modal="true" aria-label="${yt ? "Add or edit YouTube tabs" : "Add or edit sections"}">
+    <div class="yehead"><span></span><b>${yt ? "YouTube tabs" : "Sections"}</b><button id="yteditdone">Done</button></div>
+    <div class="yecap">${yt ? "Your tabs" : "Your sections"}</div>
+    <div class="yelist">${shown.map((k, i) => `<div class="yerow"><button class="del" data-ytrm="${k}" aria-label="Remove ${esc(byKey.get(k)[1])}" title="Remove">⊖</button><span class="yl">${name(k)}</span>
         <button data-ytmove="${k}" data-dir="-1" aria-label="Move up" ${i === 0 ? "disabled" : ""}>↑</button><button data-ytmove="${k}" data-dir="1" aria-label="Move down" ${i === shown.length - 1 ? "disabled" : ""}>↓</button></div>`).join("")}</div>
-    <div class="yenote">Tap ⊖ to remove a tab, or the arrows to change the order. Saved on this device.</div>
-    ${removed.length ? `<div class="yecap">Add a tab</div><div class="yelist">${removed.map((k) => `<div class="yerow"><button class="addb" data-ytadd="${k}" aria-label="Add ${esc(byKey.get(k)[1])}">⊕</button><span class="yl">${name(k)}</span></div>`).join("")}</div>` : ""}
-    <div class="yecap">Create your own tab (${mine} of 3)</div>
+    <div class="yenote">Tap ⊖ to remove ${yt ? "a tab" : "a section"}, or the arrows to change the order. Saved on this device.</div>
+    ${removed.length ? `<div class="yecap">${yt ? "Add a tab" : "Add a section"}</div><div class="yelist">${removed.map((k) => `<div class="yerow"><button class="addb" data-ytadd="${k}" aria-label="Add ${esc(byKey.get(k)[1])}">⊕</button><span class="yl">${name(k)}</span></div>`).join("")}</div>` : ""}
+    ${yt ? `    <div class="yecap">Create your own tab (${mine} of 3)</div>
     <div class="yelist"><form class="yeadd" id="ytaddform"><input id="ytaddq" maxlength="40" placeholder="Any topic, e.g. woodworking or Arsenal" autocomplete="off" enterkeyhint="done" ${mine >= 3 ? "disabled" : ""}><button id="ytaddbtn" ${mine >= 3 ? "disabled" : ""}>Create</button></form></div>
     <div class="yenote">Your own tabs show popular English videos on that topic (no Shorts), refreshed weekly. Removing one of yours frees its spot. To follow a specific creator, tap + Follow on one of their videos instead.</div>
+` : `<div class="yecap">Make your own section</div><div class="yenote" style="margin-top:0">Set up filters in <b>Sort &amp; Filter</b> (genre, length, scores, release years…), then tap <b>Save as section</b> at the bottom. ${S.sections.some((x) => x.user_id !== S.me.id) ? `Sections ${esc(pName())} saved show up here too.` : ""}</div>`}
   </div>`;
 }
-function openYtEdit() { $("ytedit").hidden = false; document.body.classList.add("noscroll"); renderYtEdit(); }
+function openYtEdit(kind = "yt") { editKind = kind; $("ytedit").hidden = false; document.body.classList.add("noscroll"); renderYtEdit(); }
 function closeYtEdit() { $("ytedit").hidden = true; document.body.classList.remove("noscroll"); render(); }
-function saveYtTabs(t) { F.ytTabs = Object.assign({ order: ytFullOrder(), hidden: [...(ytTabs().hidden || [])] }, t); saveF(); renderYtEdit(); render(); }
+function saveYtTabs(t) { const v = Object.assign({ order: ytFullOrder(), hidden: [...(tabCfg().hidden || [])] }, t); if (editKind === "yt") F.ytTabs = v; else F.catTabs = v; saveF(); renderYtEdit(); render(); }
 async function addYtTopic(label) {
   label = label.replace(/\s+/g, " ").trim(); if (label.length < 2) return;
   try {
@@ -2165,7 +2211,20 @@ async function addYtTopic(label) {
     catch { toast(`${label} will fill in on the next sync.`); }
   } catch (e) { toast(e.message.replace(/^.*?(You can have)/, "$1")); }
 }
-document.addEventListener("submit", (e) => { if (e.target.id === "ytaddform") { e.preventDefault(); addYtTopic($("ytaddq").value); } });
+document.addEventListener("submit", (e) => {
+  if (e.target.id === "ytaddform") { e.preventDefault(); addYtTopic($("ytaddq").value); }
+  if (e.target.id === "savesecform") { e.preventDefault(); saveSection($("secname").value); }
+});
+// save the current filters as a section of its own (a pill next to Movies, Series…)
+async function saveSection(label) {
+  label = label.replace(/\s+/g, " ").trim(); if (!label) { $("secname").focus(); return; }
+  const base = isUs(F.cat) ? baseCatOf(F.cat) : BUILTIN_CATS.includes(F.cat) ? F.cat : "any";
+  try {
+    const key = await api.addSection(label, base, Object.fromEntries(SEC_FILTERS.map((x) => [x, F[x]])));
+    await reload(); $("fp").open = false; setCat(key); scrollTo({ top: 0 });
+    toast(`Saved “${label}” as a section`);
+  } catch (e) { toast("Couldn’t save that: " + e.message); }
+}
 // hand-pick a title for your partner (shows under their Lists → From you)
 async function togglePick(id, title, on = !S.picks.has(id)) {
   on ? S.picks.add(id) : S.picks.delete(id); render(); renderDetail();

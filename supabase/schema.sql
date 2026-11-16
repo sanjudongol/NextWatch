@@ -84,6 +84,19 @@ end $$;
 drop trigger if exists yt_topics_limit on public.yt_topics;
 create trigger yt_topics_limit before insert on public.yt_topics for each row execute function public.yt_topics_limit();
 
+-- 9. Saved sections: your own filter combinations, shown as pills next to Movies, Series…
+create table if not exists public.sections (
+  user_id uuid not null references auth.users on delete cascade,
+  key text not null check (key ~ '^us-[a-z0-9]{6}$'),
+  label text not null check (char_length(label) between 1 and 40),
+  base text not null default 'any' check (base in ('any','movies','series','anime','reality','docs','truecrime','kids')),
+  filters jsonb not null default '{}',
+  created_at timestamptz not null default now(),
+  primary key (user_id, key)
+);
+create unique index if not exists sections_key on public.sections (key);
+alter table public.sections enable row level security;
+
 -- Create a profile when someone signs in for the first time
 create or replace function public.handle_new_user() returns trigger
 language plpgsql security definer set search_path = public as $$
@@ -192,6 +205,13 @@ drop policy if exists "own topics: write" on public.yt_topics;
 create policy "own topics: write" on public.yt_topics for all to authenticated
   using (user_id = auth.uid()) with check (user_id = auth.uid());
 
+drop policy if exists "own and partner sections: read" on public.sections;
+create policy "own and partner sections: read" on public.sections for select to authenticated
+  using (user_id = auth.uid() or public.is_my_partner(user_id));
+drop policy if exists "own sections: write" on public.sections;
+create policy "own sections: write" on public.sections for all to authenticated
+  using (user_id = auth.uid()) with check (user_id = auth.uid());
+
 -- Table permissions
 revoke all on public.titles, public.profiles, public.marks, public.views from anon, authenticated;
 grant select on public.titles to authenticated;
@@ -209,6 +229,9 @@ grant all on public.picks to service_role;
 revoke all on public.yt_topics from anon, authenticated;
 grant select, insert, delete on public.yt_topics to authenticated;
 grant all on public.yt_topics to service_role;
+revoke all on public.sections from anon, authenticated;
+grant select, insert, update, delete on public.sections to authenticated;
+grant all on public.sections to service_role;
 revoke execute on function public.yt_topics_limit() from public, anon, authenticated;
 revoke all on public.yt_channels from anon, authenticated;
 grant all on public.yt_channels to service_role;
