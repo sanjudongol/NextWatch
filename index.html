@@ -532,6 +532,7 @@ textarea:focus,input:focus{outline:2px solid color-mix(in srgb,var(--ac) 60%,tra
   #scorebar,.ctlrow .sortpop,#fchipbox,#layout,#scorepop{display:none!important}
   .ctlrow:not(:has(.ytmodes)){display:none}
   #home>.cats{margin:4px 0 10px}
+  .scoreline{display:block;font-size:.8rem;color:var(--mu);margin-top:2px}
   .ctitle{left:58px!important;transform:none!important;text-align:left!important;max-width:30%!important}
   body.onyt .fbtn,body.searching .fbtn{display:none!important}
   .hbtns .btn.nophone{display:none!important}
@@ -1348,6 +1349,9 @@ function render() {
   const inSection = all().filter((t) => categoryOf(t) === F.cat).length;
   if (F.view === "all" && !["movies", "series"].includes(F.cat) && inSection < 15)
     $("status").textContent += ` · only ${inSection} in this section so far. Tap Sync to pull in more`;
+  // iPhone: the score bar lives in Sort & Filter, so say what it is right under the count
+  if (phone() && F.cat !== "youtube" && !q && ["all", "together"].includes(F.view))
+    $("status").insertAdjacentHTML("beforeend", `<span class="scoreline">${+F.imdb || +F.rt ? `Rated IMDb ${+F.imdb ? F.imdb + "+" : "any"} ${F.mode === "any" ? "or" : "and"} RT ${+F.rt ? F.rt + "%+" : "any"}` : "Any score"}</span>`);
   let empty = "Nothing here yet.";
   if (F.view === "together") empty = "Nothing here that neither of you has seen. Try another section or loosen the filters.";
   if (F.view === "mine") empty = "Nothing on your list yet. Tap Want on anything you’d like to watch.";
