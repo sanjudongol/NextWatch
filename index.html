@@ -660,18 +660,18 @@ const DEFAULTS = { imdb: "6.5", rt: "70", mode: "any", type: "", genre: "", dire
 const CAT_SCORES = { movies: { imdb: "6.5", rt: "70", mode: "any" }, series: { imdb: "6.5", rt: "70", mode: "any" }, anime: { imdb: "6.5", rt: "70", mode: "any" }, reality: { imdb: "6.5", rt: "70", mode: "any" }, docs: { imdb: "6.5", rt: "70", mode: "any" }, kids: { imdb: "6.5", rt: "70", mode: "any" }, truecrime: { imdb: "6.5", rt: "70", mode: "any" }, youtube: { imdb: "0", rt: "0", mode: "any" } };
 const SCORE_KEYS = ["imdb", "rt", "mode"];
 const KIDS_RE = /cocomelon|nursery rhyme|baby shark|kids songs?|songs for (kids|children)|for kids\b|toddler|peppa pig|blippi|ms ?rachel|pinkfong|little baby bum|super simple songs|chuchu|kids diana|vlad (and|&) niki|like nastya|bluey|paw patrol|learn (colors|numbers|abc)/i; // same as api/youtube.js
-const YT_MODES = [["trending", "Trending now"], ["alltime", "Most viewed"], ["history", "History"], ["food", "Food & travel"], ["soccer", "Soccer"], ["f1", "F1"], ["politics", "Politics"], ["podcasts", "Podcasts"]];
+const YT_MODES = [["following", "★ Following"], ["trending", "Trending now"], ["alltime", "Most viewed"], ["history", "History"], ["food", "Food & travel"], ["soccer", "Soccer"], ["f1", "F1"], ["politics", "Politics"], ["podcasts", "Podcasts"]];
 const YT_SUBS = { // same keys as YT_TOPICS in api/youtube.js
   history: [["world", "World"], ["us", "US history"], ["ancient", "Ancient"], ["medieval", "Medieval"], ["wars", "World wars"], ["empires", "Empires"], ["mysteries", "Mysteries & archaeology"]],
   food: [["streetfood", "Street food"], ["cooking", "Cooking"], ["foodtours", "Food tours"], ["destinations", "Destinations"], ["wonders", "Amazing places"]],
   soccer: [["barca", "Barcelona", 12], ["lfc", "Liverpool", 12], ["highlights", "Latest highlights", 10], ["pl", "Premier League", 10], ["ucl", "Champions League", 16], ["transfers", "Transfer news", 6], ["fpl", "FPL", 9], ["tactics", "Tactics & analysis"], ["goals", "Best goals"], ["legends", "Legends"], ["worldcup", "World Cup"], ["skills", "Skills"], ["stories", "Stories & documentaries"]],
   f1: [["race", "Race highlights", 21], ["quali", "Qualifying", 21], ["sprint", "Sprint", 21], ["f1news", "News & analysis", 9], ["overtakes", "Best overtakes"], ["classics", "Classic races"], ["tech", "Tech explained"], ["f1docs", "Documentaries"]],
   politics: [["polnews", "Latest news", 4], ["polworld", "World affairs", 9], ["polinterviews", "Interviews", 16], ["poldebates", "Debates"], ["polexplained", "Explained"]],
-  podcasts: [["podfav", "★ My podcasters"], ["podnew", "New episodes", 9], ["podcomedy", "Comedy"], ["podinterviews", "Interviews"], ["podcrime", "True crime"], ["podscience", "Science & ideas"], ["podsports", "Sports talk"], ["podbiz", "Business & money"]],
+  podcasts: [["podnew", "New episodes", 9], ["podcomedy", "Comedy"], ["podinterviews", "Interviews"], ["podcrime", "True crime"], ["podscience", "Science & ideas"], ["podsports", "Sports talk"], ["podbiz", "Business & money"]],
 };
 // English only (same rule as api/youtube.js): hides older saved videos in another language or script
 const ytForeign = (t) => { if (t.lang && !/^en|^zxx/i.test(t.lang)) return true; if (/\b(telugu|tamil|malayalam|kannada|hindi|bhojpuri|gujarati|marathi|punjabi|bengali|bangla|odia|urdu|nepali|sinhala|tagalog|dubbed|full (?:hd |youtube |length )?(?:movie|film)|yt film|south indian)\b/i.test(t.title + " " + (t.channel || ""))) return true; const all = (t.title.match(/\p{L}/gu) || []).length; return all > 3 && (t.title.match(/[A-Za-z\u00C0-\u024F]/g) || []).length / all < 0.7; };
-const favCh = (t) => !!t.channelId && (S.follows.has(t.channelId) || S.pFollows.has(t.channelId)); // a podcaster you or your partner follow
+const favCh = (t) => !!t.channelId && (S.follows.has(t.channelId) || S.pFollows.has(t.channelId)); // a channel you or your partner follow
 const ytMaxAge = (t) => ((YT_SUBS[t.topic] || []).find((x) => x[0] === t.sub) || [])[2]; // e.g. highlights: last 10 days only
 const fmtViews = (n) => n >= 1e9 ? (n / 1e9).toFixed(1).replace(/\.0$/, "") + "B" : n >= 1e6 ? Math.round(n / 1e6) + "M" : n >= 1e3 ? Math.round(n / 1e3) + "K" : String(n || 0);
 const fmtDur = (s) => { if (!s) return ""; const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = String(s % 60).padStart(2, "0"); return h ? `${h}:${String(m).padStart(2, "0")}:${x}` : `${m}:${x}`; };
@@ -839,7 +839,7 @@ function demoApi() {
   titles.push(V("c", "All-time sample: the most-watched video", "Big Channel", 8.2e9, 2017, "Music", 236, { alltime: true }));
   titles.push(V("d", "History sample: the fall of Rome in 20 minutes", "History Explained", 21e6, 2019, "History", 1250, { alltime: true, topic: "history" }));
   titles.push(V("e", "Podcast sample: a long chat about space", "Sample Pod", 2.4e6, 2026, "Podcasts", 5400, { topic: "podcasts", sub: "podscience", channelId: "UCsamplepod0000000000000" }));
-  titles.push(V("f", "Podcast sample: last week's episode", "Sample Pod", 1.1e6, 2026, "Podcasts", 4100, { topic: "podcasts", sub: "podfav", channelId: "UCsamplepod0000000000000" }));
+  titles.push(V("f", "Podcast sample: last week's episode", "Sample Pod", 1.1e6, 2026, "Podcasts", 4100, { channelId: "UCsamplepod0000000000000" }));
   titles.push(T("movie-5", "My Octopus Teacher", "Movie", 2020, ["Documentary"], 8.1, 95, ["Netflix"], ["Pippa Ehrlich"], [], 85, null, "A filmmaker befriends an octopus.", 20));
   let signedIn = !!local.get("demo-in", false);
   // demo: you've seen Abbott Elementary up to season 4 (season 5 is out) and Severance season 2 (season 3 announced)
@@ -1075,7 +1075,7 @@ function filteredAll(cats = [F.cat]) {
     return all().filter((t) => t.kind === "yt" && !iSaw(t.id) && S.marks.get(t.id) !== "skipped"
       && (YT_SUBS[mode] || !KIDS_RE.test(t.title + " " + (t.channel || ""))) // no kids' videos in Trending / Most viewed
       && !ytForeign(t)
-      && (YT_SUBS[mode] ? t.topic === mode && (!F.ytSub || (F.ytSub === "podfav" ? favCh(t) : t.sub === F.ytSub)) && (!ytMaxAge(t) || Date.parse(t.released) > Date.now() - ytMaxAge(t) * 864e5) : mode === "alltime" ? t.alltime && !t.topic : t.trendingAt && Date.parse(t.trendingAt) > fresh)
+      && (YT_SUBS[mode] ? t.topic === mode && (!F.ytSub || t.sub === F.ytSub) && (!ytMaxAge(t) || Date.parse(t.released) > Date.now() - ytMaxAge(t) * 864e5) : mode === "following" ? favCh(t) : mode === "alltime" ? t.alltime && !t.topic : t.trendingAt && Date.parse(t.trendingAt) > fresh)
       && (F.view !== "together" || (!theySaw(t.id) && !S.pSkip.has(t.id))));
   }
   const imdb = parseFloat(F.imdb) || 0, rt = parseFloat(F.rt) || 0;
@@ -1178,7 +1178,7 @@ function vid(t) {
     ${S.partner ? btn('data-seen="partner"', theySaw(id), "", `${theySaw(id) ? "✓ " : ""}${esc(pName())}`, `${pName()} watched`) : ""}
     ${btn('data-mark="want"', mk === "want", "mk-want", "Later", "Save for later")}
     ${btn('data-mark="skipped"', mk === "skipped", "mk-skipped", "✕", "Not interested")}
-    ${t.topic === "podcasts" && t.channelId ? `<button class="rb follow ${S.follows.has(t.channelId) ? "on" : ""}" data-follow="${esc(t.channelId)}" data-ch="${esc(t.channel)}" title="${S.follows.has(t.channelId) ? `Stop following ${esc(t.channel)}` : `Follow ${esc(t.channel)}: their newest episodes show under My podcasters`}">${S.follows.has(t.channelId) ? "✓ Following" : "+ Follow"}</button>` : ""}
+    ${t.channelId ? `<button class="rb follow ${S.follows.has(t.channelId) ? "on" : ""}" data-follow="${esc(t.channelId)}" data-ch="${esc(t.channel)}" title="${S.follows.has(t.channelId) ? `Stop following ${esc(t.channel)}` : `Follow ${esc(t.channel)}: their newest videos show under ★ Following`}">${S.follows.has(t.channelId) ? "✓ Following" : "+ Follow"}</button>` : ""}
     <a class="rb ytgo" ${ext} title="Open on YouTube">Watch</a>
   </div>
 </article>`;
@@ -1252,7 +1252,7 @@ function render() {
   const pri = (t) => F.view === "together" ? wantCount(t.id) : F.view === "seasons" ? (newSeason(t) ? 1 : 0)
     : F.view === "want" ? (bothWant(t.id) ? 3 : 0) + (newSeason(t) ? 2 : isWatching(t.id) ? 1 : 0) : F.view === "all" || F.view === "mine" ? (newSeason(t) ? 2 : isWatching(t.id) ? 1 : 0)
     : F.view === "faves" ? (iSaw(t.id) ? 0 : 2) + (S.pRate.get(t.id) === 2 ? 1 : 0) : 0;
-  const newest = F.cat === "youtube" && (F.ytSub ? ((YT_SUBS[F.ytMode] || []).find((x) => x[0] === F.ytSub) || [])[2] : ["soccer", "f1"].includes(F.ytMode)) || F.ytSub === "podfav"; // "latest" tabs and sports: newest first
+  const newest = F.cat === "youtube" && (F.ytSub ? ((YT_SUBS[F.ytMode] || []).find((x) => x[0] === F.ytSub) || [])[2] : ["soccer", "f1", "following"].includes(F.ytMode)); // "latest" tabs and sports: newest first
   const sq = $("q").value.trim().toLowerCase();
   const hit = (t) => { const ti = (t.title || "").toLowerCase(); return ti === sq ? 3 : ti.startsWith(sq) ? 2 : ti.includes(sq) ? 1 : 0; };
   if (sq) list.sort((x, y) => hit(y) - hit(x) || imdbOrTmdb(y) - imdbOrTmdb(x) || (y.views || 0) - (x.views || 0));
@@ -1278,7 +1278,7 @@ function render() {
   if (F.view === "seasons") empty = "No new or upcoming seasons for series you’ve watched.";
   if (F.view === "faves") empty = `Nothing here yet. When ${esc(pName())} taps Liked it or Loved it on something, it shows up here, with what you haven’t seen first.`;
   if (F.view === "watching") empty = "Nothing in progress. On a series, tap “Watching now” to keep it here until you finish.";
-  if (F.view === "all" && F.cat === "youtube" && F.ytSub === "podfav") empty = S.follows.size || S.pFollows.size ? "No episodes from your podcasters yet. Pull down (or tap Sync) to load their newest ones." : "Tap Follow next to a podcast’s channel name and its newest episodes show up here.";
+  if (F.view === "all" && F.cat === "youtube" && F.ytMode === "following") empty = S.follows.size || S.pFollows.size ? "No videos from the channels you follow yet. Pull down (or tap Sync) to load their newest ones." : "Tap + Follow on any video, like an SNL sketch or a podcast episode, and that channel’s newest videos show up here.";
   else if (F.view === "all" && F.cat === "youtube") empty = !S.ytOn ? "YouTube isn’t switched on yet: the site needs a YouTube key in Vercel (YOUTUBE_KEY). Once it’s added, tap Sync." : `No videos here yet. ${phone() ? "Pull down on this screen" : "Tap Sync"} to load them.`;
   else if (F.view === "all") empty = all().length ? "Nothing matches these filters. Try lowering a score, widening the dates, or tapping Reset filters." : "No titles yet. Tap Sync to pull in the catalog — the first sync takes a minute or two.";
   const compact = F.layout === "list" && F.cat !== "youtube";
@@ -1521,7 +1521,7 @@ function renderTips() {
   const box = $("tipsbox");
   if (local.get("wf-tips-done", false) || !S.me) { box.innerHTML = ""; return; }
   box.innerHTML = `<div class="tips"><div class="tipshead"><b>Quick tips</b><button class="btn" id="tipsok">Got it</button></div><ol>
-    <li><b>Pick a section</b> at the top, or search. Videos live on their own <b>YouTube</b> page: History, Food & travel, Soccer, F1, Politics and Podcasts. Tap the logo or Home to get back.</li>
+    <li><b>Pick a section</b> at the top, or search. Videos live on their own <b>YouTube</b> page: History, Food & travel, Soccer, F1, Politics and Podcasts. Tap <b>+ Follow</b> on a video to see that channel under ★ Following. Tap the logo or Home to get back.</li>
     <li><b>See details:</b> tap any title (or the <b>›</b> arrow) for the summary, cast and where to watch. In Cards view, tap <b>More</b> to read the full summary.</li>
     <li><b>Mark titles:</b> tap Seen, Want or Not interested.${"ontouchstart" in window ? " On your phone you can also <b>swipe right</b> for Seen and <b>swipe left</b> for Not interested." : ""}</li>
     <li><b>Sync</b> refreshes the catalog. It also updates by itself every night.</li>
@@ -1727,7 +1727,7 @@ async function onClick(e) {
   if (b.dataset.moodex) { runMood(b.dataset.moodex); return; }
   if (b.dataset.follow) { toggleFollow(b.dataset.follow, b.dataset.ch || ""); return; }
   if (b.dataset.ytsub != null) { F.ytSub = b.dataset.ytsub; F.ytSubs = { ...(F.ytSubs || {}), [F.ytMode]: F.ytSub }; saveF(); render(); return; }
-  if (b.dataset.ytmode) { F.ytMode = b.dataset.ytmode; F.ytSub = F.ytMode in (F.ytSubs || {}) ? F.ytSubs[F.ytMode] : (F.ytMode === "f1" ? "race" : ""); F.view = F.view === "together" ? "together" : "all"; saveF(); render(); return; }
+  if (b.dataset.ytmode) { F.ytMode = b.dataset.ytmode; F.ytSub = F.ytMode in (F.ytSubs || {}) ? F.ytSubs[F.ytMode] : (F.ytMode === "f1" ? "race" : ""); if (!(YT_SUBS[F.ytMode] || []).some((x) => x[0] === F.ytSub)) F.ytSub = ""; F.view = F.view === "together" ? "together" : "all"; saveF(); render(); return; }
   if (b.dataset.score) {
     const [im, rt] = b.dataset.score.split("|");
     Object.assign(F, { imdb: im, rt, preset: F.preset }); rememberCatScores(); saveF(); render(); return;
@@ -1937,14 +1937,14 @@ async function runSync() {
   } finally { syncing = false; btn.disabled = false; btn.innerHTML = `${ICO.sync}<span class="lbl"> Sync</span>`; }
 }
 
-// follow a podcaster: save it, then load their newest episodes right away
+// follow a channel: save it, then load their newest videos right away
 async function toggleFollow(cid, name, on = !S.follows.has(cid)) {
   on ? S.follows.set(cid, name) : S.follows.delete(cid); render();
   try { await api.follow(cid, name, on); }
   catch (e) { on ? S.follows.delete(cid) : S.follows.set(cid, name); render(); toast("Couldn’t save that: " + e.message); return; }
   if (!on) { toast(`Stopped following ${name}`, () => toggleFollow(cid, name, true)); return; }
-  toast(`Following ${name}. Loading their newest episodes…`);
-  try { const r = await api.youtubeStep({ follow: cid }); await reload(); toast(`${name}: ${r.followed || 0} episode${r.followed === 1 ? "" : "s"} under ★ My podcasters`, () => { F.ytMode = "podcasts"; F.ytSub = "podfav"; saveF(); render(); scrollTo({ top: 0 }); }, "Show"); }
+  toast(`Following ${name}. Loading their newest videos…`);
+  try { const r = await api.youtubeStep({ follow: cid }); await reload(); toast(`${name}: ${r.followed || 0} video${r.followed === 1 ? "" : "s"} under ★ Following`, () => { F.ytMode = "following"; F.ytSub = ""; saveF(); render(); scrollTo({ top: 0 }); }, "Show"); }
   catch (e) { toast(`Following ${name}. Their episodes will load on the next sync.`); }
 }
 // ---------------- startup ----------------

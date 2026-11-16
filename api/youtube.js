@@ -141,7 +141,7 @@ async function save(list) {
   const rows = list.map((t) => {
     const p = prev.get(t.id) || {};
     const topic = t.topic || p.topic || null;
-    return { id: t.id, kind: "yt", updated_at: now, data: { ...t, alltime: t.alltime || p.alltime || false, trendingAt: t.trendingAt || p.trendingAt || null, topic, sub: t.sub === "podfav" ? p.sub || "podfav" : t.sub || p.sub || null,
+    return { id: t.id, kind: "yt", updated_at: now, data: { ...t, alltime: t.alltime || p.alltime || false, trendingAt: t.trendingAt || p.trendingAt || null, topic, sub: t.sub || p.sub || null, followed: t.followed || p.followed || false,
       genres: topic && YT_TOPICS[topic] ? [YT_TOPICS[topic].label] : t.genres } };
   });
   const post = (r) => sb("titles", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" }, body: clean(r) });
@@ -229,14 +229,14 @@ export async function refreshYouTube({ allTime = "auto" } = {}) {
   return out;
 }
 
-// newest uploads from one followed channel (2 quota units): skips Shorts and clips under 4 minutes
+// newest uploads from one followed channel (2 quota units): skips Shorts; they show under ★ Following (and keep any topic tab they're already in)
 export async function refreshChannel(cid) {
   if (!/^UC[\w-]{22}$/.test(cid || "")) return 0;
   const pl = await yt(`playlistItems?part=contentDetails&maxResults=25&playlistId=UU${cid.slice(2)}`);
   const ids = (pl.items || []).map((x) => (x.contentDetails || {}).videoId).filter(Boolean);
   if (!ids.length) return 0;
   const d = await yt(`videos?part=snippet,statistics,contentDetails,status&id=${ids.join(",")}`);
-  const list = (d.items || []).filter((v) => !isKids(v) && secs((v.contentDetails || {}).duration) >= 240).map((v) => toTitle(v, { topic: "podcasts", sub: "podfav" }));
+  const list = (d.items || []).filter((v) => !isKids(v) && secs((v.contentDetails || {}).duration) > 90).map((v) => toTitle(v, { followed: true }));
   await save(list);
   return list.length;
 }
