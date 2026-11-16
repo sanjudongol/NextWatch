@@ -14,8 +14,8 @@
 <meta name="apple-mobile-web-app-title" content="PopcornDate">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <style>
-:root{--bg:#f2f2f7;--card:#fff;--tx:#000;--mu:#6c6c70;--bd:#e5e5ea;--sep:rgba(60,60,67,.2);--pill:rgba(118,118,128,.12);--seg:#fff;--pop:#fff;--ac:#6155f5;--ok:#248a3d;--want:#0a7aff;--new:#c55300;--red:#ff383c;color-scheme:light}
-@media (prefers-color-scheme:dark){:root{--bg:#000;--card:#1c1c1e;--tx:#fff;--mu:#98989f;--bd:#38383a;--sep:rgba(84,84,88,.65);--pill:rgba(118,118,128,.24);--seg:#636366;--pop:#2c2c2e;--ac:#7d8bff;--ok:#30d158;--want:#0091ff;--new:#ff9230;--red:#ff4245;color-scheme:dark}}
+:root{color-scheme:light;--bg:#f2f2f7;--card:#fff;--tx:#000;--mu:#6c6c70;--bd:#e5e5ea;--sep:rgba(60,60,67,.2);--pill:rgba(118,118,128,.12);--seg:#fff;--pop:#fff;--ac:#6155f5;--ok:#248a3d;--want:#0a7aff;--new:#c55300;--red:#ff383c;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{color-scheme:dark;--bg:#000;--card:#1c1c1e;--tx:#fff;--mu:#98989f;--bd:#38383a;--sep:rgba(84,84,88,.65);--pill:rgba(118,118,128,.24);--seg:#636366;--pop:#2c2c2e;--ac:#7d8bff;--ok:#30d158;--want:#0091ff;--new:#ff9230;--red:#ff4245;color-scheme:dark}}
 @media (prefers-contrast:more){:root{--mu:#3a3a3c;--ac:#564ade;--sep:rgba(60,60,67,.45)}}
 @media (prefers-contrast:more) and (prefers-color-scheme:dark){:root{--mu:#d1d1d6;--ac:#a7aaff;--sep:rgba(120,120,128,.9)}}
 *{box-sizing:border-box}
@@ -67,6 +67,7 @@ details.panel>summary::-webkit-details-marker{display:none}
 details[open] .caret{transform:rotate(180deg)}
 .fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;padding:0 14px 14px}
 label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--mu)}
+option,optgroup{background:var(--card);color:var(--tx)} /* readable drop-down lists in dark mode too */
 select,.fgrid input{font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:7px 8px;min-width:0}
 .dirbtn,.reset{align-self:end;background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:8px 10px;font-weight:600}
 .reset{color:var(--ac)}
@@ -482,7 +483,7 @@ textarea:focus,input:focus{outline:2px solid color-mix(in srgb,var(--ac) 60%,tra
   .fgroup{display:block;background:var(--card);border-radius:12px;overflow:hidden;margin-bottom:20px}
   .fgroup>label{flex-direction:row;justify-content:space-between;align-items:center;gap:12px;padding:0 16px;min-height:44px;font-size:1rem;color:var(--tx);border-top:.5px solid var(--sep);margin-top:-.5px;background:var(--card);white-space:nowrap}
   .fgroup input::-webkit-calendar-picker-indicator{display:none!important}
-  .fgroup>label select,.fgroup>label input{background:none;border:0;border-radius:0;color:var(--mu);text-align:right;text-align-last:right;font-size:1rem;-webkit-appearance:none;appearance:none;padding:0;max-width:58%;min-height:44px}
+  .fgroup>label select,.fgroup>label input{background:none;border:0;border-radius:0;color:var(--ac);text-align:right;text-align-last:right;font-size:1rem;-webkit-appearance:none;appearance:none;padding:0;max-width:58%;min-height:44px}
   .fgrid>.dirbtn,.fgrid>.reset{display:block;width:100%;background:var(--card);border:0;border-radius:12px;min-height:44px;font-size:1rem;font-weight:400;text-align:left;padding:0 16px;margin-bottom:12px;color:var(--ac)}
   .fgrid>.reset{color:var(--red)}
   .fgrid>.hint{display:none}
