@@ -668,7 +668,7 @@ const YT_SUBS = { // same keys as YT_TOPICS in api/youtube.js
   podcasts: [["podnew", "New episodes", 9], ["podcomedy", "Comedy"], ["podinterviews", "Interviews"], ["podcrime", "True crime"], ["podscience", "Science & ideas"], ["podsports", "Sports talk"], ["podbiz", "Business & money"]],
 };
 // English only (same rule as api/youtube.js): hides older saved videos in another language or script
-const ytForeign = (t) => { if (t.lang && !/^en|^zxx/i.test(t.lang)) return true; const all = (t.title.match(/\p{L}/gu) || []).length; return all > 3 && (t.title.match(/[A-Za-z\u00C0-\u024F]/g) || []).length / all < 0.7; };
+const ytForeign = (t) => { if (t.lang && !/^en|^zxx/i.test(t.lang)) return true; if (/\b(telugu|tamil|malayalam|kannada|hindi|bhojpuri|gujarati|marathi|punjabi|bengali|bangla|odia|urdu|nepali|sinhala|tagalog|dubbed|full (?:hd |youtube |length )?(?:movie|film)|yt film|south indian)\b/i.test(t.title + " " + (t.channel || ""))) return true; const all = (t.title.match(/\p{L}/gu) || []).length; return all > 3 && (t.title.match(/[A-Za-z\u00C0-\u024F]/g) || []).length / all < 0.7; };
 const ytMaxAge = (t) => ((YT_SUBS[t.topic] || []).find((x) => x[0] === t.sub) || [])[2]; // e.g. highlights: last 10 days only
 const fmtViews = (n) => n >= 1e9 ? (n / 1e9).toFixed(1).replace(/\.0$/, "") + "B" : n >= 1e6 ? Math.round(n / 1e6) + "M" : n >= 1e3 ? Math.round(n / 1e3) + "K" : String(n || 0);
 const fmtDur = (s) => { if (!s) return ""; const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = String(s % 60).padStart(2, "0"); return h ? `${h}:${String(m).padStart(2, "0")}:${x}` : `${m}:${x}`; };

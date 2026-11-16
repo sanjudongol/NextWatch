@@ -79,11 +79,29 @@ export const YT_TOPICS = {
 };
 // English only: skip videos tagged with another language, or whose title is mostly in another script
 const LATIN = /[A-Za-z\u00C0-\u024F]/g, LETTER = /\p{L}/gu;
-export function isForeign(v) {
+// regional films and dubbed uploads often carry no language tag and an English-letter title, so catch them by name
+export const REGIONAL_RE = /\b(telugu|tamil|malayalam|kannada|hindi|bhojpuri|gujarati|marathi|punjabi|bengali|bangla|odia|urdu|nepali|sinhala|tagalog|dubbed|full (?:hd |youtube |length )?(?:movie|film)|yt film|south indian)\b/i;
+const EN_COUNTRIES = new Set(["US", "GB", "CA", "AU", "IE", "NZ"]);
+export function isForeign(v, ch) {
   const s = v.snippet || {}, lang = (s.defaultAudioLanguage || s.defaultLanguage || "").toLowerCase();
   if (lang && !lang.startsWith("en") && lang !== "zxx") return true;
   const t = s.title || "", all = (t.match(LETTER) || []).length;
-  return all > 3 && (t.match(LATIN) || []).length / all < 0.7;
+  if (all > 3 && (t.match(LATIN) || []).length / all < 0.7) return true;
+  if (REGIONAL_RE.test(t + " " + (s.channelTitle || ""))) return true;
+  const c = ch && ch.get(s.channelId); // the uploading channel's own language and country
+  if (c && c.lang && !/^en/i.test(c.lang)) return true;
+  return !!(c && c.country && !EN_COUNTRIES.has(c.country) && !lang.startsWith("en"));
+}
+// look up channels (1 quota unit per 50) so Trending and Most viewed can skip channels based outside English-speaking countries
+async function channels(items) {
+  const ids = [...new Set(items.map((v) => (v.snippet || {}).channelId).filter(Boolean))], out = new Map();
+  for (let i = 0; i < ids.length; i += 50) {
+    try {
+      const d = await yt(`channels?part=snippet&id=${ids.slice(i, i + 50).join(",")}`);
+      for (const c of d.items || []) out.set(c.id, { lang: (c.snippet || {}).defaultLanguage || "", country: (c.snippet || {}).country || "" });
+    } catch { /* if the lookup fails, the other checks still apply */ }
+  }
+  return out;
 }
 // kids' videos: YouTube's own "made for kids" flag, plus the big kids' channels and nursery-rhyme titles
 export const KIDS_RE = /cocomelon|nursery rhyme|baby shark|kids songs?|songs for (kids|children)|for kids\b|toddler|peppa pig|blippi|ms ?rachel|pinkfong|little baby bum|super simple songs|chuchu|kids diana|vlad (and|&) niki|like nastya|bluey|paw patrol|learn (colors|numbers|abc)/i;
@@ -143,7 +161,8 @@ export async function refreshYouTube({ allTime = "auto" } = {}) {
   for (const cat of ["", ...Object.keys(YT_CATS)]) {
     try {
       const d = await yt(`videos?part=snippet,statistics,contentDetails,status&chart=mostPopular&regionCode=US&maxResults=${cat ? 20 : 50}${cat ? "&videoCategoryId=" + cat : ""}`);
-      const list = (d.items || []).filter((v) => !isKids(v) && !isForeign(v)).map((v) => toTitle(v, { trendingAt: now }));
+      const ch = await channels(d.items || []);
+      const list = (d.items || []).filter((v) => !isKids(v) && !isForeign(v, ch)).map((v) => toTitle(v, { trendingAt: now }));
       await save(list); out.trending += list.length;
     } catch (e) { if (!/not found|invalid|not supported/i.test(e.message)) out.errors.push(e.message); }
   }
@@ -159,7 +178,8 @@ export async function refreshYouTube({ allTime = "auto" } = {}) {
       const ids = (s.items || []).map((x) => x.id && x.id.videoId).filter(Boolean); // 50 asked, about 25 kept after the English filter
       if (!ids.length) continue;
       const d = await yt(`videos?part=snippet,statistics,contentDetails,status&id=${ids.join(",")}`);
-      const list = (d.items || []).filter((v) => !isKids(v) && !isForeign(v)).slice(0, 25).map((v) => toTitle(v, { alltime: true }));
+      const ch = await channels(d.items || []);
+      const list = (d.items || []).filter((v) => !isKids(v) && !isForeign(v, ch)).slice(0, 25).map((v) => toTitle(v, { alltime: true }));
       await save(list); out.alltime += list.length;
     } catch (e) { out.errors.push(e.message); if (/quota/i.test(e.message)) break; }
   }
