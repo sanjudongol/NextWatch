@@ -1229,7 +1229,7 @@ function render() {
   $("fsum").innerHTML = searching ? `<b>Filters</b>paused while you search · clear the search box to use them again` : `<b>Filters</b>${esc(filterSummary())}`;
   document.body.classList.toggle("ondirs", F.view === "directors");
   if (F.view === "directors") { renderDirectors(); renderPick(); renderSub(); renderAlert(); $("shelves").hidden = true; $("shelves").innerHTML = ""; $("findwrap").hidden = true; $("layout").hidden = true; return; }
-  $("layout").hidden = F.cat === "youtube" && F.view === "all";
+  $("layout").hidden = F.cat === "youtube"; // videos always show as video tiles, so Cards / Compact list does nothing there
   $("shelveson").hidden = !(F.shelves === false && F.view === "all" && F.cat !== "youtube");
   const list = filtered();
   const k = F.cat === "youtube" && F.view === "all" && !["year", "newest"].includes(F.sort) ? "popularity" : F.sort, dir = k === "newest" ? 1 : F.desc ? -1 : 1;
@@ -1266,7 +1266,7 @@ function render() {
   if (F.view === "watching") empty = "Nothing in progress. On a series, tap “Watching now” to keep it here until you finish.";
   if (F.view === "all" && F.cat === "youtube") empty = !S.ytOn ? "YouTube isn’t switched on yet: the site needs a YouTube key in Vercel (YOUTUBE_KEY). Once it’s added, tap Sync." : `No videos here yet. ${phone() ? "Pull down on this screen" : "Tap Sync"} to load them.`;
   else if (F.view === "all") empty = all().length ? "Nothing matches these filters. Try lowering a score, widening the dates, or tapping Reset filters." : "No titles yet. Tap Sync to pull in the catalog — the first sync takes a minute or two.";
-  const compact = F.layout === "list";
+  const compact = F.layout === "list" && F.cat !== "youtube";
   $("grid").className = compact ? "list" : "";
   $("grid").innerHTML = list.length ? list.map((t) => t.kind === "yt" ? vid(t) : compact ? (openRow === t.id ? card(t, true) : row(t)) : card(t)).join("") : `<div class="empty">${empty}</div>`;
   renderShelves(list); renderDetail();
