@@ -1125,8 +1125,9 @@ function syncControls() {
   if (F.person) tabs.splice(1, 0, ["person", esc(F.person)]);
   if (F.view === "one") F.view = "onlyme";
   if (!tabs.some(([k]) => k === F.view)) F.view = "all";
+  if (F.cat === "youtube" && F.view === "together") F.view = "all"; // videos: no All / New to both switch
   // phones: the bottom bar picks the group, and only that group's tabs show here
-  const notYt = ["seasons", "watching", "directors"]; // not about videos
+  const notYt = ["seasons", "watching", "directors", "together"]; // not about videos
   const shown = (grouped() ? tabs.filter(([k]) => groupOf(k) === groupOf(F.view)) : tabs).filter(([k]) => F.cat !== "youtube" || !notYt.includes(k) || F.view === k);
   renderNav(tabs, count);
   const SEG = { all: "All", together: "New to both", mine: "My list", want: "Our list", watching: "Watching", seasons: "New", watched: "Watched", onlyme: "Only me", onlythem: `Only ${pName()}`, faves: "Faves", nopes: "Nopes", frompartner: `From ${pName()}`, forpartner: `For ${pName()}`, unrated: "To rate", skipped: "Skipped", person: F.person || "" };
