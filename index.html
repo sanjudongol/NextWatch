@@ -377,6 +377,7 @@ button:active:not(:disabled),a.rb:active,.popbtn:active{opacity:.5}
 .rateseg button.nah.on,.rb.mk-nah.on{color:var(--mu)}
 .pickbtn{width:100%;border:0;border-radius:10px;padding:10px;font:inherit;font-weight:600;background:var(--pill);color:var(--ac);min-height:44px;cursor:pointer}
 .pickbtn.on{background:var(--ac);color:#fff}
+.rb.mk-pick{color:var(--ac)}.rb.mk-pick.on{background:var(--ac);color:#fff}
 .b-nah{background:color-mix(in srgb,var(--mu) 18%,transparent);color:var(--mu)}
 .rb.on.mk-like{background:color-mix(in srgb,var(--red) 14%,transparent);color:var(--red)}
 .rb.on,.acts .on,.checks .on{background:color-mix(in srgb,var(--ok) 16%,transparent);color:var(--ok);border:0}
@@ -1306,6 +1307,7 @@ function vid(t) {
     ${S.partner ? btn('data-seen="partner"', theySaw(id), "", `${theySaw(id) ? "✓ " : ""}${esc(pName())}`, `${pName()} watched`) : ""}
     ${btn('data-mark="want"', mk === "want", "mk-want", "Later", "Save for later")}
     ${btn('data-mark="skipped"', mk === "skipped", "mk-skipped", "✕", "Not interested")}
+    ${S.partner ? btn(`data-pick="${esc(id)}"`, S.picks.has(id), "mk-pick", S.picks.has(id) ? `✓ For ${esc(pName())}` : `For ${esc(pName())}`, S.picks.has(id) ? `Picked for ${pName()}: tap to take it back` : `Pick this for ${pName()}: it shows up in their Lists`) : ""}
     ${t.channelId ? `<button class="rb follow ${S.follows.has(t.channelId) ? "on" : ""}" data-follow="${esc(t.channelId)}" data-ch="${esc(t.channel)}" title="${S.follows.has(t.channelId) ? `Stop following ${esc(t.channel)}` : `Follow ${esc(t.channel)}: their newest videos show under ★ Following`}">${S.follows.has(t.channelId) ? "✓ Following" : "+ Follow"}</button>` : ""}
     <a class="rb ytgo" ${ext} title="Open on YouTube">Watch</a>
   </div>
