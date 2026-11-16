@@ -765,8 +765,8 @@ const BUILTIN_CATS = ["movies", "series", "anime", "reality", "docs", "truecrime
 const isUs = (k) => typeof k === "string" && k.startsWith("us-");
 const secOf = (k) => S.sections.find((x) => x.key === k);
 const SEC_FILTERS = ["genre", "runtime", "recent", "director", "status2", "type", "imdb", "rt", "mode", "sort", "desc"];
-// start with 4 sections so "＋ Edit" stays in view; Anime, True crime and Kids can be added back there
-const CAT_DEFAULT = { order: ["movies", "series", "reality", "docs"], hidden: ["anime", "truecrime", "kids"] };
+// start with 4 sections so the ＋ stays in view; Reality, True crime and Kids can be added back there
+const CAT_DEFAULT = { order: ["movies", "series", "anime", "docs"], hidden: ["reality", "truecrime", "kids"] };
 const catTabs = () => F.catTabs || CAT_DEFAULT;
 const allCatTabs = () => [...BUILTIN_CATS.map((k) => [k, { movies: "Movies", series: "Series", anime: "Anime", reality: "Reality", docs: "Docs", truecrime: "True crime", kids: "Kids" }[k]]), ...S.sections.map((x) => [x.key, x.label, x.user_id])];
 function visibleTabs(all, cfg) {
@@ -2248,7 +2248,7 @@ async function toggleFollow(cid, name, on = !S.follows.has(cid)) {
   try { const r = await api.youtubeStep({ follow: cid }); await reload(); toast(`${name}: ${r.followed || 0} video${r.followed === 1 ? "" : "s"} under ★ Following`, () => { F.ytMode = "following"; F.ytSub = ""; saveF(); render(); scrollTo({ top: 0 }); }, "Show"); }
   catch (e) { toast(`Following ${name}. Their episodes will load on the next sync.`); }
 }
-if (!local.get("wf-cattabs-v1", false)) { delete F.catTabs; local.set("wf-cattabs-v1", true); saveF(); } // 4 sections to start
+if (!local.get("wf-cattabs-v2", false)) { delete F.catTabs; local.set("wf-cattabs-v2", true); saveF(); } // 4 sections to start
 if (!local.get("wf-yttabs-v2", false)) { delete F.ytTabs; local.set("wf-yttabs-v2", true); saveF(); } // new default YouTube tabs
 // iPhone: scores and sort move into the Sort & Filter sheet (the same controls, so their settings carry over)
 function placeCtrls() {
