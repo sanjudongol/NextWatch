@@ -17,16 +17,14 @@ body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.55 system-ui,-app
 main{max-width:880px;margin:0 auto;padding:calc(24px + env(safe-area-inset-top,0px)) 16px 64px}
 nav{display:flex;justify-content:space-between;align-items:center;gap:12px}
 .brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit;font-weight:800;font-size:22px;letter-spacing:-.02em}
-.bn{display:flex;flex-direction:column;line-height:1.15}.slogan{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#a1608f;margin-top:3px}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .slogan{color:#d9a6cc}}
-.wm{background:linear-gradient(90deg,#f5a524,#f0662a);-webkit-background-clip:text;background-clip:text;color:transparent}
-.wm .grad{background:linear-gradient(90deg,#e8479b,#a33ff0);-webkit-background-clip:text;background-clip:text}
+.bn{display:flex;flex-direction:column;line-height:1.15}.slogan{font-size:12px;font-weight:400;color:var(--mu);margin-top:2px;letter-spacing:0}
+.wm,.wm .grad{color:var(--tx);background:none}
 .brand img{border-radius:9px;box-shadow:0 2px 8px rgb(163 63 240 / .25)}
 .grad{background:linear-gradient(90deg,var(--g1),var(--g2));-webkit-background-clip:text;background-clip:text;color:transparent}
 .cta{display:inline-block;background:var(--ac);color:#fff;text-decoration:none;font-weight:700;padding:11px 20px;border-radius:12px;white-space:nowrap}
 .cta.ghost{background:var(--card);color:var(--tx);border:1px solid var(--bd)}
 .hero{text-align:center;padding:48px 0 40px}
-.heroimg{display:block;margin:0 auto 18px;border-radius:22px;box-shadow:0 10px 30px rgb(232 71 155 / .3)}
+.heroimg{display:block;margin:0 auto 18px;border-radius:22px;box-shadow:0 4px 14px rgb(0 0 0 / .18)}
 .hero h1{font-size:clamp(32px,6vw,52px);line-height:1.08;margin:0 0 16px;letter-spacing:-.03em}
 .hero p{font-size:clamp(17px,2.4vw,20px);color:var(--mu);max-width:620px;margin:0 auto 26px}
 .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:8px 0 48px}

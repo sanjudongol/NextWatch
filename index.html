@@ -27,14 +27,11 @@ header{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;
 h1{margin:0;font-size:24px}
 .brand{display:flex;align-items:center;gap:9px;background:none;border:0;padding:0}
 .bname{display:flex;flex-direction:column;align-items:flex-start;text-align:left;min-width:0}
-.slogan{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#a1608f;line-height:1.3;white-space:nowrap}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .slogan{color:#d9a6cc}}
-:root[data-theme="dark"] .slogan{color:#d9a6cc}
+.slogan{font-size:12px;font-weight:400;color:var(--mu);line-height:1.3;white-space:nowrap}
 .brand img,.brandline img{border-radius:9px;display:block;box-shadow:0 2px 8px rgb(91 76 240 / .25)}
 .brand h1,.brandline{letter-spacing:-.02em;font-weight:700}
-/* wordmark: "Popcorn" in butter-to-caramel, "Date" in pink-to-purple (the logo's colors) */
-.brand h1,.brandline>span{background:linear-gradient(90deg,#f5a524,#f0662a);-webkit-background-clip:text;background-clip:text;color:transparent}
-.brand h1 span,.brandline span span{background:linear-gradient(90deg,#e8479b,#a33ff0);-webkit-background-clip:text;background-clip:text;color:transparent}
+/* wordmark: plain label color, like Apple's own app names; the icon carries the color */
+.brand h1,.brandline>span,.brand h1 span,.brandline span span{color:var(--tx)}
 .brandline{display:inline-flex;align-items:center;gap:10px;justify-content:center}
 .pageswitch{grid-column:1/-1;justify-self:start;display:flex;background:var(--pill);border-radius:12px;padding:3px;gap:2px}
 .pageswitch button{border:0;background:none;padding:7px 14px;border-radius:9px;font-weight:600;font-size:14px;color:var(--mu);white-space:nowrap}
@@ -435,7 +432,7 @@ textarea:focus,input:focus{outline:2px solid color-mix(in srgb,var(--ac) 60%,tra
   .brand img{width:30px;height:30px;border-radius:8px}
   .ctitle{display:block;position:absolute;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 4px);line-height:44px;max-width:44%;text-align:center;font-weight:600;font-size:1rem;opacity:0;transition:opacity .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   header.scrolled .ctitle{opacity:1}
-  .slogan{letter-spacing:.1em;font-size:9.5px;line-height:1.3;margin-top:2px;transition:opacity .15s}
+  .slogan{font-size:12px;line-height:1.25;margin-top:1px;transition:opacity .15s}
   header.scrolled .slogan{opacity:0}
   .hbtns{grid-column:3;grid-row:1;gap:8px}
   .tgroup{display:flex;background:var(--pill);border-radius:999px}
@@ -1998,7 +1995,7 @@ function showSignIn(state) {
     gate(`<h1>Check your email</h1><p class="muted">We sent you a link. Open it on this device to finish signing in. It can take a minute to arrive — check spam too.</p><button class="btn" id="back">Back</button>`);
     $("back").onclick = () => showSignIn(); return;
   }
-  gate(`<img src="/icons/icon-192.png" alt="" width="76" height="76" style="display:block;margin:0 auto 10px;border-radius:18px;box-shadow:0 8px 24px rgb(232 71 155 / .3)"><h1 class="brandline"><span>Popcorn<span>Date</span></span></h1><div class="slogan" style="margin:-6px 0 10px;width:auto;max-width:none;white-space:nowrap">Movie night for two</div><p class="muted">Great movies and shows already included with your streaming services, plus one shared list for the two of you. <a href="/about.html" style="color:var(--ac)">How it works</a></p>
+  gate(`<img src="/icons/icon-192.png" alt="" width="76" height="76" style="display:block;margin:0 auto 10px;border-radius:18px;box-shadow:0 4px 14px rgb(0 0 0 / .18)"><h1 class="brandline"><span>Popcorn<span>Date</span></span></h1><div class="slogan" style="margin:-6px 0 10px;width:auto;max-width:none;white-space:nowrap">Movie night for two</div><p class="muted">Great movies and shows already included with your streaming services, plus one shared list for the two of you. <a href="/about.html" style="color:var(--ac)">How it works</a></p>
     <form id="signin" style="display:grid;gap:10px">
       <input type="email" id="email" required placeholder="you@example.com" autocomplete="email">
       <input type="password" id="pw" minlength="6" placeholder="Password (6+ characters)" autocomplete="current-password">
