@@ -45,6 +45,20 @@ h2{font-size:26px;letter-spacing:-.02em;margin:0 0 16px}
 
 footer{margin-top:40px;color:var(--mu);font-size:13px;text-align:center}
 @media (max-width:700px){.steps,.feats{grid-template-columns:1fr}.hero{padding:36px 0 28px}nav .cta{padding:9px 14px;font-size:14px}}
+
+/* "Add to Home Screen" guide (iPhone can't add apps automatically, so we show the three taps) */
+#a2hs{position:fixed;inset:0;z-index:50;background:rgb(0 0 0 / .4);display:flex;align-items:flex-end;justify-content:center}
+#a2hs[hidden]{display:none}
+.a2sheet{background:var(--bg);width:100%;max-width:460px;border-radius:16px 16px 0 0;padding:20px 20px calc(24px + env(safe-area-inset-bottom,0px));text-align:center}
+@media (min-width:600px){#a2hs{align-items:center}.a2sheet{border-radius:16px}}
+.a2sheet img{border-radius:16px;box-shadow:0 4px 14px rgb(0 0 0 / .18)}
+.a2sheet h2{font-size:1.2rem;margin:12px 0 4px}
+.a2sheet ol{text-align:left;margin:16px 0;padding:0;list-style:none;counter-reset:s}
+.a2sheet li{counter-increment:s;display:flex;gap:12px;align-items:center;background:var(--card);border-radius:12px;padding:12px 14px;margin-top:8px}
+.a2sheet li::before{content:counter(s);flex:none;width:26px;height:26px;border-radius:50%;background:var(--ac);color:#fff;font-weight:700;display:grid;place-items:center;font-size:.9rem}
+.a2sheet li svg{width:22px;height:22px;vertical-align:-5px;stroke:var(--ac);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.a2sheet .cta{display:block;margin-top:6px}
+.a2sheet .skip{display:block;margin-top:12px;color:var(--mu);font-size:.9rem}
 </style>
 </head>
 <body>
@@ -101,5 +115,34 @@ footer{margin-top:40px;color:var(--mu);font-size:13px;text-align:center}
 
   <footer>Ratings from IMDb and Rotten Tomatoes via OMDb · Streaming data by JustWatch · Uses the TMDB API but isn't endorsed or certified by TMDB · Video data from the YouTube Data API</footer>
 </main>
+<div id="a2hs" hidden><div class="a2sheet" role="dialog" aria-modal="true" aria-label="Add PopcornDate to your Home Screen">
+  <img src="/icons/icon-192.png" alt="" width="72" height="72">
+  <h2>Add PopcornDate to your iPhone</h2>
+  <p style="color:var(--mu);margin:0">iPhones don’t let websites install themselves, so it takes three quick taps. Open the app first, then in Safari:</p>
+  <ol>
+    <li><span>Tap the <b>Share</b> button <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M8 7l4-4 4 4M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg> in Safari’s toolbar</span></li>
+    <li><span>Scroll down and tap <b>Add to Home Screen</b> <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M12 8v8M8 12h8"/></svg></span></li>
+    <li><span>Tap <b>Add</b> in the top corner</span></li>
+  </ol>
+  <a class="cta" href="/" id="a2open">Open the app</a>
+  <p style="color:var(--mu);font-size:.85rem;margin:10px 0 0">After that it opens full screen from your Home Screen, like any app.</p>
+  <a class="skip" href="#" id="a2close">Not now</a>
+</div></div>
+<script>
+// "Open" buttons: on iPhone/iPad in a browser, show how to add it to the Home Screen; Android/desktop Chrome can install it directly
+(() => {
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const installed = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+  let evt = null;
+  addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); evt = e; });
+  document.querySelectorAll('a.cta[href="/"]:not(#a2open)').forEach((a) => a.addEventListener("click", async (e) => {
+    if (installed) return;
+    if (evt) { e.preventDefault(); evt.prompt(); try { await evt.userChoice; } catch {} evt = null; location.href = "/"; return; }
+    if (ios) { e.preventDefault(); document.getElementById("a2hs").hidden = false; }
+  }));
+  document.getElementById("a2close").onclick = (e) => { e.preventDefault(); document.getElementById("a2hs").hidden = true; };
+  document.getElementById("a2hs").onclick = (e) => { if (e.target.id === "a2hs") e.currentTarget.hidden = true; };
+})();
+</script>
 </body>
 </html>
