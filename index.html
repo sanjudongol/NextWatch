@@ -531,6 +531,8 @@ textarea:focus,input:focus{outline:2px solid color-mix(in srgb,var(--ac) 60%,tra
   #sheetscore select{font-weight:400}
   #scorebar,.ctlrow .sortpop,#fchipbox,#layout,#scorepop{display:none!important}
   .ctlrow:not(:has(.ytmodes)){display:none}
+  #home>.cats{margin:4px 0 10px}
+  .ctitle{left:58px!important;transform:none!important;text-align:left!important;max-width:30%!important}
   body.onyt .fbtn,body.searching .fbtn{display:none!important}
   .hbtns .btn.nophone{display:none!important}
   body.searching .search:focus{outline:none;box-shadow:none}
@@ -2051,6 +2053,9 @@ async function toggleFollow(cid, name, on = !S.follows.has(cid)) {
 // iPhone: scores and sort move into the Sort & Filter sheet (the same controls, so their settings carry over)
 function placeCtrls() {
   const ph = phone(), rows = [...document.querySelectorAll("label.prow")];
+  // section pills (Movies, Series, Anime…) sit right above the list on iPhone, under "All matches"
+  const sb = document.querySelector(".statusbar");
+  if (ph) { if ($("cats").nextElementSibling !== sb) sb.before($("cats")); } else if ($("cats").parentElement !== document.querySelector(".topbar")) document.querySelector(".topbar").appendChild($("cats"));
   if (ph) { rows.forEach((r) => $("sheetscore").appendChild(r)); if ($("sort").parentElement.id !== "sortrow") $("sortrow").appendChild($("sort")); }
   else { rows.forEach((r) => $("scorepop").insertBefore(r, $("scorepop").querySelector(".popnote"))); const sp = document.querySelector("label.sortpop:not(.vibepop)"); if ($("sort").parentElement !== sp) sp.appendChild($("sort")); }
 }
