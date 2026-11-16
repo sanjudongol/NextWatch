@@ -49,6 +49,10 @@ create table if not exists public.follows (
   primary key (user_id, channel_id)
 );
 
+-- 6. Server-only cache: which YouTube channel each podcast show uses
+create table if not exists public.yt_channels (key text primary key, channel_id text not null, title text not null default '', resolved_at timestamptz not null default now());
+alter table public.yt_channels enable row level security;
+
 -- Create a profile when someone signs in for the first time
 create or replace function public.handle_new_user() returns trigger
 language plpgsql security definer set search_path = public as $$
@@ -154,6 +158,8 @@ grant all on public.titles, public.profiles, public.marks, public.views to servi
 revoke all on public.follows from anon, authenticated;
 grant select, insert, update, delete on public.follows to authenticated;
 grant all on public.follows to service_role;
+revoke all on public.yt_channels from anon, authenticated;
+grant all on public.yt_channels to service_role;
 revoke execute on function public.handle_new_user() from public, anon, authenticated;   -- only the sign-up trigger runs it
 revoke execute on function public.link_partner(text), public.unlink_partner(), public.is_my_partner(uuid), public.partner_skipped() from public, anon;
 grant execute on function public.link_partner(text), public.unlink_partner(), public.is_my_partner(uuid), public.partner_skipped() to authenticated;
