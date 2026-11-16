@@ -538,6 +538,8 @@ textarea:focus,input:focus{outline:2px solid color-mix(in srgb,var(--ac) 60%,tra
   header.scrolled .bname{opacity:1!important;pointer-events:auto!important}
   .pageswitch{margin-top:6px!important}
   #home>.topbar{display:none}
+  #shelves .shelfend{display:none}
+  #allhead{margin:14px 0 8px}
   .ctitle{left:58px!important;transform:none!important;text-align:left!important;max-width:30%!important}
   body.onyt .fbtn,body.searching .fbtn{display:none!important}
   .hbtns .btn.nophone{display:none!important}
@@ -655,6 +657,7 @@ textarea:focus,input:focus{outline:2px solid color-mix(in srgb,var(--ac) 60%,tra
     <div class="tabs" id="tabs"></div>
     <section id="shelves" hidden></section>
     <div id="detail" hidden></div>
+    <div class="shelfend" id="allhead" hidden>All matches</div>
     <div class="statusbar"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><div id="status"></div><span id="ratewho" hidden style="display:inline-flex;gap:4px"></span><span id="findwrap" hidden style="display:inline-flex;gap:4px"><button class="chip" id="findmore"></button><button class="chip" id="clearfind" aria-label="Clear" title="Clear and show everything again">✕</button></span></div><div style="display:flex;gap:6px"><button class="chip" id="shelveson" hidden title="Show Tonight’s pick and the rows of picks again">Picks</button><button class="chip" id="layout" title="Switch between detailed cards and a compact list"></button><button type="button" class="chip fbtn" id="openfilters2" title="Sort and filter this list"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M7 12h10M10 17h4"/></svg>Sort &amp; Filter<span class="fcount" id="fcount"></span></button></div></div>
     <div id="grid"></div>
 
@@ -1069,7 +1072,7 @@ function syncControls() {
     : k === "unrated" ? all().filter(myUnrated).length
     : k === "watched" ? all().filter((t) => watched(t.id)).length
     : all().filter((t) => S.marks.get(t.id) === "skipped").length;
-  const tabs = [["all", "All matches"], ...(seasonNews().length ? [["seasons", "New seasons"]] : []), ...(S.partner ? [["together", "Watch together"]] : []), ["mine", "My list"], ["want", "Our list"], ...(S.partner ? [["frompartner", `${esc(pName())}’s picks for you`], ["forpartner", `Your picks for ${esc(pName())}`]] : []), ["watching", "Watching now"], ["directors", "Top directors"], ["watched", "Watched"], ["unrated", "Not rated yet"], ...(S.partner ? [["faves", `${esc(pName())}’s favorites`], ["nopes", `${esc(pName())}’s nopes`], ["onlyme", "Only you’ve seen"], ["onlythem", `Only ${esc(pName())} has seen`]] : []), ["skipped", "Not interested"]];
+  const tabs = [["all", "All matches"], ...(seasonNews().length ? [["seasons", "New seasons"]] : []), ...(S.partner ? [["together", "New to both of you"]] : []), ["mine", "My list"], ["want", "Our list"], ...(S.partner ? [["frompartner", `${esc(pName())}’s picks for you`], ["forpartner", `Your picks for ${esc(pName())}`]] : []), ["watching", "Watching now"], ["directors", "Top directors"], ["watched", "Watched"], ["unrated", "Not rated yet"], ...(S.partner ? [["faves", `${esc(pName())}’s favorites`], ["nopes", `${esc(pName())}’s nopes`], ["onlyme", "Only you’ve seen"], ["onlythem", `Only ${esc(pName())} has seen`]] : []), ["skipped", "Not interested"]];
   if (F.view !== "person") F.person = "";
   if (F.person) tabs.splice(1, 0, ["person", esc(F.person)]);
   if (F.view === "one") F.view = "onlyme";
@@ -1078,7 +1081,7 @@ function syncControls() {
   const notYt = ["seasons", "watching", "directors"]; // not about videos
   const shown = (grouped() ? tabs.filter(([k]) => groupOf(k) === groupOf(F.view)) : tabs).filter(([k]) => F.cat !== "youtube" || !notYt.includes(k) || F.view === k);
   renderNav(tabs, count);
-  const SEG = { all: "All", together: "Together", mine: "My list", want: "Our list", watching: "Watching", seasons: "New", watched: "Watched", onlyme: "Only me", onlythem: `Only ${pName()}`, faves: "Faves", nopes: "Nopes", frompartner: `From ${pName()}`, forpartner: `For ${pName()}`, unrated: "To rate", skipped: "Skipped", person: F.person || "" };
+  const SEG = { all: "All", together: "New to both", mine: "My list", want: "Our list", watching: "Watching", seasons: "New", watched: "Watched", onlyme: "Only me", onlythem: `Only ${pName()}`, faves: "Faves", nopes: "Nopes", frompartner: `From ${pName()}`, forpartner: `For ${pName()}`, unrated: "To rate", skipped: "Skipped", person: F.person || "" };
   const seg = grouped() && shown.length >= 2 && shown.length <= 5;
   $("tabs").className = seg ? "tabs seg" : "tabs";
   if (seg) { $("tabs").innerHTML = shown.map(([k]) => `<button class="chip ${F.view === k ? "on" : ""}" data-view="${k}">${esc(SEG[k] || k)}</button>`).join(""); }
@@ -1376,6 +1379,7 @@ function render() {
   $("grid").className = compact ? "list" : "";
   $("grid").innerHTML = list.length ? list.map((t) => t.kind === "yt" ? vid(t) : compact ? (openRow === t.id ? card(t, true) : row(t)) : card(t)).join("") : `<div class="empty">${empty}</div>`;
   renderShelves(list); renderDetail();
+  $("allhead").hidden = !phone() || $("shelves").hidden || !document.querySelector("#shelves .shelfend"); // iPhone: heading sits under the season news
   renderPick(); renderSub(); renderAlert(); renderTips(); if (moodRes) { moodRes.picks = moodPicks(moodRes.want); renderMood(); }
 }
 // ---------------- "for you": tonight's pick + short rows at the top of a section ----------------
@@ -1612,7 +1616,7 @@ function renderTips() {
   const box = $("tipsbox");
   if (local.get("wf-tips-done", false) || !S.me) { box.innerHTML = ""; return; }
   box.innerHTML = `<div class="tips"><div class="tipshead"><b>Quick tips</b><button class="btn" id="tipsok">Got it</button></div><ol>
-    <li><b>Pick a section</b> at the top, or search. Videos live on their own <b>YouTube</b> page: History, Food & travel, Soccer, F1, Politics and Podcasts. Tap <b>+ Follow</b> on a video to see that channel under ★ Following. Tap the logo or Home to get back.</li>
+    <li><b>Pick a section</b> (Movies, Series, Anime…) just above the list, or search. Videos live on their own <b>YouTube</b> page: History, Food & travel, Soccer, F1, Politics and Podcasts. Tap <b>+ Follow</b> on a video to see that channel under ★ Following. Tap the logo or Home to get back.</li>
     <li><b>See details:</b> tap any title (or the <b>›</b> arrow) for the summary, cast and where to watch. In Cards view, tap <b>More</b> to read the full summary.</li>
     <li><b>Mark titles:</b> tap Seen, Want or Not interested.${"ontouchstart" in window ? " On your phone you can also <b>swipe right</b> for Seen and <b>swipe left</b> for Not interested." : ""}</li>
     <li><b>Sync</b> refreshes the catalog. It also updates by itself every night.</li>
@@ -1710,8 +1714,8 @@ function renderAccount() {
         <li><b>You both see:</b> each other’s “watched” ticks, “Want to watch” picks (shown as “${esc(pName())} wants this”) and “Watching now” series.</li>
         <li><b>Either of you can tick</b> the other’s “watched” box, handy when you watch on one screen.</li>
         <li>As soon as you tick <b>I watched</b>, the title leaves <i>your</i> lists. It stays on ${esc(pName())}’s until they’ve seen it too, and shows under “Only you’ve seen” in the meantime (and what only ${esc(pName())} has seen is under “Only ${esc(pName())} has seen”). Once you’ve both ticked it, it moves to <b>Watched</b>.</li>
-        <li><b>Watch together</b> shows only what neither of you has seen, with titles you both want at the top.</li>
-        <li><b>Stays private:</b> your “Not interested” list, your filters and your password. Watch together quietly leaves out titles either of you isn’t interested in, without showing which.</li>
+        <li><b>New to both of you</b> (next to All on Home) shows only what neither of you has seen, with titles you both want at the top.</li>
+        <li><b>Stays private:</b> your “Not interested” list, your filters and your password. New to both of you quietly leaves out titles either of you isn’t interested in, without showing which.</li>
         <li>Unlinking keeps everyone’s ticks; you just stop seeing each other’s.</li>
       </ul></details></div>
     <div class="row"><button class="btn" id="unlink">Unlink partner</button></div>`
@@ -2062,9 +2066,11 @@ async function toggleFollow(cid, name, on = !S.follows.has(cid)) {
 // iPhone: scores and sort move into the Sort & Filter sheet (the same controls, so their settings carry over)
 function placeCtrls() {
   const ph = phone(), rows = [...document.querySelectorAll("label.prow")];
-  // section pills (Movies, Series, Anime…) sit right above the list on iPhone, under "All matches"
+  // iPhone: season news sits below For you, then "All matches", the section pills and the list
   const sb = document.querySelector(".statusbar");
-  if (ph) { if ($("cats").nextElementSibling !== sb) sb.before($("cats")); } else if ($("cats").parentElement !== document.querySelector(".topbar")) document.querySelector(".topbar").appendChild($("cats"));
+  if (ph) { if ($("tabs").nextElementSibling !== sb) sb.before($("tabs")); if ($("cats").nextElementSibling !== $("tabs")) $("tabs").before($("cats")); if ($("alert").nextElementSibling !== $("allhead")) $("allhead").before($("alert")); }
+  else { if ($("alert").nextElementSibling !== $("tipsbox")) $("tipsbox").before($("alert")); if ($("tabs").nextElementSibling !== $("shelves")) $("shelves").before($("tabs")); }
+  if (!ph && $("cats").parentElement !== document.querySelector(".topbar")) document.querySelector(".topbar").appendChild($("cats"));
   if (ph) { rows.forEach((r) => $("sheetscore").appendChild(r)); if ($("sort").parentElement.id !== "sortrow") $("sortrow").appendChild($("sort")); }
   else { rows.forEach((r) => $("scorepop").insertBefore(r, $("scorepop").querySelector(".popnote"))); const sp = document.querySelector("label.sortpop:not(.vibepop)"); if ($("sort").parentElement !== sp) sp.appendChild($("sort")); }
 }
