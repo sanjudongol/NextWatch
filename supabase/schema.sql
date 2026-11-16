@@ -204,7 +204,7 @@ revoke all on public.follows from anon, authenticated;
 grant select, insert, update, delete on public.follows to authenticated;
 grant all on public.follows to service_role;
 revoke all on public.picks from anon, authenticated;
-grant select, insert, delete on public.picks to authenticated;
+grant select, insert, update, delete on public.picks to authenticated;  -- "Pick for" saves with upsert, which needs update too
 grant all on public.picks to service_role;
 revoke all on public.yt_topics from anon, authenticated;
 grant select, insert, delete on public.yt_topics to authenticated;
