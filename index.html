@@ -546,7 +546,7 @@ textarea:focus,input:focus{outline:2px solid color-mix(in srgb,var(--ac) 60%,tra
 /* iPhone: search lives in the header (magnifier → field over the header, with Cancel); Sort & Filter sits on the list it filters */
 @media (max-width:620px){
   .searchrow{display:none}
-  body.searching .searchrow{display:flex;position:fixed;top:0;left:0;right:0;z-index:25;padding:calc(env(safe-area-inset-top,0px) + 6px) 16px 6px;min-height:calc(env(safe-area-inset-top,0px) + 56px);background:color-mix(in srgb,var(--bg) 88%,transparent);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);box-shadow:0 .5px 0 var(--sep)}
+  body.searching .searchrow{display:flex;position:fixed;top:0;left:0;right:0;z-index:25;padding:calc(env(safe-area-inset-top,0px) + 4px) 16px 4px;height:var(--hh,56px);box-sizing:border-box;align-items:center;background:color-mix(in srgb,var(--bg) 88%,transparent);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);box-shadow:0 .5px 0 var(--sep)}
   body.searching .searchrow .search{margin:0!important}
   .searchbtn{display:grid!important}
   .searchbtn.on{color:var(--ac)!important}
@@ -568,6 +568,7 @@ textarea:focus,input:focus{outline:2px solid color-mix(in srgb,var(--ac) 60%,tra
   .pageswitch{margin-top:6px!important}
   #home>.topbar{display:none}
   #shelves .shelfend{display:none}
+  body.hasq :is(#tabs,#home>.cats,#allhead,#alert,#ytsubs,#ratewho,.ctlrow,.pageswitch,#tipsbox){display:none!important}
   #allhead{margin:14px 0 8px}
   .ctitle{left:58px!important;transform:none!important;text-align:left!important;max-width:30%!important}
   body.onyt .fbtn,body.searching .fbtn{display:none!important}
@@ -1177,12 +1178,16 @@ function categoryOf(t) {
   return t.type === "Movie" ? "movies" : "series";
 }
 const pool = () => S.titles.filter((t) => (t.kind === "yt") === (F.cat === "youtube"));
+// search is universal: movies, shows and videos together, whatever page or list you're on
+const searchQ = () => $("q").value.trim();
 function filtered(cats = [F.cat]) {
   const yt = cats.length === 1 && cats[0] === "youtube";
+  if (searchQ() && cats.length === 1) return filteredAll(cats);
   return filteredAll(cats).filter((t) => (t.kind === "yt") === yt);
 }
 function filteredAll(cats = [F.cat]) {
   const q = $("q").value.trim();
+  if (q && cats.length === 1) return S.titles.filter((t) => matchesSearch(t, q) && !(t.kind === "yt" && ytForeign(t)));
   if (F.view === "mine") return all().filter((t) => S.marks.get(t.id) === "want" && !iSaw(t.id) && matchesSearch(t, q));
   if (F.view === "want" && !S.partner) return [];
   if (F.view === "want") return all().filter((t) => bothWant(t.id) && matchesSearch(t, q)); // only what you both want
@@ -1398,6 +1403,7 @@ function render() {
   const q = $("q").value.trim();
   const noun = F.view === "all" || F.view === "together" ? (list.length === 1 ? "match" : "matches") : (list.length === 1 ? "title" : "titles");
   $("status").textContent = `${list.length} ${noun}${F.view === "person" ? ` with ${F.person} on your services, any section or score` : ""}${q ? ` for “${q}”` : ""}${q && (F.view === "all" || F.view === "together") ? " in everything (filters paused while you search)" : ""}`;
+  if (q) $("status").textContent = `${list.length} result${list.length === 1 ? "" : "s"} for “${q}” in movies, shows and videos`;
   // offer to look beyond the catalog for a director / actor / title
   const fm = $("findmore"), dq = (F.director || "").trim();
   if (F.view === "all" && dq.length >= 2) { fm.hidden = false; fm.dataset.role = "director"; fm.dataset.q = dq; fm.textContent = `Find more by “${dq}”`; fm.title = "Looks up this director’s or creator’s work and adds whatever is included with your services"; }
@@ -1409,9 +1415,10 @@ function render() {
   rw.hidden = !showRw;
   rw.innerHTML = !showRw ? "" : [["me", `Yours (${all().filter(myUnrated).length})`], ["them", `Waiting on ${esc(pName())} (${all().filter(theirUnrated).length})`]].map(([k, l]) => `<button class="chip ${(F.rateWho || "me") === k ? "on" : ""}" data-ratewho="${k}">${l}</button>`).join("");
   const inSection = all().filter((t) => categoryOf(t) === F.cat).length;
-  if (F.view === "all" && !["movies", "series"].includes(F.cat) && inSection < 15)
+  if (!q && F.view === "all" && !["movies", "series"].includes(F.cat) && inSection < 15)
     $("status").textContent += ` · only ${inSection} in this section so far. Tap Sync to pull in more`;
   // iPhone: the score bar lives in Sort & Filter, so say what it is right under the count
+  document.body.classList.toggle("hasq", !!q);
   if (phone() && F.cat !== "youtube" && !q && ["all", "together"].includes(F.view))
     $("status").insertAdjacentHTML("beforeend", `<span class="scoreline">${+F.imdb || +F.rt ? `Rated IMDb ${+F.imdb ? F.imdb + "+" : "any"} ${F.mode === "any" ? "or" : "and"} RT ${+F.rt ? F.rt + "%+" : "any"}` : "Any score"}</span>`);
   let empty = "Nothing here yet.";
