@@ -533,6 +533,11 @@ textarea:focus,input:focus{outline:2px solid color-mix(in srgb,var(--ac) 60%,tra
   .ctlrow:not(:has(.ytmodes)){display:none}
   #home>.cats{margin:4px 0 10px}
   .scoreline{display:block;font-size:.8rem;color:var(--mu);margin-top:2px}
+  /* the tab bar already says which page you're on: no big "Home" / "Watched" title, and the name stays in the header */
+  .ltitle,.ctitle{display:none!important}
+  header.scrolled .bname{opacity:1!important;pointer-events:auto!important}
+  .pageswitch{margin-top:6px!important}
+  #home>.topbar{display:none}
   .ctitle{left:58px!important;transform:none!important;text-align:left!important;max-width:30%!important}
   body.onyt .fbtn,body.searching .fbtn{display:none!important}
   .hbtns .btn.nophone{display:none!important}
@@ -1980,7 +1985,7 @@ document.addEventListener("pointerdown", (e) => { if (phone() && $("fp").open &&
 // iOS-style behaviors: popover dismissal, compact title, pull to refresh, swipe-to-dismiss sheets
 addEventListener("scroll", () => { if (!$("scorepop").hidden && phone()) { $("scorepop").hidden = true; $("scorebtn").setAttribute("aria-expanded", "false"); } }, { passive: true });
 document.addEventListener("pointerdown", (e) => { const pop = $("scorepop"); if (!pop.hidden && !e.target.closest(".scorewrap")) { pop.hidden = true; $("scorebtn").setAttribute("aria-expanded", "false"); } });
-new IntersectionObserver(([en]) => document.querySelector("header").classList.toggle("scrolled", !en.isIntersecting && phone()), { rootMargin: "-60px 0px 0px 0px" }).observe($("ltitle"));
+new IntersectionObserver(([en]) => document.querySelector("header").classList.toggle("scrolled", !en.isIntersecting && phone()), { rootMargin: "-60px 0px 0px 0px" }).observe(document.querySelector(".pageswitch"));
 new MutationObserver(() => { $("ptrtxt").textContent = syncing ? $("sync").textContent : ""; if (!syncing) $("ptr").classList.remove("on"); }).observe($("sync"), { childList: true, subtree: true, characterData: true });
 {
   let y0 = null, d = 0; const ind = $("ptr");
