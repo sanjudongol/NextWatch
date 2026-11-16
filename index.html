@@ -974,13 +974,14 @@ function syncControls() {
   document.querySelectorAll(".pageswitch button").forEach((b) => b.classList.toggle("on", (b.dataset.page === "youtube") === isYt));
   $("q").placeholder = isYt ? "Search videos or channels…" : "Search titles, directors or actors…";
   document.querySelectorAll(".noyt").forEach((el) => (el.hidden = isYt));
+  $("fp").hidden = isYt; if (isYt) $("fp").open = false; // no Filters on the YouTube page: the tabs already pick the topic
   if (isYt) { $("typebox").hidden = $("lenbox").hidden = $("statusbox").hidden = true; }
   const nOn = activeFilterCount();
   $("presets").hidden = false;
   const subs = isYt && YT_SUBS[F.ytMode];
   const fchip = `<button class="chip fchip ${nOn ? "active" : ""}" id="openfilters">Filters${nOn ? ` · ${nOn}` : ""}</button>`;
   $("ytsubs").hidden = !isYt;
-  $("ytsubs").innerHTML = !isYt ? "" : fchip + (subs ? [["", "All"], ...subs].map(([k, l]) => `<button class="chip ${(F.ytSub || "") === k ? "on" : ""}" data-ytsub="${k}">${l}</button>`).join("") : "");
+  $("ytsubs").innerHTML = !isYt ? "" : (subs ? [["", "All"], ...subs].map(([k, l]) => `<button class="chip ${(F.ytSub || "") === k ? "on" : ""}" data-ytsub="${k}">${l}</button>`).join("") : "");
   $("presets").classList.toggle("ytmodes", isYt);
   $("fchipbox").innerHTML = isYt ? "" : fchip;
   $("presets").innerHTML = isYt ? YT_MODES.map(([k, l]) => `<button class="ytmode ${(F.ytMode || "history") === k ? "on" : ""}" data-ytmode="${k}">${l}</button>`).join("")
@@ -1071,12 +1072,10 @@ function filteredAll(cats = [F.cat]) {
   if (F.view === "skipped") return all().filter((t) => S.marks.get(t.id) === "skipped" && matchesSearch(t, q));
   if (cats.length === 1 && cats[0] === "youtube") {
     const mode = F.ytMode || "history", fresh = Date.now() - 4 * 864e5;
-    const minY = +F.recent ? new Date().getFullYear() - +F.recent : 0;
     return all().filter((t) => t.kind === "yt" && !iSaw(t.id) && S.marks.get(t.id) !== "skipped"
       && (YT_SUBS[mode] || !KIDS_RE.test(t.title + " " + (t.channel || ""))) // no kids' videos in Trending / Most viewed
       && !ytForeign(t)
       && (YT_SUBS[mode] ? t.topic === mode && (!F.ytSub || (F.ytSub === "podfav" ? favCh(t) : t.sub === F.ytSub)) && (!ytMaxAge(t) || Date.parse(t.released) > Date.now() - ytMaxAge(t) * 864e5) : mode === "alltime" ? t.alltime && !t.topic : t.trendingAt && Date.parse(t.trendingAt) > fresh)
-      && (!F.genre || gl(t).includes(F.genre)) && (!minY || t.year >= minY)
       && (F.view !== "together" || (!theySaw(t.id) && !S.pSkip.has(t.id))));
   }
   const imdb = parseFloat(F.imdb) || 0, rt = parseFloat(F.rt) || 0;
