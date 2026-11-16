@@ -215,8 +215,9 @@ export async function refreshYouTube({ allTime = "auto" } = {}) {
   await Promise.all(jobs.map(async ({ topic, def, sub, q, o }) => {
     try {
       if (allTime !== true) {
-        const fresh = await sb(`titles?select=id&kind=eq.yt&data->>sub=eq.${sub}&updated_at=gt.${encodeURIComponent(ago((o.every || 7) - 0.1))}&limit=1`);
-        if (fresh && fresh.length) return;
+        // fresh = this tab got a real refresh lately (a handful of new rows, not just one saved video carried over)
+        const fresh = await sb(`titles?select=id&kind=eq.yt&data->>sub=eq.${sub}&updated_at=gt.${encodeURIComponent(ago((o.every || 7) - 0.1))}&limit=5`);
+        if (fresh && fresh.length >= 5) return;
       }
       const sr = await yt(`search?part=id&type=video&order=viewCount&regionCode=${def.region || "US"}&relevanceLanguage=en&maxResults=30${o.days ? "&publishedAfter=" + encodeURIComponent(ago(o.days)) : ""}&q=${encodeURIComponent(q)}`);
       const ids = (sr.items || []).map((x) => x.id && x.id.videoId).filter(Boolean);
