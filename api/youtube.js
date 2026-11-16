@@ -31,8 +31,9 @@ export const YT_TOPICS = {
     wonders: ["Amazing places", "most beautiful places in the world travel"],
   } },
   // a third item { days, every } = only videos from the last N days, refreshed every M days (default: all-time, weekly)
+  // anyCountry: keep channels from any country (clubs and teams are based all over Europe)
   // soccer searches run in the UK region so "football" means soccer, never the NFL
-  soccer: { label: "Soccer", region: "GB", not: /\bnfl\b|touchdown|quarterback|super bowl|college football|\bcfb\b|\bncaa\b/i, subs: {
+  soccer: { label: "Soccer", region: "GB", anyCountry: true, not: /\bnfl\b|touchdown|quarterback|super bowl|college football|\bcfb\b|\bncaa\b/i, subs: {
     barca: ["Barcelona", "FC Barcelona", { days: 10, every: 1, must: /barcelona|bar[cç]a/i }],
     lfc: ["Liverpool", "Liverpool FC", { days: 10, every: 1, must: /liverpool|\blfc\b|anfield/i }],
     highlights: ["Latest highlights", "soccer match highlights goals", { days: 7, every: 1 }],
@@ -48,7 +49,7 @@ export const YT_TOPICS = {
     stories: ["Stories & documentaries", "football documentary"],
   } },
   // F1: each video goes to the first tab whose title rule it matches, so official "Race Highlights" land under Race
-  f1: { label: "F1", not: /motogp|moto ?gp|indycar|nascar|f1 ?2[0-9] game|\bf1 ?2[0-9]\b|career mode|league|esports|sim ?racing|fantasy/i, subs: {
+  f1: { label: "F1", anyCountry: true, not: /motogp|moto ?gp|indycar|nascar|f1 ?2[0-9] game|\bf1 ?2[0-9]\b|career mode|league|esports|sim ?racing|fantasy/i, subs: {
     race: ["Race highlights", "F1 race highlights grand prix", { days: 21, every: 1, minViews: 20000, must: /race highlights|extended highlights|grand prix highlights|race recap|driver.?s react after the race/i, mustNot: /sprint|qualifying|fp[123]|practice/i }],
     quali: ["Qualifying", "F1 qualifying highlights", { days: 21, every: 1, minViews: 20000, must: /qualifying|pole lap|quali\b/i, mustNot: /sprint qualifying|sprint shootout/i }],
     sprint: ["Sprint", "F1 sprint highlights", { days: 21, every: 1, minViews: 20000, must: /sprint/i }],
@@ -92,7 +93,7 @@ export function isForeign(v, ch) {
   if (c && c.lang && !/^en/i.test(c.lang)) return true;
   return !!(c && c.country && !EN_COUNTRIES.has(c.country) && !lang.startsWith("en"));
 }
-// look up channels (1 quota unit per 50) so Trending and Most viewed can skip channels based outside English-speaking countries
+// look up channels (1 quota unit per 50) so every YouTube tab (except club and team channels in Soccer and F1) can skip channels based outside English-speaking countries
 async function channels(items) {
   const ids = [...new Set(items.map((v) => (v.snippet || {}).channelId).filter(Boolean))], out = new Map();
   for (let i = 0; i < ids.length; i += 50) {
@@ -198,9 +199,10 @@ export async function refreshYouTube({ allTime = "auto" } = {}) {
       const ids = (sr.items || []).map((x) => x.id && x.id.videoId).filter(Boolean);
       if (!ids.length) return;
       const d = await yt(`videos?part=snippet,statistics,contentDetails,status&id=${[...new Set(ids)].join(",")}`);
+      const ch = def.anyCountry ? null : await channels(d.items || []);
       for (const v of d.items || []) {
         const sn = v.snippet || {}, text = (sn.title || "") + " " + (sn.channelTitle || "");
-        if (isKids(v) || isForeign(v)) continue;
+        if (isKids(v) || isForeign(v, ch)) continue;
         if ((YT_CATS[sn.categoryId] || "") === "Music" || (def.not && def.not.test(text))) continue;
         if (secs((v.contentDetails || {}).duration) < (def.minSecs || (o.days ? 90 : 180))) continue; // skip Shorts and clips
         if (o.minViews && (+(v.statistics || {}).viewCount || 0) < o.minViews) continue; // skip tiny channels and game sims
