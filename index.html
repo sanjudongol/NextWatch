@@ -568,8 +568,8 @@ textarea:focus,input:focus{outline:2px solid color-mix(in srgb,var(--ac) 60%,tra
   .phoneonly{display:block!important}
   #sheetscore select{font-weight:400}
   #scorebar,.ctlrow .sortpop,#fchipbox,#scorepop{display:none!important}
-  #layout{width:40px;height:34px;padding:0!important;display:inline-grid;place-items:center}#layout[hidden]{display:none}
-  #layout .ico{width:20px;height:20px;stroke-width:2}
+  #layout{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}#layout[hidden]{display:none}
+  #layout .ico{width:16px;height:16px;stroke-width:2.2}
   body.hasq #layout{display:none}
   .ctlrow:not(:has(.ytmodes)){display:none}
   #home>.cats{margin:4px 0 10px}
@@ -1185,7 +1185,7 @@ function syncControls() {
   if (seg) { $("tabs").innerHTML = shown.map(([k]) => `<button class="chip ${F.view === k ? "on" : ""}" data-view="${k}">${esc(SEG[k] || k)}</button>`).join(""); }
   else $("tabs").innerHTML = (shown.length < 2 && grouped() ? [] : shown).map(([k, l]) => `<button class="chip ${F.view === k ? "on" : ""}" data-view="${k}" ${k === "directors" ? `title="Directors and creators whose titles on your services score best, plus acclaimed directors to explore"` : ""} ${k === "together" ? `title="Only what neither of you has seen, with what you both want first. Uses the filters and section above."` : ""}>${l}${k === "all" || k === "together" || k === "directors" ? "" : ` (${count(k)})`}</button>`).join("");
   // iPhone: an icon button next to Sort & Filter; it shows what you'll switch to
-  if (phone()) { const toCards = F.layout === "list"; $("layout").innerHTML = toCards ? `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="7" rx="2"/><rect x="4" y="13" width="16" height="7" rx="2"/></svg>` : `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>`; $("layout").setAttribute("aria-label", toCards ? "Show full cards" : "Show compact list"); $("layout").title = toCards ? "Show full cards for everything" : "Show a compact list"; }
+  if (phone()) { const toCards = F.layout === "list"; $("layout").innerHTML = toCards ? `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9l5-5 5 5M7 15l5 5 5-5"/></svg>Expand all` : `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4l5 5 5-5M7 20l5-5 5 5"/></svg>Collapse all`; $("layout").setAttribute("aria-label", toCards ? "Expand all into full cards" : "Collapse all into a compact list"); $("layout").title = $("layout").getAttribute("aria-label"); }
   else $("layout").textContent = F.layout === "list" ? "Cards" : "Compact list";
   const sectionName = { movies: "Movies", series: "Series", anime: "Anime", reality: "Reality & competition", docs: "Documentaries", kids: "Kids & family", truecrime: "True crime", youtube: "YouTube" }[F.cat] || (secOf(F.cat) || {}).label || "this section";
   $("scorehint").textContent = `Score settings are remembered separately for each section (now: ${sectionName}).`;
@@ -1330,7 +1330,7 @@ function row(t) {
   return `<article data-row="${esc(id)}" class="rowc ${ns ? "fresh" : w || mk === "skipped" ? "dim" : ""}">
   <button class="rcover" data-open="${esc(id)}" tabindex="-1" aria-hidden="true">${cover(t).replace('class="cover"', 'class="cover sm"')}</button>
   <button class="rmain" data-open="${esc(id)}" title="Show details" aria-expanded="false">
-    <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+    <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
     <div class="t">${esc(t.title)}</div>
     <div class="meta">${t.year || ""} · ${esc(lenText(t))} · ${esc(gl(t).slice(0, 2).join(", "))}</div>
     <div class="meta">${esc(sc)}${sc ? " · " : ""}${esc((t.services || []).join(", "))}</div>
