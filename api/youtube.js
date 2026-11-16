@@ -58,7 +58,33 @@ export const YT_TOPICS = {
     tech: ["Tech explained", "F1 car technology explained"],
     f1docs: ["Documentaries", "Formula 1 documentary"],
   } },
+  // politics: plain, non-partisan searches; the news tabs keep only recent videos from sizable channels
+  politics: { label: "Politics", subs: {
+    polnews: ["Latest news", "US politics news today", { days: 3, every: 1, minViews: 20000 }],
+    polworld: ["World affairs", "world news geopolitics", { days: 7, every: 1, minViews: 20000 }],
+    polinterviews: ["Interviews", "political interview", { days: 14, every: 2, minViews: 20000 }],
+    poldebates: ["Debates", "political debate full"],
+    polexplained: ["Explained", "politics explained"],
+  } },
+  // podcasts: full episodes only (20+ minutes), so clips and Shorts stay out
+  podcasts: { label: "Podcasts", minSecs: 1200, subs: {
+    podnew: ["New episodes", "podcast full episode", { days: 7, every: 1, minViews: 50000 }],
+    podcomedy: ["Comedy", "comedy podcast full episode"],
+    podinterviews: ["Interviews", "long form interview podcast"],
+    podcrime: ["True crime", "true crime podcast episode"],
+    podscience: ["Science & ideas", "science podcast episode"],
+    podsports: ["Sports talk", "sports podcast episode"],
+    podbiz: ["Business & money", "business podcast episode"],
+  } },
 };
+// English only: skip videos tagged with another language, or whose title is mostly in another script
+const LATIN = /[A-Za-z\u00C0-\u024F]/g, LETTER = /\p{L}/gu;
+export function isForeign(v) {
+  const s = v.snippet || {}, lang = (s.defaultAudioLanguage || s.defaultLanguage || "").toLowerCase();
+  if (lang && !lang.startsWith("en") && lang !== "zxx") return true;
+  const t = s.title || "", all = (t.match(LETTER) || []).length;
+  return all > 3 && (t.match(LATIN) || []).length / all < 0.7;
+}
 // kids' videos: YouTube's own "made for kids" flag, plus the big kids' channels and nursery-rhyme titles
 export const KIDS_RE = /cocomelon|nursery rhyme|baby shark|kids songs?|songs for (kids|children)|for kids\b|toddler|peppa pig|blippi|ms ?rachel|pinkfong|little baby bum|super simple songs|chuchu|kids diana|vlad (and|&) niki|like nastya|bluey|paw patrol|learn (colors|numbers|abc)/i;
 const isKids = (v) => !!((v.status || {}).madeForKids) || KIDS_RE.test(((v.snippet || {}).title || "") + " " + ((v.snippet || {}).channelTitle || ""));
@@ -74,7 +100,7 @@ function toTitle(v, extra) {
     genres: [YT_CATS[s.categoryId] || "Other"], views, likes: +st.likeCount || 0, popularity: views,
     secs: secs((v.contentDetails || {}).duration), services: ["YouTube"],
     poster: (th.medium || th.high || th.default || {}).url || null,
-    summary: (s.description || "").slice(0, 300), dirs: [], cast: [], ...extra,
+    summary: (s.description || "").slice(0, 300), dirs: [], cast: [], lang: s.defaultAudioLanguage || s.defaultLanguage || "", ...extra,
   };
 }
 
@@ -109,7 +135,7 @@ export async function refreshYouTube({ allTime = "auto" } = {}) {
   for (const cat of ["", ...Object.keys(YT_CATS)]) {
     try {
       const d = await yt(`videos?part=snippet,statistics,contentDetails,status&chart=mostPopular&regionCode=US&maxResults=${cat ? 20 : 50}${cat ? "&videoCategoryId=" + cat : ""}`);
-      const list = (d.items || []).filter((v) => !isKids(v)).map((v) => toTitle(v, { trendingAt: now }));
+      const list = (d.items || []).filter((v) => !isKids(v) && !isForeign(v)).map((v) => toTitle(v, { trendingAt: now }));
       await save(list); out.trending += list.length;
     } catch (e) { if (!/not found|invalid|not supported/i.test(e.message)) out.errors.push(e.message); }
   }
@@ -121,11 +147,11 @@ export async function refreshYouTube({ allTime = "auto" } = {}) {
   }
   if (doAll) for (const cat of Object.keys(YT_CATS)) {
     try {
-      const s = await yt(`search?part=id&type=video&order=viewCount&regionCode=US&maxResults=25&videoCategoryId=${cat}`);
-      const ids = (s.items || []).map((x) => x.id && x.id.videoId).filter(Boolean);
+      const s = await yt(`search?part=id&type=video&order=viewCount&regionCode=US&relevanceLanguage=en&maxResults=50&videoCategoryId=${cat}`);
+      const ids = (s.items || []).map((x) => x.id && x.id.videoId).filter(Boolean); // 50 asked, about 25 kept after the English filter
       if (!ids.length) continue;
       const d = await yt(`videos?part=snippet,statistics,contentDetails,status&id=${ids.join(",")}`);
-      const list = (d.items || []).filter((v) => !isKids(v)).map((v) => toTitle(v, { alltime: true }));
+      const list = (d.items || []).filter((v) => !isKids(v) && !isForeign(v)).slice(0, 25).map((v) => toTitle(v, { alltime: true }));
       await save(list); out.alltime += list.length;
     } catch (e) { out.errors.push(e.message); if (/quota/i.test(e.message)) break; }
   }
@@ -146,9 +172,9 @@ export async function refreshYouTube({ allTime = "auto" } = {}) {
       const d = await yt(`videos?part=snippet,statistics,contentDetails,status&id=${[...new Set(ids)].join(",")}`);
       for (const v of d.items || []) {
         const sn = v.snippet || {}, text = (sn.title || "") + " " + (sn.channelTitle || "");
-        if (isKids(v)) continue;
+        if (isKids(v) || isForeign(v)) continue;
         if ((YT_CATS[sn.categoryId] || "") === "Music" || (def.not && def.not.test(text))) continue;
-        if (secs((v.contentDetails || {}).duration) < (o.days ? 90 : 180)) continue; // skip Shorts and clips
+        if (secs((v.contentDetails || {}).duration) < (def.minSecs || (o.days ? 90 : 180))) continue; // skip Shorts and clips
         if (o.minViews && (+(v.statistics || {}).viewCount || 0) < o.minViews) continue; // skip tiny channels and game sims
         const f = found.get(v.id) || { v, topic, subs: new Set() };
         f.subs.add(sub); found.set(v.id, f);
