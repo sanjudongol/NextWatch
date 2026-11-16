@@ -2021,6 +2021,13 @@ setInterval(() => { if (!document.hidden) checkVersion(); }, 10 * 60000);
 
 // ---------------- sync ----------------
 let syncing = false;
+// phones drop a request when the screen locks or you switch apps ("Load failed"): wait a moment and try that step again
+const netErr = (e) => e instanceof TypeError || /load failed|failed to fetch|network/i.test(String(e && e.message));
+async function retry(fn, tries = 3) {
+  for (let i = 1; ; i++) { try { return await fn(); } catch (e) { if (i >= tries || !netErr(e)) throw e; await new Promise((r) => setTimeout(r, 1500 * i)); } }
+}
+const syncMsg = (e) => netErr(e) ? "the connection dropped (this happens if the screen locks or you switch apps mid-sync). Everything saved so far is kept; pull down to finish." : e.message;
+const ytMsg = (m) => /quota/i.test(m) ? "YouTube’s daily limit is used up, so some video tabs refresh tonight instead" : m;
 async function runSync() {
   if (syncing) return; syncing = true;
   const btn = $("sync"); btn.disabled = true;
@@ -2030,18 +2037,18 @@ async function runSync() {
       let total = job.pages;
       for (let page = 1; page <= total; page++) {
         btn.textContent = innerWidth < 620 ? `${page}/${total}` : `Syncing ${job.label || (job.kind === "movie" ? "movies" : "series")} ${page}/${total}…`;
-        const r = await api.syncStep({ kind: job.kind, order: job.order, page, ...(job.genre ? { genre: job.genre } : {}), ...(job.lang ? { lang: job.lang } : {}) });
+        const r = await retry(() => api.syncStep({ kind: job.kind, order: job.order, page, ...(job.genre ? { genre: job.genre } : {}), ...(job.lang ? { lang: job.lang } : {}) }));
         saved += r.saved || 0; if (r.firstError) errs.push(r.firstError);
         total = Math.min(job.pages, r.totalPages || total);
       }
     }
     btn.textContent = innerWidth < 620 ? "…" : "Refreshing older titles…";
-    await api.syncStep({ mode: "stale" });
-    if (S.ytOn) { btn.textContent = innerWidth < 620 ? "…" : "Refreshing YouTube…"; try { const y = await api.youtubeStep(); saved += Object.values(y).reduce((n, v) => n + (typeof v === "number" ? v : 0), 0); } catch (e) { errs.push(e.message); } }
+    await retry(() => api.syncStep({ mode: "stale" }));
+    if (S.ytOn) { btn.textContent = innerWidth < 620 ? "…" : "Refreshing YouTube…"; try { const y = await retry(() => api.youtubeStep()); saved += Object.values(y).reduce((n, v) => n + (typeof v === "number" ? v : 0), 0); if ((y.errors || []).some((m) => /quota/i.test(m))) errs.push(ytMsg("quota")); } catch (e) { errs.push(netErr(e) ? "YouTube didn’t answer in time" : ytMsg(e.message)); } }
     await reload();
     toast(`Sync done: ${saved} title${saved === 1 ? "" : "s"} added or refreshed.` + (errs.length ? ` (${errs.length} had problems: ${errs[0]})` : ""));
   } catch (e) {
-    toast("Sync stopped: " + e.message);
+    toast("Sync stopped: " + syncMsg(e));
     await reload().catch(() => {});
   } finally { syncing = false; btn.disabled = false; btn.innerHTML = `${ICO.sync}<span class="lbl"> Sync</span>`; }
 }
