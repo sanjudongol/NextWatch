@@ -1383,8 +1383,9 @@ function render() {
   syncControls();
   const searching = $("q").value.trim() && (F.view === "all" || F.view === "together");
   $("fsum").innerHTML = searching ? `<b>Filters</b>paused while you search · clear the search box to use them again` : `<b>Filters</b>${esc(filterSummary())}`;
-  document.body.classList.toggle("ondirs", F.view === "directors");
-  if (F.view === "directors") { renderDirectors(); renderPick(); renderSub(); renderAlert(); $("shelves").hidden = true; $("shelves").innerHTML = ""; $("findwrap").hidden = true; $("layout").hidden = true; return; }
+  const dirsView = F.view === "directors" && !$("q").value.trim(); // a search from Directors shows search results, like anywhere else
+  document.body.classList.toggle("ondirs", dirsView);
+  if (dirsView) { renderDirectors(); renderPick(); renderSub(); renderAlert(); $("shelves").hidden = true; $("shelves").innerHTML = ""; $("findwrap").hidden = true; $("layout").hidden = true; return; }
   $("layout").hidden = F.cat === "youtube"; // videos always show as video tiles, so Cards / Compact list does nothing there
   $("shelveson").hidden = !(F.shelves === false && F.view === "all" && F.cat !== "youtube");
   const list = filtered();
