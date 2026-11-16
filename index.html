@@ -138,6 +138,8 @@ body.ondirs :is(.pageswitch,.topbar,.ctlrow,#ytsubs,#fp,#alert,#shelves){display
 #alert button{background:var(--ac);color:#fff;border:0;border-radius:8px;padding:6px 12px;font-weight:600}
 #ytsubs{padding-top:6px}
 #ytsubs .chip{font-size:12.5px;padding:4px 10px}
+.rb.follow{color:var(--ac);box-shadow:inset 0 0 0 1px var(--ac)}
+.rb.follow.on{background:var(--ac);color:#fff}
 #alert .alert-acts{display:flex;gap:6px;align-items:center;margin-left:auto}
 #alert button.alert-x{background:transparent;color:var(--mu);padding:4px 8px;font-size:16px;line-height:1}
 #alert button.alert-x:hover{color:var(--tx)}
@@ -665,10 +667,11 @@ const YT_SUBS = { // same keys as YT_TOPICS in api/youtube.js
   soccer: [["barca", "Barcelona", 12], ["lfc", "Liverpool", 12], ["highlights", "Latest highlights", 10], ["pl", "Premier League", 10], ["ucl", "Champions League", 16], ["transfers", "Transfer news", 6], ["fpl", "FPL", 9], ["tactics", "Tactics & analysis"], ["goals", "Best goals"], ["legends", "Legends"], ["worldcup", "World Cup"], ["skills", "Skills"], ["stories", "Stories & documentaries"]],
   f1: [["race", "Race highlights", 21], ["quali", "Qualifying", 21], ["sprint", "Sprint", 21], ["f1news", "News & analysis", 9], ["overtakes", "Best overtakes"], ["classics", "Classic races"], ["tech", "Tech explained"], ["f1docs", "Documentaries"]],
   politics: [["polnews", "Latest news", 4], ["polworld", "World affairs", 9], ["polinterviews", "Interviews", 16], ["poldebates", "Debates"], ["polexplained", "Explained"]],
-  podcasts: [["podnew", "New episodes", 9], ["podcomedy", "Comedy"], ["podinterviews", "Interviews"], ["podcrime", "True crime"], ["podscience", "Science & ideas"], ["podsports", "Sports talk"], ["podbiz", "Business & money"]],
+  podcasts: [["podfav", "★ My podcasters"], ["podnew", "New episodes", 9], ["podcomedy", "Comedy"], ["podinterviews", "Interviews"], ["podcrime", "True crime"], ["podscience", "Science & ideas"], ["podsports", "Sports talk"], ["podbiz", "Business & money"]],
 };
 // English only (same rule as api/youtube.js): hides older saved videos in another language or script
 const ytForeign = (t) => { if (t.lang && !/^en|^zxx/i.test(t.lang)) return true; if (/\b(telugu|tamil|malayalam|kannada|hindi|bhojpuri|gujarati|marathi|punjabi|bengali|bangla|odia|urdu|nepali|sinhala|tagalog|dubbed|full (?:hd |youtube |length )?(?:movie|film)|yt film|south indian)\b/i.test(t.title + " " + (t.channel || ""))) return true; const all = (t.title.match(/\p{L}/gu) || []).length; return all > 3 && (t.title.match(/[A-Za-z\u00C0-\u024F]/g) || []).length / all < 0.7; };
+const favCh = (t) => !!t.channelId && (S.follows.has(t.channelId) || S.pFollows.has(t.channelId)); // a podcaster you or your partner follow
 const ytMaxAge = (t) => ((YT_SUBS[t.topic] || []).find((x) => x[0] === t.sub) || [])[2]; // e.g. highlights: last 10 days only
 const fmtViews = (n) => n >= 1e9 ? (n / 1e9).toFixed(1).replace(/\.0$/, "") + "B" : n >= 1e6 ? Math.round(n / 1e6) + "M" : n >= 1e3 ? Math.round(n / 1e3) + "K" : String(n || 0);
 const fmtDur = (s) => { if (!s) return ""; const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = String(s % 60).padStart(2, "0"); return h ? `${h}:${String(m).padStart(2, "0")}:${x}` : `${m}:${x}`; };
@@ -710,7 +713,7 @@ if (F.cat === "main" || !F.cat) { // "Movies & series" became two sections
   if (F.byCat && F.byCat.main) { F.byCat.movies = F.byCat.series = F.byCat.main; delete F.byCat.main; }
   F.cat = F.type === "Series" ? "series" : "movies"; F.type = "";
 } if (!Array.isArray(F.svcOn)) F.svcOn = []; // old "hide a service" setting is replaced by "only these"
-let S = { ytOn: DEMO, titles: [], me: null, partner: null, marks: new Map(), pMarks: new Map(), views: new Set(), pViews: new Set(), seen: new Map(), pSeen: new Map(), rate: new Map(), pRate: new Map(), pSkip: new Set(), lastUpdated: null };
+let S = { ytOn: DEMO, titles: [], me: null, partner: null, marks: new Map(), pMarks: new Map(), views: new Set(), pViews: new Set(), seen: new Map(), pSeen: new Map(), rate: new Map(), pRate: new Map(), follows: new Map(), pFollows: new Map(), pSkip: new Set(), lastUpdated: null };
 let openRow = null, installEvt = null;
 let api, pickId = null;
 const tid = (t) => t.id;
@@ -749,6 +752,7 @@ async function supabaseApi(cfg) {
       }
       const marks = must(await sb.from("marks").select("user_id,title_id,status"));
       const views = must(await sb.from("views").select("user_id,title_id,seasons,rating"));
+      const follows = (await sb.from("follows").select("user_id,channel_id,channel_name")).data || []; // podcasters you follow (empty if the table isn't set up yet)
       // titles your partner isn't interested in: only used to leave them out of "Watch together"
       const pSkip = partner ? (must(await sb.rpc("partner_skipped")) || []).map((x) => (typeof x === "string" ? x : Object.values(x)[0])) : [];
       return {
@@ -762,6 +766,8 @@ async function supabaseApi(cfg) {
         pSeen: new Map(views.filter((v) => partner && v.user_id === partner.id && v.seasons != null).map((v) => [v.title_id, v.seasons])),
         rate: new Map(views.filter((v) => v.user_id === uid && v.rating).map((v) => [v.title_id, v.rating])),
         pRate: new Map(views.filter((v) => partner && v.user_id === partner.id && v.rating).map((v) => [v.title_id, v.rating])),
+        follows: new Map(follows.filter((f) => f.user_id === uid).map((f) => [f.channel_id, f.channel_name])),
+        pFollows: new Map(follows.filter((f) => partner && f.user_id === partner.id).map((f) => [f.channel_id, f.channel_name])),
       };
     },
     async setMark(titleId, status) {
@@ -784,9 +790,13 @@ async function supabaseApi(cfg) {
       if (!r.ok) throw new Error(body.error || "Lookup failed");
       return body;
     },
-    async youtubeStep() {
+    async follow(channelId, name, on) {
+      if (on) must(await sb.from("follows").upsert({ user_id: S.me.id, channel_id: channelId, channel_name: name }));
+      else must(await sb.from("follows").delete().eq("user_id", S.me.id).eq("channel_id", channelId));
+    },
+    async youtubeStep(opts) {
       const token = (await a.session())?.access_token;
-      const r = await fetch("/api/youtube", { method: "POST", headers: { Authorization: "Bearer " + token } });
+      const r = await fetch("/api/youtube", { method: "POST", headers: { Authorization: "Bearer " + token, ...(opts ? { "Content-Type": "application/json" } : {}) }, ...(opts ? { body: JSON.stringify(opts) } : {}) });
       const body = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(body.error || "YouTube refresh failed");
       return body;
@@ -828,13 +838,15 @@ function demoApi() {
   titles.push(V("b", "Trending sample: how bridges are built", "Science Channel", 3.1e6, 2026, "Science & Tech", 1290, { trendingAt: nowIso }));
   titles.push(V("c", "All-time sample: the most-watched video", "Big Channel", 8.2e9, 2017, "Music", 236, { alltime: true }));
   titles.push(V("d", "History sample: the fall of Rome in 20 minutes", "History Explained", 21e6, 2019, "History", 1250, { alltime: true, topic: "history" }));
+  titles.push(V("e", "Podcast sample: a long chat about space", "Sample Pod", 2.4e6, 2026, "Podcasts", 5400, { topic: "podcasts", sub: "podscience", channelId: "UCsamplepod0000000000000" }));
+  titles.push(V("f", "Podcast sample: last week's episode", "Sample Pod", 1.1e6, 2026, "Podcasts", 4100, { topic: "podcasts", sub: "podfav", channelId: "UCsamplepod0000000000000" }));
   titles.push(T("movie-5", "My Octopus Teacher", "Movie", 2020, ["Documentary"], 8.1, 95, ["Netflix"], ["Pippa Ehrlich"], [], 85, null, "A filmmaker befriends an octopus.", 20));
   let signedIn = !!local.get("demo-in", false);
   // demo: you've seen Abbott Elementary up to season 4 (season 5 is out) and Severance season 2 (season 3 announced)
   Object.assign(titles.find((t) => t.id === "tv-3"), { aired: 5, next: null });
   Object.assign(titles.find((t) => t.id === "tv-1"), { aired: 2, next: { season: 3, date: "2027-01-16" } });
   Object.assign(titles.find((t) => t.id === "tv-2"), { aired: 5, next: null });
-  const db = { marks: new Map(), views: new Map([["me", new Set(["tv-3", "tv-1"])], ["p", new Set()]]), seen: new Map([["tv-3", 4], ["tv-1", 2]]), rate: new Map([["tv-3", 2]]) };
+  const db = { marks: new Map(), views: new Map([["me", new Set(["tv-3", "tv-1"])], ["p", new Set()]]), seen: new Map([["tv-3", 4], ["tv-1", 2]]), rate: new Map([["tv-3", 2]]), follows: new Map() };
   let partner = null;
   return {
     async session() { return signedIn ? { user: { id: "me" } } : null; },
@@ -846,9 +858,11 @@ function demoApi() {
     async signOut() { signedIn = false; local.set("demo-in", false); },
     async load() {
       return { titles, me: { id: "me", name: "You", invite_code: "AB12CD", partner_id: partner && "p" }, partner, lastUpdated: new Date().toISOString(),
-        marks: new Map(db.marks), pMarks: new Map([["tv-3", "want"], ["tv-1", "watching"]].filter(() => partner)), pSkip: new Set(partner ? ["movie-4"] : []), views: new Set(db.views.get("me")), pViews: new Set(partner ? db.views.get("p") : []), seen: new Map(db.seen), pSeen: new Map(), rate: new Map(db.rate), pRate: new Map(partner ? [["tv-3", 1], ["movie-2", 2], ["movie-6", 1]] : []) };
+        marks: new Map(db.marks), pMarks: new Map([["tv-3", "want"], ["tv-1", "watching"]].filter(() => partner)), pSkip: new Set(partner ? ["movie-4"] : []), views: new Set(db.views.get("me")), pViews: new Set(partner ? db.views.get("p") : []), seen: new Map(db.seen), pSeen: new Map(), rate: new Map(db.rate), follows: new Map(db.follows), pFollows: new Map(), pRate: new Map(partner ? [["tv-3", 1], ["movie-2", 2], ["movie-6", 1]] : []) };
     },
     async setMark(t, s) { s ? db.marks.set(t, s) : db.marks.delete(t); },
+    async follow(c, n, on) { on ? db.follows.set(c, n) : db.follows.delete(c); },
+    async youtubeStep() { return { followed: 0 }; },
     async setView(u, t, on, n, r) { const k = u === "me" ? "me" : "p"; on ? db.views.get(k).add(t) : db.views.get(k).delete(t); if (k === "me") { on && n != null ? db.seen.set(t, n) : db.seen.delete(t); if (!on) db.rate.delete(t); else if (r !== undefined) r ? db.rate.set(t, r) : db.rate.delete(t); } },
     async saveSeasons(rows) { rows.forEach((r) => r.user_id === "me" && db.seen.set(r.title_id, r.seasons)); },
     async rename() {},
@@ -1061,7 +1075,7 @@ function filteredAll(cats = [F.cat]) {
     return all().filter((t) => t.kind === "yt" && !iSaw(t.id) && S.marks.get(t.id) !== "skipped"
       && (YT_SUBS[mode] || !KIDS_RE.test(t.title + " " + (t.channel || ""))) // no kids' videos in Trending / Most viewed
       && !ytForeign(t)
-      && (YT_SUBS[mode] ? t.topic === mode && (!F.ytSub || t.sub === F.ytSub) && (!ytMaxAge(t) || Date.parse(t.released) > Date.now() - ytMaxAge(t) * 864e5) : mode === "alltime" ? t.alltime && !t.topic : t.trendingAt && Date.parse(t.trendingAt) > fresh)
+      && (YT_SUBS[mode] ? t.topic === mode && (!F.ytSub || (F.ytSub === "podfav" ? favCh(t) : t.sub === F.ytSub)) && (!ytMaxAge(t) || Date.parse(t.released) > Date.now() - ytMaxAge(t) * 864e5) : mode === "alltime" ? t.alltime && !t.topic : t.trendingAt && Date.parse(t.trendingAt) > fresh)
       && (!F.genre || gl(t).includes(F.genre)) && (!minY || t.year >= minY)
       && (F.view !== "together" || (!theySaw(t.id) && !S.pSkip.has(t.id))));
   }
@@ -1165,6 +1179,7 @@ function vid(t) {
     ${S.partner ? btn('data-seen="partner"', theySaw(id), "", `${theySaw(id) ? "✓ " : ""}${esc(pName())}`, `${pName()} watched`) : ""}
     ${btn('data-mark="want"', mk === "want", "mk-want", "Later", "Save for later")}
     ${btn('data-mark="skipped"', mk === "skipped", "mk-skipped", "✕", "Not interested")}
+    ${t.topic === "podcasts" && t.channelId ? `<button class="rb follow ${S.follows.has(t.channelId) ? "on" : ""}" data-follow="${esc(t.channelId)}" data-ch="${esc(t.channel)}" title="${S.follows.has(t.channelId) ? `Stop following ${esc(t.channel)}` : `Follow ${esc(t.channel)}: their newest episodes show under My podcasters`}">${S.follows.has(t.channelId) ? "✓ Following" : "+ Follow"}</button>` : ""}
     <a class="rb ytgo" ${ext} title="Open on YouTube">Watch</a>
   </div>
 </article>`;
@@ -1238,7 +1253,7 @@ function render() {
   const pri = (t) => F.view === "together" ? wantCount(t.id) : F.view === "seasons" ? (newSeason(t) ? 1 : 0)
     : F.view === "want" ? (bothWant(t.id) ? 3 : 0) + (newSeason(t) ? 2 : isWatching(t.id) ? 1 : 0) : F.view === "all" || F.view === "mine" ? (newSeason(t) ? 2 : isWatching(t.id) ? 1 : 0)
     : F.view === "faves" ? (iSaw(t.id) ? 0 : 2) + (S.pRate.get(t.id) === 2 ? 1 : 0) : 0;
-  const newest = F.cat === "youtube" && (F.ytSub ? ((YT_SUBS[F.ytMode] || []).find((x) => x[0] === F.ytSub) || [])[2] : ["soccer", "f1"].includes(F.ytMode)); // "latest" tabs and sports: newest first
+  const newest = F.cat === "youtube" && (F.ytSub ? ((YT_SUBS[F.ytMode] || []).find((x) => x[0] === F.ytSub) || [])[2] : ["soccer", "f1"].includes(F.ytMode)) || F.ytSub === "podfav"; // "latest" tabs and sports: newest first
   const sq = $("q").value.trim().toLowerCase();
   const hit = (t) => { const ti = (t.title || "").toLowerCase(); return ti === sq ? 3 : ti.startsWith(sq) ? 2 : ti.includes(sq) ? 1 : 0; };
   if (sq) list.sort((x, y) => hit(y) - hit(x) || imdbOrTmdb(y) - imdbOrTmdb(x) || (y.views || 0) - (x.views || 0));
@@ -1264,7 +1279,8 @@ function render() {
   if (F.view === "seasons") empty = "No new or upcoming seasons for series you’ve watched.";
   if (F.view === "faves") empty = `Nothing here yet. When ${esc(pName())} taps Liked it or Loved it on something, it shows up here, with what you haven’t seen first.`;
   if (F.view === "watching") empty = "Nothing in progress. On a series, tap “Watching now” to keep it here until you finish.";
-  if (F.view === "all" && F.cat === "youtube") empty = !S.ytOn ? "YouTube isn’t switched on yet: the site needs a YouTube key in Vercel (YOUTUBE_KEY). Once it’s added, tap Sync." : `No videos here yet. ${phone() ? "Pull down on this screen" : "Tap Sync"} to load them.`;
+  if (F.view === "all" && F.cat === "youtube" && F.ytSub === "podfav") empty = S.follows.size || S.pFollows.size ? "No episodes from your podcasters yet. Pull down (or tap Sync) to load their newest ones." : "Tap Follow next to a podcast’s channel name and its newest episodes show up here.";
+  else if (F.view === "all" && F.cat === "youtube") empty = !S.ytOn ? "YouTube isn’t switched on yet: the site needs a YouTube key in Vercel (YOUTUBE_KEY). Once it’s added, tap Sync." : `No videos here yet. ${phone() ? "Pull down on this screen" : "Tap Sync"} to load them.`;
   else if (F.view === "all") empty = all().length ? "Nothing matches these filters. Try lowering a score, widening the dates, or tapping Reset filters." : "No titles yet. Tap Sync to pull in the catalog — the first sync takes a minute or two.";
   const compact = F.layout === "list" && F.cat !== "youtube";
   $("grid").className = compact ? "list" : "";
@@ -1623,9 +1639,9 @@ function renderAccount() {
 
 // ---------------- toast ----------------
 let toastT;
-function toast(msg, undo) {
+function toast(msg, undo, label = "Undo") {
   const t = $("toast");
-  t.innerHTML = `<span>${esc(msg)}</span>` + (undo ? `<button id="undo">Undo</button>` : "");
+  t.innerHTML = `<span>${esc(msg)}</span>` + (undo ? `<button id="undo">${esc(label)}</button>` : "");
   t.classList.add("show"); clearTimeout(toastT);
   toastT = setTimeout(() => t.classList.remove("show"), undo ? 8000 : 4500);
   if (undo) $("undo").onclick = () => { undo(); t.classList.remove("show"); };
@@ -1710,6 +1726,7 @@ async function onClick(e) {
     saveF(); render(); scrollTo({ top: 0 }); return;
   }
   if (b.dataset.moodex) { runMood(b.dataset.moodex); return; }
+  if (b.dataset.follow) { toggleFollow(b.dataset.follow, b.dataset.ch || ""); return; }
   if (b.dataset.ytsub != null) { F.ytSub = b.dataset.ytsub; F.ytSubs = { ...(F.ytSubs || {}), [F.ytMode]: F.ytSub }; saveF(); render(); return; }
   if (b.dataset.ytmode) { F.ytMode = b.dataset.ytmode; F.ytSub = F.ytMode in (F.ytSubs || {}) ? F.ytSubs[F.ytMode] : (F.ytMode === "f1" ? "race" : ""); F.view = F.view === "together" ? "together" : "all"; saveF(); render(); return; }
   if (b.dataset.score) {
@@ -1921,6 +1938,16 @@ async function runSync() {
   } finally { syncing = false; btn.disabled = false; btn.innerHTML = `${ICO.sync}<span class="lbl"> Sync</span>`; }
 }
 
+// follow a podcaster: save it, then load their newest episodes right away
+async function toggleFollow(cid, name, on = !S.follows.has(cid)) {
+  on ? S.follows.set(cid, name) : S.follows.delete(cid); render();
+  try { await api.follow(cid, name, on); }
+  catch (e) { on ? S.follows.delete(cid) : S.follows.set(cid, name); render(); toast("Couldn’t save that: " + e.message); return; }
+  if (!on) { toast(`Stopped following ${name}`, () => toggleFollow(cid, name, true)); return; }
+  toast(`Following ${name}. Loading their newest episodes…`);
+  try { const r = await api.youtubeStep({ follow: cid }); await reload(); toast(`${name}: ${r.followed || 0} episode${r.followed === 1 ? "" : "s"} under ★ My podcasters`, () => { F.ytMode = "podcasts"; F.ytSub = "podfav"; saveF(); render(); scrollTo({ top: 0 }); }, "Show"); }
+  catch (e) { toast(`Following ${name}. Their episodes will load on the next sync.`); }
+}
 // ---------------- startup ----------------
 let lastLoad = 0;
 async function reload() {

@@ -40,6 +40,15 @@ create table if not exists public.views (
 alter table public.views add column if not exists seasons int;
 alter table public.views add column if not exists rating smallint check (rating in (1,2)); -- 1 liked, 2 loved
 
+-- 5. YouTube channels (podcasters) you follow: their newest episodes are fetched on every refresh
+create table if not exists public.follows (
+  user_id uuid not null references auth.users on delete cascade,
+  channel_id text not null check (channel_id ~ '^UC[A-Za-z0-9_-]{22}$'),
+  channel_name text not null default '',
+  created_at timestamptz not null default now(),
+  primary key (user_id, channel_id)
+);
+
 -- Create a profile when someone signs in for the first time
 create or replace function public.handle_new_user() returns trigger
 language plpgsql security definer set search_path = public as $$
@@ -99,6 +108,7 @@ alter table public.titles enable row level security;
 alter table public.profiles enable row level security;
 alter table public.marks enable row level security;
 alter table public.views enable row level security;
+alter table public.follows enable row level security;
 
 drop policy if exists "signed-in people read the catalog" on public.titles;
 create policy "signed-in people read the catalog" on public.titles for select to authenticated using (true);
@@ -126,6 +136,13 @@ create policy "own and partner views: write" on public.views for all to authenti
   using (user_id = auth.uid() or public.is_my_partner(user_id))
   with check (user_id = auth.uid() or public.is_my_partner(user_id));
 
+drop policy if exists "own and partner follows: read" on public.follows;
+create policy "own and partner follows: read" on public.follows for select to authenticated
+  using (user_id = auth.uid() or public.is_my_partner(user_id));
+drop policy if exists "own follows: write" on public.follows;
+create policy "own follows: write" on public.follows for all to authenticated
+  using (user_id = auth.uid()) with check (user_id = auth.uid());
+
 -- Table permissions
 revoke all on public.titles, public.profiles, public.marks, public.views from anon, authenticated;
 grant select on public.titles to authenticated;
@@ -134,6 +151,9 @@ revoke update on public.profiles from authenticated;
 grant update (name) on public.profiles to authenticated;   -- partner links change only through the functions above
 grant select, insert, update, delete on public.marks, public.views to authenticated;
 grant all on public.titles, public.profiles, public.marks, public.views to service_role;
+revoke all on public.follows from anon, authenticated;
+grant select, insert, update, delete on public.follows to authenticated;
+grant all on public.follows to service_role;
 revoke execute on function public.handle_new_user() from public, anon, authenticated;   -- only the sign-up trigger runs it
 revoke execute on function public.link_partner(text), public.unlink_partner(), public.is_my_partner(uuid), public.partner_skipped() from public, anon;
 grant execute on function public.link_partner(text), public.unlink_partner(), public.is_my_partner(uuid), public.partner_skipped() to authenticated;

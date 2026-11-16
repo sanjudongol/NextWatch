@@ -113,7 +113,7 @@ function toTitle(v, extra) {
   const th = s.thumbnails || {};
   const views = +st.viewCount || 0;
   return {
-    id: "yt-" + v.id, kind: "yt", type: "Video", title: s.title || "Untitled", channel: s.channelTitle || "",
+    id: "yt-" + v.id, kind: "yt", type: "Video", title: s.title || "Untitled", channel: s.channelTitle || "", channelId: s.channelId || "",
     year: +(s.publishedAt || "").slice(0, 4) || null, released: (s.publishedAt || "").slice(0, 10) || null,
     genres: [YT_CATS[s.categoryId] || "Other"], views, likes: +st.likeCount || 0, popularity: views,
     secs: secs((v.contentDetails || {}).duration), services: ["YouTube"],
@@ -140,7 +140,7 @@ async function save(list) {
   const rows = list.map((t) => {
     const p = prev.get(t.id) || {};
     const topic = t.topic || p.topic || null;
-    return { id: t.id, kind: "yt", updated_at: now, data: { ...t, alltime: t.alltime || p.alltime || false, trendingAt: t.trendingAt || p.trendingAt || null, topic, sub: t.sub || p.sub || null,
+    return { id: t.id, kind: "yt", updated_at: now, data: { ...t, alltime: t.alltime || p.alltime || false, trendingAt: t.trendingAt || p.trendingAt || null, topic, sub: t.sub === "podfav" ? p.sub || "podfav" : t.sub || p.sub || null,
       genres: topic && YT_TOPICS[topic] ? [YT_TOPICS[topic].label] : t.genres } };
   });
   const post = (r) => sb("titles", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" }, body: clean(r) });
@@ -223,13 +223,33 @@ export async function refreshYouTube({ allTime = "auto" } = {}) {
   }
   for (let i = 0; i < list.length; i += 100) await save(list.slice(i, i + 100));
   for (const t of list) out[t.topic] = (out[t.topic] || 0) + 1;
+  await refreshFollows(out);
   return out;
+}
+
+// newest uploads from one followed channel (2 quota units): skips Shorts and clips under 4 minutes
+export async function refreshChannel(cid) {
+  if (!/^UC[\w-]{22}$/.test(cid || "")) return 0;
+  const pl = await yt(`playlistItems?part=contentDetails&maxResults=25&playlistId=UU${cid.slice(2)}`);
+  const ids = (pl.items || []).map((x) => (x.contentDetails || {}).videoId).filter(Boolean);
+  if (!ids.length) return 0;
+  const d = await yt(`videos?part=snippet,statistics,contentDetails,status&id=${ids.join(",")}`);
+  const list = (d.items || []).filter((v) => !isKids(v) && secs((v.contentDetails || {}).duration) >= 240).map((v) => toTitle(v, { topic: "podcasts", sub: "podfav" }));
+  await save(list);
+  return list.length;
+}
+async function refreshFollows(out) {
+  const rows = await sb("follows?select=channel_id");
+  const ids = [...new Set((rows || []).map((r) => r.channel_id))].slice(0, 60);
+  await Promise.all(ids.map(async (c) => { try { out.followed = (out.followed || 0) + await refreshChannel(c); } catch (e) { out.errors.push(e.message); } }));
 }
 
 export default async function handler(req, res) {
   try {
     if (!env("YOUTUBE_KEY")) return json(res, 200, { skipped: "no key" });
     if (!(await requireUser(req))) return json(res, 401, { error: "Please sign in again." });
+    const follow = (req.body && req.body.follow) || "";
+    if (follow) return json(res, 200, { followed: await refreshChannel(follow) }); // just followed: load that channel now
     return json(res, 200, await refreshYouTube());
   } catch (e) {
     return json(res, 500, { error: String(e.message || e) });
