@@ -377,6 +377,8 @@ button:active:not(:disabled),a.rb:active,.popbtn:active{opacity:.5}
 .rateseg button.nah.on,.rb.mk-nah.on{color:var(--mu)}
 .pickbtn{width:100%;border:0;border-radius:10px;padding:10px;font:inherit;font-weight:600;background:var(--pill);color:var(--ac);min-height:44px;cursor:pointer}
 .pickbtn.on{background:var(--ac);color:#fff}
+.paidtag{display:inline-block;font-size:.72rem;font-weight:700;padding:1px 7px;border-radius:6px;background:color-mix(in srgb,#ff9f0a 18%,transparent);color:#c77700}
+.paidsvc{display:inline-block;padding:6px 12px;border-radius:999px;background:var(--pill);color:var(--mu);font-size:.85rem;margin:0 6px 6px 0}
 .rb.mk-pick{color:var(--ac)}.rb.mk-pick.on{background:var(--ac);color:#fff}
 .b-nah{background:color-mix(in srgb,var(--mu) 18%,transparent);color:var(--mu)}
 .rb.on.mk-like{background:color-mix(in srgb,var(--red) 14%,transparent);color:var(--red)}
@@ -804,7 +806,7 @@ const theirUnrated = (t) => t.kind !== "yt" && !!S.partner && theySaw(t.id) && !
 const needsRate = (t) => (F.rateWho === "them" && S.partner ? theirUnrated : myUnrated)(t);
 // niche services: their titles only show when you pick that service in Sort & Filter (same names as lib/server.js)
 const EXTRA_SERVICES = new Set(["Hoopla", "Starz", "MGM+", "AMC+", "Criterion Channel", "MUBI", "BritBox", "Acorn TV", "Shudder"]);
-const svcOk = (t) => { const sv = t.services || []; if (F.svcOn.length) return sv.some((s) => F.svcOn.includes(s)); return !sv.length || sv.some((s) => !EXTRA_SERVICES.has(s)); };
+const svcOk = (t) => { if (t.paid) return false; /* rent/buy titles: search results only */ const sv = t.services || []; if (F.svcOn.length) return sv.some((s) => F.svcOn.includes(s)); return !sv.length || sv.some((s) => !EXTRA_SERVICES.has(s)); };
 const favCh = (t) => !!t.channelId && (S.follows.has(t.channelId) || S.pFollows.has(t.channelId)); // a channel you or your partner follow
 const ytMaxAge = (t) => ((YT_SUBS[t.topic] || []).find((x) => x[0] === t.sub) || [])[2]; // e.g. highlights: last 10 days only
 const fmtViews = (n) => n >= 1e9 ? (n / 1e9).toFixed(1).replace(/\.0$/, "") + "B" : n >= 1e6 ? Math.round(n / 1e6) + "M" : n >= 1e3 ? Math.round(n / 1e3) + "K" : String(n || 0);
@@ -989,7 +991,8 @@ function demoApi() {
   titles.push(T("tv-6", "The Great British Bake Off", "Series", 2010, ["Reality"], 8.6, 100, ["Netflix"], [], ["Noel Fielding"], 15, "Ongoing", "Amateur bakers compete in a tent.", 45));
   titles.push(T("movie-6", "Interstellar", "Movie", 2014, ["Sci-Fi", "Drama"], 8.7, 73, ["Paramount+"], ["Christopher Nolan"], ["Matthew McConaughey"], 169, null, "Explorers travel through a wormhole.", 60));
   titles.push(T("movie-7", "The Grand Budapest Hotel", "Movie", 2014, ["Comedy"], 8.1, 92, ["Hulu"], ["Wes Anderson"], ["Ralph Fiennes"], 99, null, "A legendary concierge and his lobby boy.", 30))
-  titles.push(T("movie-9", "Sample: a Starz-only movie", "Movie", 2019, ["Drama"], 7.6, 88, ["Starz"], ["Sample Director"], ["Sample Actor"], 110, null, "Only on a niche service: shows when Starz is picked in Sort & Filter.", 5));
+  titles.push(T("movie-9", "Sample: a Starz-only movie", "Movie", 2019, ["Drama"], 7.6, 88, ["Starz"], ["Sample Director"], ["Sample Actor"], 110, null, "Only on a niche service: shows when Starz is picked in Sort & Filter.", 5))
+  titles.push(Object.assign(T("movie-10", "Moon", "Movie", 2009, ["Sci-Fi", "Drama"], 7.8, 90, [], ["Duncan Jones"], ["Sam Rockwell"], 97, null, "Sample: rent-or-buy only, so it appears in search results but not in your lists.", 40), { paid: true, paidOn: ["Prime Video", "Apple TV"] }));
   titles.push(T("movie-8", "Fantastic Mr. Fox", "Movie", 2009, ["Animation", "Comedy"], 7.9, 93, ["Disney+"], ["Wes Anderson"], ["George Clooney"], 87, null, "A fox plans one last heist.", 25));
   const V = (id, title, channel, views, year, genre, secs, extra) => ({ id: "yt-" + id, kind: "yt", type: "Video", title, channel, views, popularity: views, year, released: year + "-01-01", genres: [genre], secs, services: ["YouTube"], poster: null, dirs: [], cast: [], ...extra });
   const nowIso = new Date().toISOString();
@@ -1350,7 +1353,7 @@ function row(t) {
     <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
     <div class="t">${esc(t.title)}</div>
     <div class="meta">${t.year || ""} · ${esc(lenText(t))} · ${esc(gl(t).slice(0, 2).join(", "))}</div>
-    <div class="meta">${esc(sc)}${sc ? " · " : ""}${esc((t.services || []).join(", "))}</div>
+    <div class="meta">${esc(sc)}${sc ? " · " : ""}${t.paid ? `<span class="paidtag">Rent or buy</span> ${esc((t.paidOn || []).join(", "))}` : esc((t.services || []).join(", "))}</div>
     ${badgeList(t).length ? `<div class="badges">${badgeList(t).join("")}</div>` : ""}
   </button>
   <div class="rbtns">
@@ -1409,7 +1412,7 @@ function card(t, collapsible) {
   <div class="scores"><div>${imdbCell}</div><div>Tomatometer<b>${t.rt != null ? t.rt + "%" : "—"}</b></div><div>Trending<b>${t.popularity ? "#" + rank(t) : "—"}</b></div></div>
   ${t.summary ? `<p class="sum" data-sum>${esc(t.summary)}</p>${t.summary.length > 110 ? `<button class="summore" data-summore>More</button>` : ""}` : ""}
   ${dirs || cast ? `<div class="people">${dirs ? `${t.type === "Series" ? "Created by" : "Directed by"} ${dirs}<br>` : ""}${cast ? `Starring ${cast}` : ""}</div>` : ""}
-  <div><div class="where">Where to watch</div><div class="svc">${(t.services || []).map((x) => `<button class="${x === "YouTube" ? "free" : ""}" data-svconly="${esc(x)}" title="Show only ${esc(x)} titles">${esc(x)}${x === "YouTube" ? " · free w/ ads" : ""}</button>`).join("")}</div></div>
+  <div><div class="where">${t.paid ? "Not included with your services · rent or buy on" : "Where to watch"}</div><div class="svc">${t.paid ? (t.paidOn || []).map((x) => `<span class="paidsvc">${esc(x)}</span>`).join("") : ""}${(t.services || []).map((x) => `<button class="${x === "YouTube" ? "free" : ""}" data-svconly="${esc(x)}" title="Show only ${esc(x)} titles">${esc(x)}${x === "YouTube" ? " · free w/ ads" : ""}</button>`).join("")}</div></div>
   ${ns ? `<button class="seasonbtn" data-season="${ns}" data-id="${esc(id)}">✓ I’ve watched season ${ns}</button>` : ""}
   ${checks}
   <div class="rate"><span>How was it?</span><div class="rateseg" role="group" aria-label="Your rating">
@@ -1462,17 +1465,17 @@ function render() {
   const newest = F.cat === "youtube" && (F.ytSub ? ((YT_SUBS[F.ytMode] || []).find((x) => x[0] === F.ytSub) || [])[2] : ["soccer", "f1", "following", "sidemen"].includes(F.ytMode)) || F.ytMode === "podcasts"; // "latest" tabs and sports: newest first
   const sq = $("q").value.trim().toLowerCase();
   const hit = (t) => { const ti = (t.title || "").toLowerCase(); return ti === sq ? 3 : ti.startsWith(sq) ? 2 : ti.includes(sq) ? 1 : 0; };
-  if (sq) list.sort((x, y) => hit(y) - hit(x) || imdbOrTmdb(y) - imdbOrTmdb(x) || (y.views || 0) - (x.views || 0));
+  if (sq) list.sort((x, y) => (x.paid ? 1 : 0) - (y.paid ? 1 : 0) || hit(y) - hit(x) || imdbOrTmdb(y) - imdbOrTmdb(x) || (y.views || 0) - (x.views || 0));
   else if (newest) list.sort((x, y) => (y.released || "").localeCompare(x.released || "") || (y.views || 0) - (x.views || 0));
   else list.sort((x, y) => pri(y) - pri(x) || dir * (sortVal(x, k) - sortVal(y, k)) || imdbOrTmdb(y) - imdbOrTmdb(x));
   const q = $("q").value.trim();
   const noun = F.view === "all" || F.view === "together" ? (list.length === 1 ? "match" : "matches") : (list.length === 1 ? "title" : "titles");
   $("status").textContent = `${list.length} ${noun}${F.view === "person" ? ` with ${F.person} on your services, any section or score` : ""}${q ? ` for “${q}”` : ""}${q && (F.view === "all" || F.view === "together") ? " in everything (filters paused while you search)" : ""}`;
-  if (q) $("status").textContent = `${list.length} result${list.length === 1 ? "" : "s"} for “${q}” in movies, shows and videos`;
+  if (q) { const np = list.filter((t) => t.paid).length; $("status").textContent = `${list.length} result${list.length === 1 ? "" : "s"} for “${q}” in movies, shows and videos${np ? ` (${np} to rent or buy)` : ""}`; }
   // offer to look beyond the catalog for a director / actor / title
   const fm = $("findmore"), dq = (F.director || "").trim();
   if (F.view === "all" && dq.length >= 2) { fm.hidden = false; fm.dataset.role = "director"; fm.dataset.q = dq; fm.textContent = `Find more by “${dq}”`; fm.title = "Looks up this director’s or creator’s work and adds whatever is included with your services"; }
-  else if (F.view === "all" && q.length >= 3) { fm.hidden = false; fm.dataset.role = "any"; fm.dataset.q = q; fm.textContent = `Look up “${q}” on your services`; fm.title = "Finds titles, or a person’s films and shows, that aren’t in the list yet"; }
+  else if (q.length >= 3) { fm.hidden = false; fm.dataset.role = "any"; fm.dataset.q = q; fm.textContent = `Find more for “${q}” (incl. rent or buy)`; fm.title = "Finds titles, or a person’s films and shows, that aren’t in the list yet"; }
   else fm.hidden = true;
   $("findwrap").hidden = fm.hidden; fm.hidden = false;
   // To rate: switch between yours and the ones waiting on your partner
@@ -2074,8 +2077,8 @@ async function onClick(e) {
         await reload();
         const who = r.person || `“${text}”`;
         if (!r.found) toast(`Couldn’t find anything for ${who}.`);
-        else if (!r.streaming) toast(`Found ${r.found} titles for ${who}, but none are included free with your services right now.`);
-        else { if (r.person) showPerson(r.person); toast(`${r.streaming} of ${r.found} titles for ${who} are on your services. They’re all listed here.`); }
+        else if (!r.streaming) toast(r.paid ? `${who}: none included with your services, but ${r.paid} can be rented or bought. They’re in the results, marked “Rent or buy”.` : `Found ${r.found} titles for ${who}, but none are on your services right now.`);
+        else { if (r.person) showPerson(r.person); toast(`${r.streaming} of ${r.found} titles for ${who} are on your services${r.paid ? `, and ${r.paid} more can be rented or bought (marked “Rent or buy”)` : ""}. They’re all listed here.`); }
       } catch (er) { toast("Lookup failed: " + er.message); render(); }
       finally { b.disabled = false; }
       return;

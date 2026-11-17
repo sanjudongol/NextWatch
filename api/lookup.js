@@ -1,6 +1,7 @@
 // POST /api/lookup?q=Wes%20Anderson&role=director|any
 // Finds titles that aren't in the catalog yet: a director's (or creator's) work, an actor's work, or titles by name.
-// Each one is checked against the streaming services and only kept if it's included with a subscription.
+// Each one is checked against the streaming services. Titles included with a subscription are kept; titles you can
+// only rent or buy are kept too but marked paid, so they show up in search results only.
 import { env, json, requireUser, tmdb, providerMap, buildTitle, freshIds, saveTitles, mapLimit } from "../lib/server.js";
 import { NEEDED_ENV } from "./sync.js";
 
@@ -45,11 +46,12 @@ export default async function handler(req, res) {
     const maps = { movie: await providerMap("movie"), tv: await providerMap("tv") };
     const ids = picks.map((p) => `${p.kind}-${p.id}`);
     const fresh = await freshIds(ids);
-    const built = await mapLimit(picks.filter((p) => !fresh.has(`${p.kind}-${p.id}`)), 5, (p) => buildTitle(p.kind, p.id, maps[p.kind]));
+    const built = await mapLimit(picks.filter((p) => !fresh.has(`${p.kind}-${p.id}`)), 5, (p) => buildTitle(p.kind, p.id, maps[p.kind], { allowPaid: true }));
     const keep = built.filter((t) => t && !t.remove && !t.error);
     await saveTitles(keep);
-    const streamingIds = [...fresh, ...keep.map((t) => t.id)];
-    return json(res, 200, { person: person && person.name, found: picks.length, streaming: streamingIds.length, ids: streamingIds });
+    const streamingIds = [...fresh, ...keep.filter((t) => !t.paid).map((t) => t.id)];
+    const paid = keep.filter((t) => t.paid).length;
+    return json(res, 200, { person: person && person.name, found: picks.length, streaming: streamingIds.length, paid, ids: streamingIds });
   } catch (e) {
     return json(res, 500, { error: String(e.message || e) });
   }
