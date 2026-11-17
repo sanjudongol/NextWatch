@@ -984,7 +984,8 @@ function demoApi() {
   titles.push(Object.assign(T("tv-5", "Frieren", "Series", 2023, ["Animation", "Drama"], 8.9, 100, ["Netflix"], ["Keiichiro Saito"], ["Atsumi Tanezaki"], 1, "Ongoing", "An elf mage reflects on life after her hero party’s quest.", 50), { lang: "ja" }));
   titles.push(T("tv-6", "The Great British Bake Off", "Series", 2010, ["Reality"], 8.6, 100, ["Netflix"], [], ["Noel Fielding"], 15, "Ongoing", "Amateur bakers compete in a tent.", 45));
   titles.push(T("movie-6", "Interstellar", "Movie", 2014, ["Sci-Fi", "Drama"], 8.7, 73, ["Paramount+"], ["Christopher Nolan"], ["Matthew McConaughey"], 169, null, "Explorers travel through a wormhole.", 60));
-  titles.push(T("movie-7", "The Grand Budapest Hotel", "Movie", 2014, ["Comedy"], 8.1, 92, ["Hulu"], ["Wes Anderson"], ["Ralph Fiennes"], 99, null, "A legendary concierge and his lobby boy.", 30));
+  titles.push(T("movie-7", "The Grand Budapest Hotel", "Movie", 2014, ["Comedy"], 8.1, 92, ["Hulu"], ["Wes Anderson"], ["Ralph Fiennes"], 99, null, "A legendary concierge and his lobby boy.", 30))
+  titles.push(T("movie-9", "Sample: a Starz-only movie", "Movie", 2019, ["Drama"], 7.6, 88, ["Starz"], ["Sample Director"], ["Sample Actor"], 110, null, "Only on a niche service: shows when Starz is picked in Sort & Filter.", 5));
   titles.push(T("movie-8", "Fantastic Mr. Fox", "Movie", 2009, ["Animation", "Comedy"], 7.9, 93, ["Disney+"], ["Wes Anderson"], ["George Clooney"], 87, null, "A fox plans one last heist.", 25));
   const V = (id, title, channel, views, year, genre, secs, extra) => ({ id: "yt-" + id, kind: "yt", type: "Video", title, channel, views, popularity: views, year, released: year + "-01-01", genres: [genre], secs, services: ["YouTube"], poster: null, dirs: [], cast: [], ...extra });
   const nowIso = new Date().toISOString();
@@ -1090,7 +1091,7 @@ function buildFilters() {
 function renderServiceChips() {
   const svcsAll = [...new Set(all().flatMap((t) => t.services || []))].sort();
   const svcs = svcsAll.filter((x) => !EXTRA_SERVICES.has(x)), extras = svcsAll.filter((x) => EXTRA_SERVICES.has(x));
-  const on = F.svcOn.filter((x) => svcs.includes(x));
+  const on = F.svcOn.filter((x) => svcsAll.includes(x)); // include picked "More services" so they light up too
   $("chips").innerHTML = `<div class="lbl">Streaming services: tap one to see only its titles; tap more to add them</div>` +
     `<button class="chip ${on.length ? "" : "on"}" data-svcall="1">All services</button>` +
     svcs.map((s) => `<button class="chip ${on.includes(s) ? "on" : ""}" data-svc="${esc(s)}" aria-pressed="${on.includes(s)}">${esc(s)}</button>`).join("") +
