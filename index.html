@@ -586,7 +586,7 @@ textarea:focus,input:focus{outline:2px solid color-mix(in srgb,var(--ac) 60%,tra
   body.hasq :is(#tabs,#home>.cats,#allhead,#alert,#ytsubs,#ratewho,.ctlrow,.pageswitch,#tipsbox){display:none!important}
   #allhead{margin:14px 0 8px}
   .ctitle{left:58px!important;transform:none!important;text-align:left!important;max-width:30%!important}
-  body.onyt .fbtn,body.searching .fbtn{display:none!important}
+  body.onyt .fbtn,body.hasq .fbtn{display:none!important} /* hidden only while a search is typed, not just because the search bar is open */
   .hbtns .btn.nophone{display:none!important}
   body.searching .search:focus{outline:none;box-shadow:none}
 }
@@ -2094,6 +2094,8 @@ if ("serviceWorker" in navigator && location.protocol === "https:") navigator.se
 let qT; $("q").addEventListener("input", () => { clearTimeout(qT); qT = setTimeout(render, 120); });
 // a search left typed in stays open; an empty one closes when you tap away
 $("q").addEventListener("blur", () => setTimeout(() => { if (!$("q").value.trim()) document.body.classList.remove("searching"); }, 150));
+// an empty search bar left open closes when you scroll away (it isn't covering the header for nothing)
+addEventListener("scroll", () => { if (document.body.classList.contains("searching") && !$("q").value.trim() && document.activeElement !== $("q")) document.body.classList.remove("searching"); }, { passive: true });
 $("fp").addEventListener("toggle", () => {
   if (!phone()) local.set("wf-panel-open", $("fp").open);
   document.body.style.overflow = phone() && $("fp").open ? "hidden" : ""; // no background scrolling under the sheet
