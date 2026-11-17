@@ -21,6 +21,8 @@ function jobs() {
     { kind: "movie", order: "top", page: rot(10) }, { kind: "tv", order: "top", page: rot(8) },
     { kind: "tv", order: "top", page: rot(4), genre: "10764" }, { kind: "tv", order: "top", page: rot(4), genre: "16", lang: "ja" },
     { kind: "tv", order: "top", page: rot(3), genre: "99" }, { kind: "movie", order: "top", page: rot(3), genre: "99" },
+    // one smaller service a night (Tubi, Pluto TV…), so their catalogs keep filling in
+    { kind: "movie", order: "top", page: rot(3), svc: ["Tubi", "Pluto TV", "The Roku Channel", "Kanopy", "Crunchyroll"][day % 5] },
     { mode: "stale" }, { mode: "stale" }, { mode: "stale" }, { mode: "stale" },
   ];
 }

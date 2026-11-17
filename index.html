@@ -833,6 +833,10 @@ const SYNC_JOBS = [
   { kind: "movie", order: "top", pages: 3, genre: "16", label: "animated movies" },
   { kind: "tv", order: "top", pages: 3, genre: "10762", label: "kids’ series" },       // TMDB: Kids
   { kind: "tv", order: "top", pages: 2, genre: "16", label: "animated series" },
+  // smaller and free services, one at a time, so their best titles aren't crowded out by Netflix & co.
+  ...["Tubi", "Pluto TV", "The Roku Channel", "Kanopy"].flatMap((svc) => [{ kind: "movie", order: "top", pages: 3, svc, label: `${svc} movies` }, { kind: "tv", order: "top", pages: 1, svc, label: `${svc} series` }]),
+  { kind: "tv", order: "top", pages: 3, svc: "Crunchyroll", label: "Crunchyroll" },
+  ...["Hoopla", "Starz", "MGM+", "AMC+", "Criterion Channel", "MUBI", "BritBox", "Acorn TV", "Shudder"].map((svc) => ({ kind: "movie", order: "top", pages: 1, svc, label: svc })),
 ];
 
 // ---------------- state ----------------
@@ -2183,7 +2187,7 @@ async function runSync() {
       let total = job.pages;
       for (let page = 1; page <= total; page++) {
         btn.textContent = innerWidth < 620 ? `${page}/${total}` : `Syncing ${job.label || (job.kind === "movie" ? "movies" : "series")} ${page}/${total}…`;
-        const r = await retry(() => api.syncStep({ kind: job.kind, order: job.order, page, ...(job.genre ? { genre: job.genre } : {}), ...(job.lang ? { lang: job.lang } : {}) }));
+        const r = await retry(() => api.syncStep({ kind: job.kind, order: job.order, page, ...(job.genre ? { genre: job.genre } : {}), ...(job.lang ? { lang: job.lang } : {}), ...(job.svc ? { svc: job.svc } : {}) }));
         saved += r.saved || 0; if (r.firstError) errs.push(r.firstError);
         total = Math.min(job.pages, r.totalPages || total);
       }

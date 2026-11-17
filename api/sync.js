@@ -27,13 +27,16 @@ export async function syncPage(q) {
     const page = Math.max(1, Math.min(20, parseInt(q.page, 10) || 1));
     const genre = /^\d{1,6}([|,]\d{1,6})*$/.test(q.genre || "") ? q.genre : "";  // "|" = any of, "," = all of (99,80 = true crime)  // e.g. 10764 = Reality, 99 = Documentary, 16 = Animation
     const lang = /^[a-z]{2}$/.test(q.lang || "") ? q.lang : "";
+    const svc = typeof q.svc === "string" ? q.svc.slice(0, 40) : ""; // one service only (smaller catalogs get crowded out of the big pages)
     const byId = await providerMap(kind);
+    const pids = [...byId].filter(([, name]) => !svc || name === svc).map(([pid]) => pid);
+    if (!pids.length) return { page, totalPages: 1, checked: 0, skippedFresh: 0, saved: 0, removed: 0 };
     if (!byId.size) throw new Error("Couldn’t match any streaming services on TMDB.");
 
     const today = new Date().toISOString().slice(0, 10);
     const p = new URLSearchParams({
       watch_region: "US",
-      with_watch_providers: [...byId.keys()].join("|"),
+      with_watch_providers: pids.join("|"),
       with_watch_monetization_types: "flatrate|free|ads",
       include_adult: "false",
       language: "en-US",
