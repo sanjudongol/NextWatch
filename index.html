@@ -1115,7 +1115,7 @@ const groupOf = (v) => (GROUPS.find((g) => g[3].includes(v)) || GROUPS[0])[0];
 const phone = () => innerWidth < 620;
 const grouped = () => innerWidth < 620 || innerWidth >= 900; // phone tab bar or desktop sidebar
 // picks from your partner you haven't looked at yet (cleared when you open that list)
-const newPicks = () => [...S.pPicks].filter(([id, at]) => Date.parse(at) > (F.picksSeen || 0) && !iSaw(id)).length;
+const newPicks = () => [...S.pPicks].filter(([id, at]) => Date.parse(at) > (F.picksSeen || 0)).length;
 function renderNav(tabs, count) {
   if (F.view === "frompartner" && newPicks()) { F.picksSeen = Date.now(); saveF(); }
   const nav = $("bnav");
@@ -1177,7 +1177,7 @@ function syncControls() {
   const count = (k) => k === "mine" ? all().filter((t) => S.marks.get(t.id) === "want" && !iSaw(t.id)).length
     : k === "want" ? !S.partner ? 0 : all().filter((t) => bothWant(t.id)).length
     : k === "watching" ? all().filter((t) => isWatching(t.id)).length
-    : k === "frompartner" ? all().filter((t) => S.pPicks.has(t.id) && !iSaw(t.id)).length
+    : k === "frompartner" ? all().filter((t) => S.pPicks.has(t.id)).length
     : k === "forpartner" ? all().filter((t) => S.picks.has(t.id)).length
     : k === "seasons" ? seasonNews().length
     : k === "bothwant" ? all().filter((t) => bothWant(t.id)).length
@@ -1267,7 +1267,7 @@ function filteredAll(cats = curCats()) {
   if (F.view === "onlythem") return all().filter((t) => onlyThem(t.id) && matchesSearch(t, q));
   if (F.view === "person") return all().filter((t) => byPerson(t, F.person) && matchesSearch(t, q));
   if (F.view === "faves") return all().filter((t) => S.pRate.get(t.id) > 0 && matchesSearch(t, q));
-  if (F.view === "frompartner") return all().filter((t) => S.pPicks.has(t.id) && !iSaw(t.id) && matchesSearch(t, q));
+  if (F.view === "frompartner") return all().filter((t) => S.pPicks.has(t.id) && matchesSearch(t, q)); // every pick, even ones you've seen (those sort last)
   if (F.view === "forpartner") return all().filter((t) => S.picks.has(t.id) && matchesSearch(t, q));
   if (F.view === "unrated") return all().filter((t) => needsRate(t) && matchesSearch(t, q));
   if (F.view === "nopes") return all().filter((t) => S.pRate.get(t.id) === -1 && matchesSearch(t, q));
@@ -1331,7 +1331,7 @@ function badgeList(t) {
   else if (mk === "want") badges.push(`<span class="badge b-want">Want to watch</span>`);
   else if (pmk === "want") badges.push(`<span class="badge b-want">${esc(pName())} wants this</span>`);
   if (mk === "skipped") badges.push(`<span class="badge b-skipped">Not interested</span>`);
-  if (S.pPicks.has(id)) badges.push(`<span class="badge b-want">${esc(pName())} picked this for you</span>`);
+  if (S.pPicks.has(id)) badges.push(`<span class="badge b-want">${esc(pName())} picked this for you${iSaw(id) ? " · you’ve seen it" : ""}</span>`);
   const rt = S.rate.get(id), prt = S.pRate.get(id);
   if (F.view === "unrated" && F.rateWho === "them" && S.partner) badges.push(`<span class="badge b-nah">${esc(pName())} hasn’t rated it</span>`);
   const verb = (r) => r === 2 ? "loved it" : r === 1 ? "liked it" : "didn’t like it", cls = (r) => r > 0 ? "b-like" : "b-nah";
@@ -1459,7 +1459,7 @@ function render() {
   const k = F.cat === "youtube" && F.view === "all" && !["year", "newest"].includes(F.sort) ? "popularity" : F.sort, dir = k === "newest" ? 1 : F.desc ? -1 : 1;
   $("dir").hidden = F.sort === "newest"; // already newest → oldest
   // pinned first: in "Watch together", what you both want; elsewhere, series you're in the middle of
-  const pri = (t) => F.view === "frompartner" ? Date.parse(S.pPicks.get(t.id) || 0) / 1e12 : F.view === "together" ? wantCount(t.id) : F.view === "seasons" ? (newSeason(t) ? 1 : 0)
+  const pri = (t) => F.view === "frompartner" ? (iSaw(t.id) ? 0 : 10) + Date.parse(S.pPicks.get(t.id) || 0) / 1e13 : F.view === "together" ? wantCount(t.id) : F.view === "seasons" ? (newSeason(t) ? 1 : 0)
     : F.view === "want" ? (bothWant(t.id) ? 3 : 0) + (newSeason(t) ? 2 : isWatching(t.id) ? 1 : 0) : F.view === "all" || F.view === "mine" ? (newSeason(t) ? 2 : isWatching(t.id) ? 1 : 0)
     : F.view === "faves" ? (iSaw(t.id) ? 0 : 2) + (S.pRate.get(t.id) === 2 ? 1 : 0) : 0;
   const newest = F.cat === "youtube" && (F.ytSub ? ((YT_SUBS[F.ytMode] || []).find((x) => x[0] === F.ytSub) || [])[2] : ["soccer", "f1", "following", "sidemen"].includes(F.ytMode)) || F.ytMode === "podcasts"; // "latest" tabs and sports: newest first
