@@ -1384,7 +1384,7 @@ function vid(t) {
     ${S.partner ? btn('data-seen="partner"', theySaw(id), "", `${theySaw(id) ? "✓ " : ""}${esc(pName())}`, `${pName()} watched`) : ""}
     ${btn('data-mark="want"', mk === "want", "mk-want", "Later", "Save for later")}
     ${btn('data-mark="skipped"', mk === "skipped", "mk-skipped", "✕", "Not interested")}
-    ${S.partner ? btn(`data-pick="${esc(id)}"`, S.picks.has(id), "mk-pick", S.picks.has(id) ? `✓ For ${esc(pName())}` : `For ${esc(pName())}`, S.picks.has(id) ? `Picked for ${pName()}: tap to take it back` : `Pick this for ${pName()}: it shows up in their Lists`) : ""}
+    ${S.partner ? btn(`data-forp="${esc(id)}"`, S.picks.has(id), "mk-pick", S.picks.has(id) ? `✓ For ${esc(pName())}` : `For ${esc(pName())}`, S.picks.has(id) ? `Picked for ${pName()}: tap to take it back` : `Pick this for ${pName()}: it shows up in their Lists`) : ""}
     ${t.channelId ? `<button class="rb follow ${S.follows.has(t.channelId) ? "on" : ""}" data-follow="${esc(t.channelId)}" data-ch="${esc(t.channel)}" title="${S.follows.has(t.channelId) ? `Stop following ${esc(t.channel)}` : `Follow ${esc(t.channel)}: their newest videos show under ★ Following`}">${S.follows.has(t.channelId) ? "✓ Following" : "+ Follow"}</button>` : ""}
     <a class="rb ytgo" ${ext} title="Open on YouTube">Watch</a>
   </div>
@@ -1425,7 +1425,7 @@ function card(t, collapsible) {
     ${t.type === "Series" ? `<button class="mk-watching ${mk === "watching" ? "on" : ""}" data-mark="watching" data-id="${esc(id)}" title="Keeps it at the top until you finish">${mk === "watching" ? "✓ " : ""}Watching now</button>` : ""}
     <button class="mk-skipped ${mk === "skipped" ? "on" : ""}" data-mark="skipped" data-id="${esc(id)}">${mk === "skipped" ? "✓ " : ""}Not interested</button>
   </div>
-  ${S.partner ? `<button class="pickbtn ${S.picks.has(id) ? "on" : ""}" data-pick="${esc(id)}">${S.picks.has(id) ? `✓ Picked for ${esc(pName())}` : `Pick for ${esc(pName())}`}</button>` : ""}
+  ${S.partner ? `<button class="pickbtn ${S.picks.has(id) ? "on" : ""}" data-forp="${esc(id)}">${S.picks.has(id) ? `✓ Picked for ${esc(pName())}` : `Pick for ${esc(pName())}`}</button>` : ""}
 </article>`;
 }
 let rankMap = new Map();
@@ -1927,7 +1927,7 @@ async function onClick(e) {
   if (e.target.id === "ytedit") { closeYtEdit(); return; }
   const b = e.target.closest("button"); if (!b) return;
   if (b.dataset.detail) { detailId = b.dataset.detail; renderDetail(); return; }
-  if (b.closest("#detail") && !b.dataset.mark && !b.dataset.seen && !b.dataset.rate && !b.dataset.pick && !b.dataset.open) { detailId = null; renderDetail(); if (b.id === "detailclose") return; }
+  if (b.closest("#detail") && !b.dataset.mark && !b.dataset.seen && !b.dataset.rate && !b.dataset.forp && !b.dataset.open) { detailId = null; renderDetail(); if (b.id === "detailclose") return; }
   const name = (id) => (all().find((t) => t.id === id) || {}).title || "title";
   if (b.dataset.mark) {
     const id = b.dataset.id, cur = S.marks.get(id) || "", nx = cur === b.dataset.mark ? "" : b.dataset.mark;
@@ -1976,7 +1976,7 @@ async function onClick(e) {
     saveYtTabs({ hidden: [...new Set([...(tabCfg().hidden || []), k])] }); toast(`Removed ${label}. You can add it back below.`); return;
   }
   if (b.dataset.ytadd) { const k = b.dataset.ytadd, hid = tabCfg().hidden || []; const o = ytFullOrder().filter((x) => x !== k); const lastShown = o.filter((x) => !hid.includes(x)).pop(); o.splice(o.indexOf(lastShown) + 1, 0, k); saveYtTabs({ order: o, hidden: hid.filter((x) => x !== k) }); return; }
-  if (b.dataset.pick) { togglePick(b.dataset.pick, name(b.dataset.pick)); return; }
+  if (b.dataset.forp) { togglePick(b.dataset.forp, name(b.dataset.forp)); return; } // "Pick for [partner]" (data-pick is Surprise me's Movie / Series / Either)
   if (b.dataset.ratewho) { F.rateWho = b.dataset.ratewho === "them" ? "them" : ""; saveF(); render(); return; }
   if (b.dataset.follow) { toggleFollow(b.dataset.follow, b.dataset.ch || ""); return; }
   if (b.dataset.ytsub != null) { F.ytSub = b.dataset.ytsub; F.ytSubs = { ...(F.ytSubs || {}), [F.ytMode]: F.ytSub }; saveF(); render(); return; }
