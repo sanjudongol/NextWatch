@@ -377,6 +377,10 @@ button:active:not(:disabled),a.rb:active,.popbtn:active{opacity:.5}
 .rateseg button.nah.on,.rb.mk-nah.on{color:var(--mu)}
 .pickbtn{width:100%;border:0;border-radius:10px;padding:10px;font:inherit;font-weight:600;background:var(--pill);color:var(--ac);min-height:44px;cursor:pointer}
 .pickbtn.on{background:var(--ac);color:#fff}
+/* account page: one button size; leaving actions in red, like iOS */
+#account .row .btn{font-size:.95rem!important;font-weight:600;min-height:44px;padding:0 16px!important}
+#account #unlink,#account #signout{color:var(--red)!important}
+#account #acctsync{color:var(--ac)!important}
 .paidtag{display:inline-block;font-size:.72rem;font-weight:700;padding:1px 7px;border-radius:6px;background:color-mix(in srgb,#ff9f0a 18%,transparent);color:#c77700}
 .paidsvc{display:inline-block;padding:6px 12px;border-radius:999px;background:var(--pill);color:var(--mu);font-size:.85rem;margin:0 6px 6px 0}
 .rb.mk-pick{color:var(--ac)}.rb.mk-pick.on{background:var(--ac);color:#fff}
@@ -716,7 +720,7 @@ textarea:focus,input:focus{outline:2px solid color-mix(in srgb,var(--ac) 60%,tra
 
     <footer>
       Ratings from IMDb and Rotten Tomatoes via OMDb. When a title has no IMDb rating yet, its TMDB score is shown instead and marked “TMDB”.
-      Only offers included with a subscription or free with ads are listed — never rent or buy.<br>
+      Lists show only titles included with a subscription or free with ads; rent-or-buy titles appear only in search results, marked “Rent or buy”.<br>
       Video data from the YouTube Data API.
       Streaming availability data by JustWatch. This product uses the TMDB API but is not endorsed or certified by TMDB.<br>
       <a href="/about.html">What is PopcornDate?</a>
@@ -853,6 +857,14 @@ if (F.cat === "main" || !F.cat) { // "Movies & series" became two sections
   if (F.byCat && F.byCat.main) { F.byCat.movies = F.byCat.series = F.byCat.main; delete F.byCat.main; }
   F.cat = F.type === "Series" ? "series" : "movies"; F.type = "";
 } if (!Array.isArray(F.svcOn)) F.svcOn = []; // old "hide a service" setting is replaced by "only these"
+// tiny IndexedDB key-value store for the catalog cache (fails quietly: then it just downloads everything)
+const idb = (() => {
+  let dbP = null;
+  const open = () => dbP || (dbP = new Promise((res, rej) => { const r = indexedDB.open("popcorndate", 1); r.onupgradeneeded = () => r.result.createObjectStore("kv"); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }));
+  const tx = (mode, fn) => open().then((db) => new Promise((res, rej) => { const t = db.transaction("kv", mode); const r = fn(t.objectStore("kv")); t.oncomplete = () => res(r && r.result); t.onerror = () => rej(t.error); }));
+  return { get: (k) => tx("readonly", (st) => st.get(k)).catch(() => null), set: (k, v) => tx("readwrite", (st) => st.put(v, k)).catch(() => null), del: (k) => tx("readwrite", (st) => st.delete(k)).catch(() => null) };
+})();
+const titleCache = { mem: null };
 let S = { ytOn: DEMO, titles: [], me: null, partner: null, marks: new Map(), pMarks: new Map(), views: new Set(), pViews: new Set(), seen: new Map(), pSeen: new Map(), rate: new Map(), pRate: new Map(), follows: new Map(), pFollows: new Map(), picks: new Set(), pPicks: new Map(), ytTopics: [], sections: [], pSkip: new Set(), lastUpdated: null };
 let openRow = null, installEvt = null;
 let api, pickId = null;
@@ -878,25 +890,52 @@ async function supabaseApi(cfg) {
     async signOut() { await sb.auth.signOut({ scope: "local" }); }, // this browser only — never kicks out other devices
     async load() {
       const session = await a.session(); const uid = session.user.id;
+      // The catalog (3,000+ titles) is kept on the device: after the first load only what changed is downloaded.
+      async function loadTitles() {
+        const pages = async (q, par = 4, size = 1000) => { // `par` pages at a time
+          const out = [];
+          for (let from = 0; ; from += par * size) {
+            const got = await Promise.all([...Array(par).keys()].map((i) => q().range(from + i * size, from + (i + 1) * size - 1).then(must)));
+            got.forEach((g) => out.push(...g));
+            if (got.some((g) => g.length < size)) return out;
+          }
+        };
+        const cached = titleCache.mem || (await idb.get("titles"));
+        if (cached && cached.last && Date.now() - (cached.full || 0) < 7 * 864e5) {
+          const [changed, ids] = await Promise.all([
+            pages(() => sb.from("titles").select("data,updated_at").gt("updated_at", cached.last).order("id"), 1), // usually a handful
+            pages(() => sb.from("titles").select("id").order("id")),                                                 // to drop removed titles
+          ]);
+          const live = new Set(ids.map((r) => r.id)), byId = new Map(cached.list.filter((t) => live.has(t.id)).map((t) => [t.id, t]));
+          let last = cached.last;
+          changed.forEach((r) => { byId.set(r.data.id, r.data); if (r.updated_at > last) last = r.updated_at; });
+          titleCache.mem = { list: [...byId.values()], last, full: cached.full };
+        } else {
+          const rows = await pages(() => sb.from("titles").select("data,updated_at").order("id"));
+          let last = null; rows.forEach((r) => { if (!last || r.updated_at > last) last = r.updated_at; });
+          titleCache.mem = { list: rows.map((r) => r.data), last, full: Date.now() };
+        }
+        idb.set("titles", titleCache.mem); // save for next time (in the background)
+        return { titles: titleCache.mem.list, last: titleCache.mem.last };
+      }
       let me = must(await sb.from("profiles").select("id,name,invite_code,partner_id").eq("id", uid).maybeSingle());
       if (!me) { await new Promise((r) => setTimeout(r, 800)); me = must(await sb.from("profiles").select("id,name,invite_code,partner_id").eq("id", uid).maybeSingle()); }
       if (!me) throw new Error("Your profile wasn’t created. Re-run the database setup script in Supabase.");
-      let partner = null;
-      if (me.partner_id) partner = must(await sb.from("profiles").select("id,name,partner_id").eq("id", me.partner_id).maybeSingle());
-      if (partner && partner.partner_id !== uid) partner = null;
-      let titles = [], from = 0, last = null;
-      for (;;) {
-        const rows = must(await sb.from("titles").select("data,updated_at").order("id").range(from, from + 999));
-        rows.forEach((r) => { titles.push(r.data); if (!last || r.updated_at > last) last = r.updated_at; });
-        if (rows.length < 1000) break; from += 1000;
-      }
-      const marks = must(await sb.from("marks").select("user_id,title_id,status"));
-      const views = must(await sb.from("views").select("user_id,title_id,seasons,rating"));
-      const follows = (await sb.from("follows").select("user_id,channel_id,channel_name")).data || [];
-      const picks = (await sb.from("picks").select("user_id,title_id,created_at")).data || []; // hand-picked for each other
-      const sections = (await sb.from("sections").select("user_id,key,label,base,filters,created_at").order("created_at")).data || []; // saved sections
-      const ytTopics = (await sb.from("yt_topics").select("user_id,key,label,created_at").order("created_at")).data || []; // your own YouTube topics // podcasters you follow (empty if the table isn't set up yet)
-      // titles your partner isn't interested in: only used to leave them out of "Watch together"
+      // everything else loads at the same time
+      const partnerP = me.partner_id ? sb.from("profiles").select("id,name,partner_id").eq("id", me.partner_id).maybeSingle().then(must) : Promise.resolve(null);
+      const opt = (q) => q.then((r) => r.data || []); // tables that may not exist on older setups
+      const [partner0, cat, marks, views, follows, picks, sections, ytTopics] = await Promise.all([
+        partnerP, loadTitles(),
+        sb.from("marks").select("user_id,title_id,status").then(must),
+        sb.from("views").select("user_id,title_id,seasons,rating").then(must),
+        opt(sb.from("follows").select("user_id,channel_id,channel_name")),       // channels you follow
+        opt(sb.from("picks").select("user_id,title_id,created_at")),              // hand-picked for each other
+        opt(sb.from("sections").select("user_id,key,label,base,filters,created_at").order("created_at")), // saved sections
+        opt(sb.from("yt_topics").select("user_id,key,label,created_at").order("created_at")),             // your own YouTube topics
+      ]);
+      const partner = partner0 && partner0.partner_id === uid ? partner0 : null;
+      const { titles, last } = cat;
+      // titles your partner isn't interested in: only used to leave them out of "New to both"
       const pSkip = partner ? (must(await sb.rpc("partner_skipped")) || []).map((x) => (typeof x === "string" ? x : Object.values(x)[0])) : [];
       return {
         pSkip: new Set(pSkip),
@@ -1358,8 +1397,8 @@ function row(t) {
   </button>
   <div class="rbtns">
     ${ns ? btn(`data-season="${ns}"`, false, "", `✓ Seen S${ns}`, `I’ve watched season ${ns}`) : ""}
-    ${btn('data-seen="me"', iSaw(id), "", `${iSaw(id) ? "✓ " : ""}${S.partner ? "Me" : "Seen"}`, S.partner ? "I watched" : "Watched")}
-    ${S.partner ? btn('data-seen="partner"', theySaw(id), "", `${theySaw(id) ? "✓ " : ""}${esc(pName())}`, `${pName()} watched`) : ""}
+    ${btn('data-seen="me"', iSaw(id), "", `${iSaw(id) ? "✓ " : ""}${S.partner ? "I saw" : "Seen"}`, S.partner ? "I watched it" : "Watched")}
+    ${S.partner ? btn('data-seen="partner"', theySaw(id), "", `${theySaw(id) ? "✓ " : ""}${esc(pName())} saw`, `${pName()} watched it`) : ""}
     ${iSaw(id) ? btn('data-rate="-1"', S.rate.get(id) === -1, "mk-nah", S.rate.get(id) === -1 ? "✓ Nope" : "Nope", "Not for me") + btn('data-rate="1"', S.rate.get(id) === 1, "mk-like", S.rate.get(id) === 1 ? "✓ Liked" : "Liked", "Liked it") + btn('data-rate="2"', S.rate.get(id) === 2, "mk-like", S.rate.get(id) === 2 ? "✓ Loved" : "Loved", "Loved it")
       : btn('data-mark="want"', mk === "want", "mk-want", "Want", "Want to watch")}
     ${t.type === "Series" ? btn('data-mark="watching"', mk === "watching", "mk-watching", "Watching", "Watching now: keeps it at the top until you finish") : ""}
@@ -1380,8 +1419,8 @@ function vid(t) {
     <div class="meta">${fmtViews(t.views)} views${ytMaxAge(t) && t.released ? " · " + fmtDate(t.released) : t.year ? " · " + t.year : ""} · ${esc(gl(t).join(", "))}</div>
     ${badges.length ? `<div class="badges">${badges.join("")}</div>` : ""}</div>
   <div class="rbtns">
-    ${btn('data-seen="me"', iSaw(id), "", `${iSaw(id) ? "✓ " : ""}${S.partner ? "Me" : "Seen"}`, S.partner ? "I watched" : "Watched")}
-    ${S.partner ? btn('data-seen="partner"', theySaw(id), "", `${theySaw(id) ? "✓ " : ""}${esc(pName())}`, `${pName()} watched`) : ""}
+    ${btn('data-seen="me"', iSaw(id), "", `${iSaw(id) ? "✓ " : ""}${S.partner ? "I saw" : "Seen"}`, S.partner ? "I watched it" : "Watched")}
+    ${S.partner ? btn('data-seen="partner"', theySaw(id), "", `${theySaw(id) ? "✓ " : ""}${esc(pName())} saw`, `${pName()} watched it`) : ""}
     ${btn('data-mark="want"', mk === "want", "mk-want", "Later", "Save for later")}
     ${btn('data-mark="skipped"', mk === "skipped", "mk-skipped", "✕", "Not interested")}
     ${S.partner ? btn(`data-forp="${esc(id)}"`, S.picks.has(id), "mk-pick", S.picks.has(id) ? `✓ For ${esc(pName())}` : `For ${esc(pName())}`, S.picks.has(id) ? `Picked for ${pName()}: tap to take it back` : `Pick this for ${pName()}: it shows up in their Lists`) : ""}
@@ -1456,6 +1495,7 @@ function render() {
   $("layout").hidden = F.cat === "youtube"; // videos always show as video tiles, so Cards / Compact list does nothing there
   $("shelveson").hidden = !(F.shelves === false && F.view === "all" && F.cat !== "youtube");
   const list = filtered();
+  if (!list.length) $("layout").hidden = true; // nothing to expand
   const k = F.cat === "youtube" && F.view === "all" && !["year", "newest"].includes(F.sort) ? "popularity" : F.sort, dir = k === "newest" ? 1 : F.desc ? -1 : 1;
   $("dir").hidden = F.sort === "newest"; // already newest → oldest
   // pinned first: in "Watch together", what you both want; elsewhere, series you're in the middle of
@@ -1750,11 +1790,12 @@ function showDirector(name) { showPerson(name); }
 function renderTips() {
   const box = $("tipsbox");
   if (local.get("wf-tips-done", false) || !S.me) { box.innerHTML = ""; return; }
+  const ph = innerWidth < 620;
   box.innerHTML = `<div class="tips"><div class="tipshead"><b>Quick tips</b><button class="btn" id="tipsok">Got it</button></div><ol>
-    <li><b>Pick a section</b> (Movies, Series, Anime…) just above the list, or search. Tap the <b>＋</b> at the end of those pills to remove or reorder sections; to make your own, set filters in Sort &amp; Filter and tap <b>Save as section</b>. Videos live on their own <b>YouTube</b> page: History, Food & travel, Soccer, F1, Politics and Podcasts. Tap <b>+ Follow</b> on a video to see that channel under ★ Following. Tap <b>＋ Add or edit tabs</b> to add, remove or reorder tabs, or create up to 3 of your own. Tap the logo or Home to get back.</li>
-    <li><b>See details:</b> tap any title (or the <b>›</b> arrow) for the summary, cast and where to watch. In Cards view, tap <b>More</b> to read the full summary.</li>
-    <li><b>Mark titles:</b> tap Seen, Want or Not interested.${"ontouchstart" in window ? " On your phone you can also <b>swipe right</b> for Seen and <b>swipe left</b> for Not interested." : ""}</li>
-    <li><b>Sync</b> refreshes the catalog. It also updates by itself every night.</li>
+    <li><b>Tap a title</b> to see its summary, cast and where to watch.</li>
+    <li><b>Mark it:</b> Seen, Want or ✕ Not interested${"ontouchstart" in window ? " (or swipe right / left)" : ""}. Titles you both Want go to <b>Our list</b>.</li>
+    <li><b>Narrow it down</b> with the section pills and <b>Sort &amp; Filter</b>${ph ? " above the list" : ""}; the <b>＋</b> adds or removes sections.</li>
+    <li><b>Sync</b>${ph ? " (pull down)" : ""} fetches new titles; it also runs by itself every night.</li>
   </ol></div>`;
 }
 function renderAlert() {
@@ -2186,18 +2227,27 @@ async function runSync() {
   const btn = $("sync"); btn.disabled = true;
   let saved = 0, errs = [];
   try {
-    for (const job of SYNC_JOBS) {
-      let total = job.pages;
-      for (let page = 1; page <= total; page++) {
-        btn.textContent = innerWidth < 620 ? `${page}/${total}` : `Syncing ${job.label || (job.kind === "movie" ? "movies" : "series")} ${page}/${total}…`;
-        const r = await retry(() => api.syncStep({ kind: job.kind, order: job.order, page, ...(job.genre ? { genre: job.genre } : {}), ...(job.lang ? { lang: job.lang } : {}), ...(job.svc ? { svc: job.svc } : {}) }));
-        saved += r.saved || 0; if (r.firstError) errs.push(r.firstError);
-        total = Math.min(job.pages, r.totalPages || total);
+    // 4 catalog jobs at a time, with YouTube refreshing alongside: about 4× faster than one request after another
+    const est = SYNC_JOBS.reduce((n, j) => n + j.pages, 0); let done = 0;
+    const show = () => { btn.textContent = innerWidth < 620 ? `${Math.min(99, Math.round((done / est) * 100))}%` : `Syncing… ${Math.min(99, Math.round((done / est) * 100))}%`; };
+    show();
+    const ytP = S.ytOn ? retry(() => api.youtubeStep()).then((y) => { saved += Object.values(y).reduce((n, v) => n + (typeof v === "number" ? v : 0), 0); if ((y.errors || []).some((m) => /quota/i.test(m))) errs.push(ytMsg("quota")); }, (e) => errs.push(netErr(e) ? "YouTube didn’t answer in time" : ytMsg(e.message))) : Promise.resolve();
+    const queue = [...SYNC_JOBS];
+    const worker = async () => {
+      for (let job; (job = queue.shift()); ) {
+        let total = job.pages;
+        for (let page = 1; page <= total; page++) {
+          const r = await retry(() => api.syncStep({ kind: job.kind, order: job.order, page, ...(job.genre ? { genre: job.genre } : {}), ...(job.lang ? { lang: job.lang } : {}), ...(job.svc ? { svc: job.svc } : {}) }));
+          saved += r.saved || 0; if (r.firstError) errs.push(r.firstError);
+          const t2 = Math.min(job.pages, r.totalPages || total); done += 1 + (page === t2 ? total - t2 : 0); total = t2; show();
+        }
       }
-    }
+    };
+    await Promise.all([worker(), worker(), worker(), worker()]);
     btn.textContent = innerWidth < 620 ? "…" : "Refreshing older titles…";
     await retry(() => api.syncStep({ mode: "stale" }));
-    if (S.ytOn) { btn.textContent = innerWidth < 620 ? "…" : "Refreshing YouTube…"; try { const y = await retry(() => api.youtubeStep()); saved += Object.values(y).reduce((n, v) => n + (typeof v === "number" ? v : 0), 0); if ((y.errors || []).some((m) => /quota/i.test(m))) errs.push(ytMsg("quota")); } catch (e) { errs.push(netErr(e) ? "YouTube didn’t answer in time" : ytMsg(e.message)); } }
+    if (S.ytOn) btn.textContent = innerWidth < 620 ? "…" : "Finishing YouTube…";
+    await ytP;
     await reload();
     toast(`Sync done: ${saved} title${saved === 1 ? "" : "s"} added or refreshed.` + (errs.length ? ` (${errs.length} had problems: ${errs[0]})` : ""));
   } catch (e) {
